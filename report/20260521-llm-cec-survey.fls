@@ -176,9 +176,6 @@ INPUT 20260521-llm-cec-survey.out
 INPUT ./20260521-llm-cec-survey.out
 INPUT ./20260521-llm-cec-survey.out
 OUTPUT 20260521-llm-cec-survey.out
-INPUT /usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-LatinModernRoman.cfg
-INPUT /usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-LatinModernRoman.cfg
-INPUT /usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-LatinModernRoman.cfg
 INPUT /usr/local/texlive/2026basic/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/local/texlive/2026basic/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
 INPUT /usr/local/texlive/2026basic/texmf-dist/fonts/tfm/public/cm/cmex10.tfm

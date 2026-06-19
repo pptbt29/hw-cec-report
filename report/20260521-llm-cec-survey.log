@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  19 JUN 2026 11:48
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  19 JUN 2026 16:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -497,6 +497,25 @@ Package fontspec Info:
 File: ctex.cfg 2022/07/14 v2.5.10 Configuration file (CTEX)
 )
 
+Package fontspec Info: 
+(fontspec)             Font family 'TimesNewRoman(0)' created for font 'Times
+(fontspec)             New Roman' with options [Ligatures=TeX].
+(fontspec)              
+(fontspec)              This font family consists of the following NFSS
+(fontspec)             series/shapes:
+(fontspec)              
+(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"Times New
+(fontspec)             Roman/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"Times New
+(fontspec)             Roman/B/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'italic' (m/it) with NFSS spec.: <->"Times New
+(fontspec)             Roman/I/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"Times New
+(fontspec)             Roman/BI/OT:script=latn;language=dflt;mapping=tex-text;"
+
+
+
+
 Package xeCJK Warning: Redefining CJKfamily `\CJKrmdefault' (STSong(0)).
 
 
@@ -808,7 +827,7 @@ Package caption Info: hyperref package is loaded.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/setspace/setspace.sty
 Package: setspace 2022/12/04 v6.7b set line spacing
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 25.
+Package hyperref Info: Option `colorlinks' set `true' on input line 31.
 
 
 LaTeX Warning: Unused global option(s):
@@ -817,26 +836,26 @@ LaTeX Warning: Unused global option(s):
 (./20260521-llm-cec-survey.aux)
 \openout1 = `20260521-llm-cec-survey.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 46.
-LaTeX Font Info:    ... okay on input line 46.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 52.
+LaTeX Font Info:    ... okay on input line 52.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
@@ -844,57 +863,64 @@ Package fontspec Info:
 
 \symlegacymaths=\mathgroup4
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 46.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 46.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 46.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 46.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 46.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 46.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 46.
-LaTeX Font Info:    Redeclaring math accent \check on input line 46.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 46.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 46.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \colon on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 46.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 46.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 46.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 52.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 52.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 52.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 52.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 52.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 52.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 52.
+LaTeX Font Info:    Redeclaring math accent \check on input line 52.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 52.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 52.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \colon on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 52.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 52.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 52.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 46.
+(Font)              `operators' in the math version `normal' on input line 52.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> TU/lmr/m/n on input line 46.
+(Font)                  OT1/cmr/m/n --> TU/TimesNewRoman(0)/m/n on input line 5
+2.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 46.
+(Font)              `operators' in the math version `bold' on input line 52.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/bx/n --> TU/lmr/m/n on input line 46.
+(Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/m/n on input line 
+52.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  TU/lmr/m/n --> TU/lmr/m/n on input line 46.
+(Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/m/n on 
+input line 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  OT1/cmr/m/it --> TU/lmr/m/it on input line 46.
+(Font)                  OT1/cmr/m/it --> TU/TimesNewRoman(0)/m/it on input line
+ 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
-(Font)                  OT1/cmr/bx/n --> TU/lmr/b/n on input line 46.
+(Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/b/n on input line 
+52.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 46.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 46.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 52.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  TU/lmr/m/n --> TU/lmr/b/n on input line 46.
+(Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/b/n on 
+input line 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/bx/it --> TU/lmr/b/it on input line 46.
+(Font)                  OT1/cmr/bx/it --> TU/TimesNewRoman(0)/b/it on input lin
+e 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 46.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 52.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 46.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 52.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -930,62 +956,369 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-Package hyperref Info: Link coloring ON on input line 46.
+Package hyperref Info: Link coloring ON on input line 52.
 (./20260521-llm-cec-survey.out) (./20260521-llm-cec-survey.out)
 \@outlinefile=\write3
 \openout3 = `20260521-llm-cec-survey.out'.
 
-LaTeX Info: Redefining \microtypecontext on input line 46.
-Package microtype Info: Applying patch `item' on input line 46.
-Package microtype Info: Applying patch `toc' on input line 46.
-Package microtype Info: Applying patch `eqnum' on input line 46.
+LaTeX Info: Redefining \microtypecontext on input line 52.
+Package microtype Info: Applying patch `item' on input line 52.
+Package microtype Info: Applying patch `toc' on input line 52.
+Package microtype Info: Applying patch `eqnum' on input line 52.
 
 
-Package microtype Warning: Unable to apply patch `footnote' on input line 46.
+Package microtype Warning: Unable to apply patch `footnote' on input line 52.
 
-Package microtype Info: Applying patch `verbatim' on input line 46.
-LaTeX Info: Redefining \microtypesetup on input line 46.
+Package microtype Info: Applying patch `verbatim' on input line 52.
+LaTeX Info: Redefining \microtypesetup on input line 52.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
 Package microtype Info: No adjustment of tracking.
 Package microtype Info: No adjustment of spacing.
 Package microtype Info: No adjustment of kerning.
-
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-LatinModernRoma
-n.cfg
-File: mt-LatinModernRoman.cfg 2026/02/26 v1.2 microtype config. file: Latin Mod
-ern Roman (RS)
-)
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `TimesNewRoman' (encoding: TU).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: End \AtBeginDocument code.
-
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/26.09749'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/14'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/7'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/5'.
+(microtype)             Ignoring protrusion settings for this character.
 
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <10.53937> not available
-(Font)              size <10.95> substituted on input line 63.
+(Font)              size <10.95> substituted on input line 69.
 
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <7> on input line 63.
+(Font)              <7> on input line 69.
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <5> on input line 63.
+(Font)              <5> on input line 69.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
 )
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
+(microtype)             Ignoring protrusion settings for this character.
+
 [1
 
-] [1
+]
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/9.03374'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/16'.
+(microtype)             Ignoring protrusion settings for this character.
+ [1
 
-] (./20260521-llm-cec-survey.toc [2
+]
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
+(microtype)             Ignoring protrusion settings for this character.
+ (./20260521-llm-cec-survey.toc [2
 
 
-])
+] [3])
 \tf@toc=\write4
 \openout4 = `20260521-llm-cec-survey.toc'.
 
- [3] [4]
+ [4]
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/12.045'.
+(microtype)             Ignoring protrusion settings for this character.
+
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 88.
+(hyperref)                be the same. Added a new anchor on input line 94.
 
 [5
 
@@ -993,2317 +1326,146 @@ Package hyperref Warning: The anchor of a bookmark and its parent's must not
 ] [6] [7]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 179.
+(hyperref)                be the same. Added a new anchor on input line 181.
 
 [8
 
-] [9] [10] [11] [12]
-Overfull \hbox (17.00752pt too wide) in paragraph at lines 497--498
-\TU/STSong(0)/m/n/10.53937 在 \TU/lmr/bx/n/10.53937 Distributed scope \TU/STSong
-(0)/m/n/10.53937 下，| \TU/lmr/m/n/10.53937 Model-Level \TU/STSong(0)/m/n/10.5393
-7 主 要 体 现 为 \TU/lmr/m/n/10.53937 distributed-aware model architecture \TU/STSon
-g(0)/m/n/10.53937 或 \TU/lmr/m/n/10.53937 distributed-
- []
-
-[13] [14] [15] [16] [17] [18]
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Continuous batch-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 892--892
-[]|\TU/STSong(0)/m/n/6.52437 对 不 同 阶 段 和 长 度 的 请 求 进 行 动 态
- []
-
-
-Underfull \hbox (badness 1231) in paragraph at lines 892--892
-[]|\TU/STSong(0)/m/n/6.52437 通 过 \TU/lmr/m/n/6.52437 paged KV \TU/STSong(0)/m/n
-/6.52437 管 理 改 善 \TU/lmr/m/n/6.52437 KV
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Model + Kernel × Lo-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 compute\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 
-copy\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 communica-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 1762) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Multi-LoRA batch-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/STSong(0)/m/n/6.52437 多 \TU/lmr/m/n/6.52437 adapter \TU/STSong(0)/m/n/6.
-52437 请 求 混 合 服 务 时
- []
-
-
-Underfull \hbox (badness 7203) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Serving Policy & Routing
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/bx/n/6.52437 Hugging Face
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Continuous batch-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Underfull \hbox (badness 8019) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Dynamic split &
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
-[]|\TU/lmr/m/n/6.52437 Runtime / Batching-
- []
-
-
-Overfull \hbox (2.22427pt too wide) in paragraph at lines 901--902
-\TU/STSong(0)/m/n/10.53937 本 章 首 先 介 绍 了 \TU/lmr/m/n/10.53937 LLM inference \TU
-/STSong(0)/m/n/10.53937 的 基 本 执 行 机 制，|  包 括 \TU/lmr/m/n/10.53937 prefill/decod
-e\TU/STSong(0)/m/n/10.53937 、| \TU/lmr/m/n/10.53937 KV Cache\TU/STSong(0)/m/n/1
-0.53937 、| \TU/lmr/m/n/10.53937 batching/scheduling
- []
-
-[19] [20] [21]
+]
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/m/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textendash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textemdash ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquoteright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblleft ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+Package microtype Info: Character `textquotedblright ' is missing
+(microtype)             in font `TU/TimesNewRoman(0)/b/n/6.52437'.
+(microtype)             Ignoring protrusion settings for this character.
+ [9] [10] [11] [12] [13] [14] [15] [16] [17] [18] [19] [20]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 918.
+(hyperref)                be the same. Added a new anchor on input line 957.
 
-[22
+[21
 
-] [23] [24] [25] [26] [27] [28] [29] [30] [31]
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/bx/n/6.52437 System /
- []
+] [22] [23] [24] [25] [26] [27] [28] [29]
 
+LaTeX Warning: Float too large for page by 205.23894pt on input line 1655.
 
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/bx/n/6.52437 Venue /
- []
+[30
 
-
-Underfull \hbox (badness 3989) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Jupiter: Fast
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 and Resource-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Efficient Col-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 laborative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference of
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Generative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 IEEE IN-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 FOCOM
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 1776) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 prefill/decode \TU/STSong(0)/m/n/6.52437 协
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 intra-sequence
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 pipeline parallelism;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 parallel decoding;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 TensAllo:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Adaptive
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Deployment
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 of LLMs on
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Resource-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Constrained
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Heterogeneous
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 IEEE IN-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 FOCOM
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 5847) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 在 资 源 受 限 异 构 边
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 tensor parallelism;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 IEEE IoT
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Journal
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 model shard place-
- []
-
-
-Underfull \hbox (badness 7832) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ment; joint device
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 selection; dynamic
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Petals: Col-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 laborative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference and
- []
-
-
-Underfull \hbox (badness 4391) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Fine-tuning of
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 ACL 2023
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 decentralized
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 layer/block place-
- []
-
-
-Underfull \hbox (badness 2042) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 把 \TU/lmr/m/n/6.52437 Transformer block \TU/STSong
-(0)/m/n/6.52437 分 散 存 放 在 志 愿 节 点
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 erative Infer-
- []
-
-
-Underfull \hbox (badness 2707) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ence of Large
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Language
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Model over
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Heterogeneous
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 5847) in paragraph at lines 1600--1600
-\TU/STSong(0)/m/n/6.52437 构 网 络 上 组 织 生 成
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 asymmetric tensor
- []
-
-
-Underfull \hbox (badness 4048) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 parallelism; pipeline
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 parallelism; con-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Resource-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Efficient Col-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Transformer
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Hybrid Model
- []
-
-
-Underfull \hbox (badness 3701) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 hybrid model paral-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 and memory-aware
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 用 \TU/lmr/m/n/6.52437 hybrid model parallelism \TU
-/STSong(0)/m/n/6.52437 结 合
- []
-
-
-Underfull \hbox (badness 4608) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 layer/pipeline \TU/STSong(0)/m/n/6.52437 与 \TU/lmr/m/n/6.52
-437 tensor \TU/STSong(0)/m/n/6.52437 并 行；|  通 过 \TU/lmr/m/n/6.52437 Re-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Co-Designing
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Transformer
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Architectures
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 IEEE
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 张 量\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-算 子
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 low-communication
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 throughput
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Generative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference of
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Large Lan-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 guage Models
- []
-
-
-Underfull \hbox (badness 3872) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 with a Single
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 张 量\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-算 子
- []
-
-
-Underfull \hbox (badness 5847) in paragraph at lines 1600--1600
-\TU/STSong(0)/m/n/6.52437 限 环 境 中 服 务 大 模
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 tensor/KV/activation
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 placement; GPU-
- []
-
-
-Underfull \hbox (badness 7704) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 CPU-disk offloading;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 E2LLM:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Structure-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Guided Effi-
- []
-
-
-Underfull \hbox (badness 2035) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 cient Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 for LLMs in
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Distributed
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 边 缘 结 构 规 划 与
- []
-
-
-Underfull \hbox (badness 2310) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ning; static-dynamic
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 FlexPipe:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Adapting
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Dynamic
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 LLM Serving
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Through In-
- []
-
-
-Underfull \hbox (badness 6808) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 flight Pipeline
- []
-
-
-Underfull \hbox (badness 5050) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Refactoring in
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Fragmented
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 EuroSys
- []
-
-
-Underfull \hbox (badness 1888) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 层 级 切 分 \TU/lmr/m/n/6.52437 /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 运 行 时 \TU/lmr/m/n/6.52437 pipeline
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 fine-grained model
- []
-
-
-Underfull \hbox (badness 2951) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 partitioning; inflight
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 pipeline refactoring;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 DistServe:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Disaggregat-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ing Prefill
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 and Decoding
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 for Goodput-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 1776) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 prefill/decode \TU/STSong(0)/m/n/6.52437 物
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 phase-specific work-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ers; phase-aware
- []
-
-
-Underfull \hbox (badness 3250) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Splitwise: Ef-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ficient Gen-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 erative LLM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 2368) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 prompt pool; token
- []
-
-
-Underfull \hbox (badness 2150) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ing; overlapped KV
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Mooncake:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Trading more
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 computation
- []
-
-
-Underfull \hbox (badness 1596) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 – A KVCache-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 USENIX
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 global scheduling;
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 KVCache-centric ar-
- []
-
-
-Underfull \hbox (badness 4981) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 SLIDE: Simul-
- []
-
-
-Underfull \hbox (badness 1975) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 taneous Model
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Downloading
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 and Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 推 理 阶 段 切
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 layer-wise down-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 load/inference over-
- []
-
-
-Underfull \hbox (badness 1789) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 lap; bandwidth and
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 On-Device
- []
-
-
-Underfull \hbox (badness 1466) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 LLM Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 With Specula-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 语 义\TU/lmr/m/n/6.52437 /token
- []
-
-
-Underfull \hbox (badness 1430) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 on-device speculative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 SPIN: Ac-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 celerating
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Large Lan-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 guage Model
- []
-
-
-Underfull \hbox (badness 4699) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference with
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Heterogeneous
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Speculative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 IEEE IN-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 FOCOM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 语 义\TU/lmr/m/n/6.52437 /token
- []
-
-
-Underfull \hbox (badness 5847) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 异 构 草 稿 模 型 选 择
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 heterogeneous SSM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 selection; request
- []
-
-
-Underfull \hbox (badness 2582) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 decomposition; spec-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ulation/verification
- []
-
-
-Underfull \hbox (badness 6364) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 为 不 同 难 度 请 求 选 择 合 适 的 异 构 \TU/lmr/m/n/6.52437 sp
-eculative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 erative LLM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Serving with
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Tree-based
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Speculative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference and
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 ASPLOS
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 语 义\TU/lmr/m/n/6.52437 /token
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 SwapMoE:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Serving Off-
- []
-
-
-Underfull \hbox (badness 3364) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 the-shelf MoE-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 based Large
- []
-
-
-Underfull \hbox (badness 4353) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 els with Tun-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 able Memory
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 4108) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 virtual experts; ex-
- []
-
-
-Underfull \hbox (badness 2293) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 pert swapping; tun-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 Taming
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Latency-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Off in MoE-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Based LLM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Serving via
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Fine-Grained
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 EuroSys
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 fine-grained expert
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 offloading; latency-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 MoE-Infinity:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Efficient MoE
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inference on
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Personal Ma-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 chines with
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Sparsity-Aware
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 稀 疏 感 知 \TU/lmr/m/n/6.52437 expert
- []
-
-
-Underfull \hbox (badness 4899) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 An Algorithm-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 System Co-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 and Scalable
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 pre-gating; expert
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 EdgeMoE:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Empowering
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Sparse Large
- []
-
-
-Underfull \hbox (badness 2781) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 els on Mobile
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 2698) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 移 动 端 稀 疏 \TU/lmr/m/n/6.52437 LLM
- []
-
-
-Underfull \hbox (badness 4779) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 sparse MoE deploy-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 专 家\TU/lmr/m/n/6.52437 /\TU/STSong(0)/m/n/6.52437 
-组 件
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 无 线 边 缘 分 布 式
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 wireless distributed
- []
-
-
-Underfull \hbox (badness 6910) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 experts; expert se-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 lection; bandwidth
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 P4LLM: Pro-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 ding Privacy
- []
-
-
-Underfull \hbox (badness 6332) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 against Model
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Inversion At-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 LLM Serving
- []
-
-
-Underfull \hbox (badness 1448) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 via Token-wise
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 Partition and
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-[]|\TU/STSong(0)/m/n/6.52437 语 义\TU/lmr/m/n/6.52437 /token
- []
-
-
-Underfull \hbox (badness 1975) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 token-wise parti-
- []
-
-
-Underfull \hbox (badness 2970) in paragraph at lines 1600--1600
-[]|\TU/lmr/m/n/6.52437 insensitive token fil-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 tering; partitioning
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1600--1600
-\TU/lmr/m/n/6.52437 scheduler; hidden-
- []
-
-
-LaTeX Warning: Float too large for page by 759.54877pt on input line 1601.
-
-[32
-
-] [33]
-Underfull \hbox (badness 1184) in paragraph at lines 1637--1637
-[]|\TU/lmr/m/n/6.52437 IEEE IoT Journal
- []
-
-
-Underfull \hbox (badness 5548) in paragraph at lines 1637--1637
-[]|\TU/STSong(0)/m/n/6.52437 将 \TU/lmr/m/n/6.52437 LLM \TU/STSong(0)/m/n/6.5243
-7 划 分 为 多 个 \TU/lmr/m/n/6.52437 model
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 1637--1637
-[]|\TU/STSong(0)/m/n/6.52437 体 现 层 级 切 分 与 异 构 资 源 感 知 并 行
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1637--1637
-[]|\TU/lmr/m/n/6.52437 IEEE INFOCOM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1637--1637
-[]|\TU/lmr/m/n/6.52437 IEEE INFOCOM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1637--1637
-[]|\TU/STSong(0)/m/n/6.52437 多 个 边 缘 设 备 协 作 执 行 生 成 式
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1637--1637
-[]|\TU/STSong(0)/m/n/6.52437 设 计 \TU/lmr/m/n/6.52437 collaborative pipeline
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1637--1637
-\TU/lmr/m/n/6.52437 scheduling\TU/STSong(0)/m/n/6.52437 ，|  并 区 分 \TU/lmr/m/n/6
-.52437 pre-
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 1637--1637
-[]|\TU/STSong(0)/m/n/6.52437 同 时 涉 及 边 缘 协 作 拓 扑 和 阶 段 级 执
- []
-
-[34]
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-[]|\TU/lmr/m/n/6.52437 Resource-Efficient
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 Transformer Infer-
- []
-
-
-Underfull \hbox (badness 1571) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 ence With Hybrid
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-[]|\TU/lmr/m/n/6.52437 Collaborative edge Trans-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-[]|\TU/lmr/m/n/6.52437 Co-Designing
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 Transformer Ar-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 chitectures for
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 Distributed Infer-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-\TU/lmr/m/n/6.52437 ence With Low
- []
-
-
-Underfull \hbox (badness 3954) in paragraph at lines 1678--1678
-[]|\TU/STSong(0)/m/n/6.52437 通 过 低 通 信 架 构 \TU/lmr/m/n/6.52437 co-design \TU/ST
-Song(0)/m/n/6.52437 和
- []
-
-
-Underfull \hbox (badness 2384) in paragraph at lines 1678--1678
-[]|\TU/STSong(0)/m/n/6.52437 通 过 线 性 规 划 选 择 \TU/lmr/m/n/6.52437 tensor\TU/STSo
-ng(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 KV
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 1678--1678
-[]|\TU/STSong(0)/m/n/6.52437 体 现 水 平 切 分 与 异 构 并 行 规 划 的 结
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1678--1678
-[]|\TU/lmr/m/n/6.52437 IEEE INFOCOM
- []
-
-[35]
-Underfull \hbox (badness 3386) in paragraph at lines 1715--1715
-[]|\TU/STSong(0)/m/n/6.52437 通 过 \TU/lmr/m/n/6.52437 virtual experts\TU/STSong(
-0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 expert
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1715--1715
-[]|\TU/STSong(0)/m/n/6.52437 典 型 \TU/lmr/m/n/6.52437 expert/component-level
- []
-
-
-Underfull \hbox (badness 5119) in paragraph at lines 1715--1715
-\TU/lmr/m/n/6.52437 partitioning\TU/STSong(0)/m/n/6.52437 ，|  切 分 对 象 是 \TU/lmr
-/m/n/6.52437 MoE
- []
-
-[36]
-Underfull \hbox (badness 10000) in paragraph at lines 1757--1757
-[]|\TU/lmr/m/n/6.52437 IEEE INFOCOM
- []
-
-
-Underfull \hbox (badness 2726) in paragraph at lines 1757--1757
-[]|\TU/STSong(0)/m/n/6.52437 边 缘 设 备 协 同 执 行 生 成 式 \TU/lmr/m/n/6.52437 LLM
- []
-
-
-Underfull \hbox (badness 2875) in paragraph at lines 1757--1757
-\TU/STSong(0)/m/n/6.52437 行，| \TU/lmr/m/n/6.52437 decode \TU/STSong(0)/m/n/6.52
-437 阶 段 采 用 \TU/lmr/m/n/6.52437 outline-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1757--1757
-[]|\TU/STSong(0)/m/n/6.52437 边 缘 侧 进 行 结 构 规 划 并 生 成
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1757--1757
-\TU/lmr/m/n/6.52437 segment-specific KV cache\TU/STSong(0)/m/n/6.52437 ，|
- []
-
-
-Underfull \hbox (badness 3260) in paragraph at lines 1757--1757
-[]|\TU/STSong(0)/m/n/6.52437 更 接 近 \TU/lmr/m/n/6.52437 prefill/coordination \TU
-/STSong(0)/m/n/6.52437 与
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1757--1757
-[]|\TU/lmr/m/n/6.52437 USENIX FAST
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1757--1757
-[]|\TU/STSong(0)/m/n/6.52437 长 上 下 文 聊 天 服 务 中，| \TU/lmr/m/n/6.52437 pre-
- []
-
-
-Underfull \hbox (badness 1681) in paragraph at lines 1757--1757
-[]|\TU/lmr/m/n/6.52437 prefill/decode disaggregation\TU/STSong(0)/m/n/6.52437 ，
-|
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 1757--1757
-[]|\TU/STSong(0)/m/n/6.52437 将 模 型 下 载 与 推 理 执 行 视 为 可 重 叠
- []
-
-[37]
-Underfull \hbox (badness 1237) in paragraph at lines 1798--1798
-[]|\TU/lmr/m/n/6.52437 On-device speculative decod-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1798--1798
-[]|\TU/lmr/m/n/6.52437 IEEE INFOCOM
- []
-
-
-Underfull \hbox (badness 1701) in paragraph at lines 1798--1798
-[]|\TU/STSong(0)/m/n/6.52437 不 同 请 求 适 合 不 同 异 构 草 稿 模 型，|
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1798--1798
-[]|\TU/lmr/m/n/6.52437 Heterogeneous speculative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1798--1798
-[]|\TU/STSong(0)/m/n/6.52437 偏 安 全，|  但 切 分 粒 度 明 确，|  属 于
- []
-
-[38] [39]
-Underfull \hbox (badness 1354) in paragraph at lines 1873--1873
-[]|\TU/lmr/m/n/6.52437 split point\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52
-437 layer placement\TU/STSong(0)/m/n/6.52437 、|
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-[]|\TU/lmr/m/n/6.52437 attention head\TU/STSong(0)/m/n/6.52437 、|
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-\TU/lmr/m/n/6.52437 MLP \TU/STSong(0)/m/n/6.52437 矩 阵、| \TU/lmr/m/n/6.52437 ten
-sor
- []
-
-
-Underfull \hbox (badness 5711) in paragraph at lines 1873--1873
-\TU/lmr/m/n/6.52437 shard\TU/STSong(0)/m/n/6.52437 、|  通 信 \TU/lmr/m/n/6.52437 
-primi-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-[]|\TU/lmr/m/n/6.52437 Expert /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-\TU/lmr/m/n/6.52437 Component-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-[]|\TU/lmr/m/n/6.52437 prefill/decode worker\TU/STSong(0)/m/n/6.52437 、| \TU/lm
-r/m/n/6.52437 stage
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1873--1873
-\TU/lmr/m/n/6.52437 queue\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 KV tr
-ansfer\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.52437 phase
- []
-
-
-Underfull \hbox (badness 1107) in paragraph at lines 1873--1873
-[]|\TU/lmr/m/n/6.52437 Semantic / Token-
- []
-
-
-Underfull \hbox (badness 3128) in paragraph at lines 1873--1873
-\TU/lmr/m/n/6.52437 level Collaborative
- []
-
-[40] [41] [42
+] [31] [32] [33] [34] [35] [36] [37] [38] [39] [40
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Queue-level
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Dynamic / Ad-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Queue-level
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Dynamic / Ad-
- []
-
-
-Underfull \hbox (badness 3323) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 SLO-aware scheduling\TU/STSong(0)/m/n/6.52437 ；|
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Queue-level
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Dynamic / Ad-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Queue-level
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Dynamic / Ad-
- []
-
-
-Underfull \hbox (badness 8113) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 time utility\TU/STSong(0)/m/n/6.52437 ；| \TU/lmr/m/n/6.5
-2437 iteration-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 streaming token
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Batching\TU/STSong(0)/m/n/6.52437 ；| \TU/lmr/m/n/6.52437 Ch
-un-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 ked Prefill /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Blended Batch-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Chunked Prefill
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Chunked Prefill
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Chunked Prefill
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 online/offline mixed
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Disaggregated
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Prefill-Decode
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/STSong(0)/m/n/6.52437 将 \TU/lmr/m/n/6.52437 compute-heavy prefill \TU/ST
-Song(0)/m/n/6.52437 与
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 memory/latency-sensitive decode \TU/STSong(0)/m/n/6.52437 解
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Disaggregated
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Prefill-Decode
- []
-
-
-Underfull \hbox (badness 2435) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 USENIX FAST
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 Disaggregated
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1952--1952
-\TU/lmr/m/n/6.52437 Prefill-Decode
- []
-
-
-Underfull \hbox (badness 1635) in paragraph at lines 1952--1952
-[]|\TU/lmr/m/n/6.52437 distributed KV cache\TU/STSong(0)/m/n/6.52437 ；|
- []
-
-
-Underfull \hbox (badness 1371) in paragraph at lines 1952--1952
-[]|\TU/STSong(0)/m/n/6.52437 在 \TU/lmr/m/n/6.52437 prefill/decode \TU/STSong(0)
-/m/n/6.52437 解 耦 基 础 上 构 建 分 布 式
- []
-
-
-Underfull \hbox (badness 10000) in alignment at lines 1952--1952
+Underfull \hbox (badness 10000) in alignment at lines 2042--2042
 [][][][][][] 
  []
 
-[43]
-Underfull \hbox (badness 1701) in paragraph at lines 1990--1990
-[]|\TU/STSong(0)/m/n/6.52437 根 据 成 本 模 型 预 测 请 求 紧 迫 程 度，|
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1990--1990
-[]|\TU/lmr/m/n/6.52437 SoCC 2024
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1990--1990
-|\TU/STSong(0)/m/n/6.52437 （\TU/lmr/m/n/6.52437 AIOps@ASPLOS
- []
-
-
-Underfull \hbox (badness 1939) in paragraph at lines 1990--1990
-[]|\TU/lmr/m/n/6.52437 LLM serving \TU/STSong(0)/m/n/6.52437 队 列 中 不 同 请 求
- []
-
-[44]
-Underfull \hbox (badness 10000) in paragraph at lines 2031--2031
-[]|\TU/STSong(0)/m/n/6.52437 用 \TU/lmr/m/n/6.52437 PagedAttention \TU/STSong(0)
-/m/n/6.52437 将 \TU/lmr/m/n/6.52437 KV
- []
-
-[45]
-Underfull \hbox (badness 6332) in paragraph at lines 2071--2071
-[]|\TU/lmr/m/n/6.52437 A Hybrid Online
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2071--2071
-\TU/lmr/m/n/6.52437 and Offline Re-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2071--2071
-\TU/lmr/m/n/6.52437 quests Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2071--2071
-[]|\TU/STSong(0)/m/n/6.52437 在 线 交 互 请 求 和 离 线 请 求 共 存，|
- []
-
-
-Underfull \hbox (badness 4242) in paragraph at lines 2071--2071
-\TU/STSong(0)/m/n/6.52437 固 定 策 略 会 浪 费 资 源 或 伤 害 在 线
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2071--2071
-\TU/STSong(0)/m/n/6.52437 充 足 时 填 充 资 源，|  并 与 \TU/lmr/m/n/6.52437 pre-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2071--2071
-[]|\TU/STSong(0)/m/n/6.52437 将 业 务 类 型 和 阶 段 混 合 纳 入
- []
-
-[46]
-Underfull \hbox (badness 10000) in paragraph at lines 2110--2110
-[]|\TU/lmr/m/n/6.52437 USENIX FAST
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2110--2110
-[]|\TU/STSong(0)/m/n/6.52437 长 上 下 文 聊 天 服 务 中，| \TU/lmr/m/n/6.52437 pre-
- []
-
-[47]
-Underfull \hbox (badness 10000) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 Queue-level Dy-
- []
-
-
-Underfull \hbox (badness 8019) in paragraph at lines 2180--2180
-[]|\TU/STSong(0)/m/n/6.52437 请 求 进 入 执 行 前 动 态
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 2180--2180
-[]|\TU/STSong(0)/m/n/6.52437 服 务 时 间 预 测 不 准 会 造 成 错 误 等 待
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 Continuous /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2180--2180
-\TU/lmr/m/n/6.52437 Iteration-level
- []
-
-
-Underfull \hbox (badness 2326) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 decode iteration /
- []
-
-
-Underfull \hbox (badness 1292) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 active set\TU/STSong(0)/m/n/6.52437 、| \TU/lmr/m/n/6.524
-37 join/leave policy\TU/STSong(0)/m/n/6.52437 、|
- []
-
-
-Underfull \hbox (badness 4266) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 Chunked Prefill /
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 Disaggregated
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2180--2180
-\TU/lmr/m/n/6.52437 Prefill-Decode
- []
-
-
-Underfull \hbox (badness 3209) in paragraph at lines 2180--2180
-[]|\TU/lmr/m/n/6.52437 prefill/decode \TU/STSong(0)/m/n/6.52437 分 池
- []
-
-[48] [49]
+[41] [42] [43] [44] [45] [46] [47]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2212.
+(hyperref)                be the same. Added a new anchor on input line 2317.
 
-[50
+[48
 
-]
-Missing character: There is no γ (U+03B3) in font [lmroman7-regular]:mapping=te
-x-text;!
-Missing character: There is no γ (U+03B3) in font [lmroman7-regular]:mapping=te
-x-text;!
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 Quality-of-Service
- []
-
-
-Underfull \hbox (badness 1859) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Aware LLM Rout-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 将 请 求 路 由 建 模 为 \TU/lmr/m/n/6.52437 infinite-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 horizon MDP\TU/STSong(0)/m/n/6.52437 ；|  使 用
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 DistilBERT-based predic-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 length\TU/STSong(0)/m/n/6.52437 ；|  使 用 \TU/lmr/m/n/6.52437
- heterogeneous
- []
-
-
-Underfull \hbox (badness 2591) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 graph attention network \TU/STSong(0)/m/n/6.52437 抽
- []
-
-
-Underfull \hbox (badness 5533) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 象 系 统 状 态，|  并 用 \TU/lmr/m/n/6.52437 SAC \TU/STSong(0
-)/m/n/6.52437 学 习
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 predictable LLM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Requests With
- []
-
-
-Underfull \hbox (badness 5490) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 RouteLLM: Learn-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 from Preference
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 在 保 持 回 复 质 量 的 同 时 降 低 强 模 型
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 Efficient Training-
- []
-
-
-Underfull \hbox (badness 2189) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Free Online Rout-
- []
-
-Missing character: There is no γ (U+03B3) in font [lmroman7-regular]:mapping=te
-x-text;!
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 先 用 历 史 \TU/lmr/m/n/6.52437 query \TU/STSong(0)/m/
-n/6.52437 的 近 邻 检 索
- []
-
-
-Underfull \hbox (badness 3260) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 一 次 轻 量 优 化，|  学 习 每 个 \TU/lmr/m/n/6.52437 LLM
- []
-
-
-Underfull \hbox (badness 5726) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 的 预 算  |“影 子 价 格”| \TU/lmr/m/n/6.52437 γ\TU/STSong(0)
-/m/n/6.52437 。|  之 后 每 个 新
- []
-
-
-Underfull \hbox (badness 1590) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 算 成 本 惩 罚”|  打 分，|  选 择 得 分 最 高
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 Large Language
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Models Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Cloud-Edge Com-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 Joint Inference
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Offloading and
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Small and Large
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Language Model
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 在 短 时 间 尺 度 上 使 用 \TU/lmr/m/n/6.52437 factor
- []
-
-
-Underfull \hbox (badness 1655) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 行 分 布 式 \TU/lmr/m/n/6.52437 inference offloading
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 在 时 延 和 显 存 约 束 下 最 大 化 长 期 平
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-[]|\TU/lmr/m/n/6.52437 MGCO: Mobility-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Aware Generative
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 Computation Of-
- []
-
-
-Underfull \hbox (badness 6944) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 floading in Edge-
- []
-
-
-Underfull \hbox (badness 5417) in paragraph at lines 2239--2239
-\TU/lmr/m/n/6.52437 tation offloading action \TU/STSong(0)/m/n/6.52437 会
- []
-
-
-Underfull \hbox (badness 4242) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 受 到 历 史 决 策 和 未 来 移 动 状 态 影
- []
-
-
-Underfull \hbox (badness 6995) in paragraph at lines 2239--2239
-\TU/STSong(0)/m/n/6.52437 响；|  短 程 决 策 容 易 短 视，|  且 传 统
- []
-
-
-Underfull \hbox (badness 3199) in paragraph at lines 2239--2239
-[]|\TU/STSong(0)/m/n/6.52437 使 用 \TU/lmr/m/n/6.52437 Transformer MHA en-
- []
-
-[51]
-Underfull \hbox (badness 5490) in paragraph at lines 2280--2280
-[]|\TU/lmr/m/n/6.52437 RouteLLM: Learn-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 from Preference
- []
-
-
-Underfull \hbox (badness 3158) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 现 有 \TU/lmr/m/n/6.52437 LLM serving \TU/STSong(0)/
-m/n/6.52437 中，|  所 有
- []
-
-
-Underfull \hbox (badness 1147) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 query \TU/STSong(0)/m/n/6.52437 都 调 用 强 模 型 会 带 来 高 成
- []
-
-
-Underfull \hbox (badness 7777) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 使 用 偏 好 数 据 训 练 一 个 \TU/lmr/m/n/6.52437 query-
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 在 保 持 目 标 回 答 质 量 的 同 时 减 少 强
- []
-
-
-Underfull \hbox (badness 4328) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 通 过 将 \TU/lmr/m/n/6.52437 query \TU/STSong(0)/m/n/
-6.52437 映 射 到 \TU/lmr/m/n/6.52437 latent
- []
-
-
-Underfull \hbox (badness 1540) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 ing Agentic Work-
- []
-
-
-Underfull \hbox (badness 4242) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 如 何 在 尽 量 减 少 人 工 设 计 的 情 况
- []
-
-
-Underfull \hbox (badness 3713) in paragraph at lines 2280--2280
-\TU/STSong(0)/m/n/6.52437 表 示 为 代 码 形 式 的 \TU/lmr/m/n/6.52437 LLM \TU/STSong(0)
-/m/n/6.52437 调 用
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2280--2280
-[]|\TU/lmr/m/n/6.52437 Mobility-Aware
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 Dependent Task
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 ital Twin-Assisted
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2280--2280
-\TU/lmr/m/n/6.52437 Reinforcement
- []
-
-
-Underfull \hbox (badness 3260) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 移 动 用 户 产 生 具 有 \TU/lmr/m/n/6.52437 DAG \TU/STSong
-(0)/m/n/6.52437 依 赖
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 2280--2280
-[]|\TU/STSong(0)/m/n/6.52437 最 小 化 任 务 完 成 时 间 和 能 耗 的 加 权
- []
-
-[52] [53]
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Spillover Manage-
- []
-
-
-Underfull \hbox (badness 2799) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 ment on Memory-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Constrained GPU
- []
-
-
-Underfull \hbox (badness 1226) in paragraph at lines 2322--2322
-\TU/STSong(0)/m/n/6.52437 择 \TU/lmr/m/n/6.52437 KV cache \TU/STSong(0)/m/n/6.52
-437 溢 出 策 略，|  并 把
- []
-
-
-Underfull \hbox (badness 4378) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 Weaver: Efficient
- []
-
-
-Underfull \hbox (badness 6316) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 Mooncake: Trad-
- []
-
-
-Underfull \hbox (badness 4144) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 ing More Storage
- []
-
-
-Underfull \hbox (badness 1122) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 for Less Computa-
- []
-
-
-Underfull \hbox (badness 7540) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 for Serving LLM
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 USENIX FAST,
- []
-
-
-Underfull \hbox (badness 2213) in paragraph at lines 2322--2322
-[]|\TU/STSong(0)/m/n/6.52437 在 长 上 下 文 \TU/lmr/m/n/6.52437 LLM \TU/STSong(0)/m/
-n/6.52437 聊 天 服 务 中，|
- []
-
-
-Underfull \hbox (badness 4454) in paragraph at lines 2322--2322
-\TU/STSong(0)/m/n/6.52437 如 何 用 全 局 分 布 式 \TU/lmr/m/n/6.52437 KV cache
- []
-
-
-Underfull \hbox (badness 5388) in paragraph at lines 2322--2322
-\TU/STSong(0)/m/n/6.52437 复 用 历 史 前 缀 计 算，|  减 少 昂 贵 的
- []
-
-
-Underfull \hbox (badness 1584) in paragraph at lines 2322--2322
-\TU/STSong(0)/m/n/6.52437 中 \TU/lmr/m/n/6.52437 CPU/DRAM/SSD/RDMA
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/STSong(0)/m/n/6.52437 组 织 成 全 局 分 布 式 \TU/lmr/m/n/6.52437 KVCache
- []
-
-
-Underfull \hbox (badness 4479) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 DistServe: Disag-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 gregating Prefill
- []
-
-
-Underfull \hbox (badness 4181) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 and Decoding for
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Goodput-optimized
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 USENIX OSDI,
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 Serving Long-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Context LLMs
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 at the Mobile
- []
-
-
-Underfull \hbox (badness 5908) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Edge: Test-Time
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Reinforcement
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Learning-based
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 Inference Offload-
- []
-
-
-Underfull \hbox (badness 3568) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 Mobile edge \TU/STSong(0)/m/n/6.52437 难 以 支 撑 \TU/lmr/m/
-n/6.52437 long-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-[]|\TU/STSong(0)/m/n/6.52437 降 低 系 统 成 本，|  同 时 保 证 \TU/lmr/m/n/6.52437 long-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-[]|\TU/lmr/m/n/6.52437 Context-Aware
- []
-
-
-Underfull \hbox (badness 2762) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 AIGC Service Mi-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 2322--2322
-\TU/lmr/m/n/6.52437 via Transformer
- []
-
-[54]
-Overfull \hbox (16.17021pt too wide) in paragraph at lines 2349--2350
-[]\TU/STSong(0)/m/n/10.53937 第 三，| \TU/lmr/m/n/10.53937 LLM inference offloadin
-g \TU/STSong(0)/m/n/10.53937 正 在 从 \TU/lmr/m/n/10.53937 computation-aware \TU/S
-TSong(0)/m/n/10.53937 走 向 \TU/lmr/m/n/10.53937 computation-state co-optimizatio
-n\TU/STSong(0)/m/n/10.53937 。|
- []
-
-[55] [56]
+] [49] [50] [51] [52] [53] [54]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2367.
+(hyperref)                be the same. Added a new anchor on input line 2487.
 
-[57
+[55
 
-] [58] [59] [60] [61
+] [56] [57] [58] [59
 
 ]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2448.
+(hyperref)                be the same. Added a new anchor on input line 2568.
+
+[60
+
+] [61]
+
+Package hyperref Warning: The anchor of a bookmark and its parent's must not
+(hyperref)                be the same. Added a new anchor on input line 2610.
 
 [62
 
-] [63]
-
-Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2490.
-
-[64
-
-] [65] [66
+] [63] [64
 
 ]
-Overfull \hbox (63.47614pt too wide) in paragraph at lines 2557--2558
-[]\TU/lmr/m/n/10.53937 [9] NVIDIA, ”TensorRT-LLM documentation,” 2026. [Online]
-. Available: [][]https://nvidia.github.io/TensorRT-
+
+Package fontspec Info: 
+(fontspec)             Script 'CJK' not explicitly supported within font
+(fontspec)             'STFangsong'. Check the typeset output, and if it is
+(fontspec)             okay then ignore this warning. Otherwise a different
+(fontspec)             font should be chosen.
+
+
+Package fontspec Info: 
+(fontspec)             Could not resolve font "STFangsong/BI" (it probably
+(fontspec)             doesn't exist).
+
+
+Package fontspec Info: 
+(fontspec)             Could not resolve font "STFangsong/B" (it probably
+(fontspec)             doesn't exist).
+
+
+Package fontspec Info: 
+(fontspec)             Could not resolve font "STFangsong/I" (it probably
+(fontspec)             doesn't exist).
+
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `lmtt' (encoding: TU).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+
+Package fontspec Info: 
+(fontspec)             Font family 'STFangsong(0)' created for font
+(fontspec)             'STFangsong' with options [Script={CJK}].
+(fontspec)              
+(fontspec)              This font family consists of the following NFSS
+(fontspec)             series/shapes:
+(fontspec)              
+(fontspec)             - 'normal' (m/n) with NFSS spec.:
+(fontspec)             <->"STFangsong/OT:script=hani;language=dflt;"
+
+ [65
+
+] [66] [67] [68]
+Overfull \hbox (0.96266pt too wide) in paragraph at lines 2817--2818
+[]\TU/TimesNewRoman(0)/m/n/10.53937 [68] ”Serving Long-Context LLMs at the Mobi
+le Edge: Test-Time Reinforcement Learning-based Model
  []
 
-
-Overfull \hbox (160.61339pt too wide) in paragraph at lines 2560--2561
-[]\TU/lmr/m/n/10.53937 [10] NVIDIA, ”Triton Inference Server: Dynamic batcher,”
- 2026. [Online]. Available: [][]https://docs.nvidia.com/deeplearning/triton-
- []
-
-[67] [68] (./20260521-llm-cec-survey.aux)
+[69] (./20260521-llm-cec-survey.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2022/07/14>
@@ -3315,15 +1477,15 @@ LaTeX Font Warning: Size substitutions with differences
 
 Package rerunfilecheck Info: File `20260521-llm-cec-survey.out' has not changed
 .
-(rerunfilecheck)             Checksum: D6754C76B37744A8090BE09A631C97CC;11581.
+(rerunfilecheck)             Checksum: 02D9EF1F604C8F0B61937AA687FF9445;11659.
  ) 
 Here is how much of TeX's memory you used:
- 18550 strings out of 469709
- 411881 string characters out of 5466024
- 954960 words of memory out of 5000000
- 46930 multiletter control sequences out of 15000+600000
- 632337 words of font info for 93 fonts, out of 8000000 for 9000
+ 18533 strings out of 469709
+ 410451 string characters out of 5466024
+ 940017 words of memory out of 5000000
+ 46906 multiletter control sequences out of 15000+600000
+ 632465 words of font info for 109 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 93i,10n,114p,1020b,516s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,13n,114p,1102b,516s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on 20260521-llm-cec-survey.xdv (69 pages, 1441020 bytes).
+Output written on 20260521-llm-cec-survey.xdv (70 pages, 1494852 bytes).

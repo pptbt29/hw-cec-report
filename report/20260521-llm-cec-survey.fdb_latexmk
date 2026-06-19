@@ -1,10 +1,10 @@
 # Fdb version 4
-["xdvipdfmx"] 1781840929.74779 "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey.pdf" "20260521-llm-cec-survey" 1781840929.89838 0
-  "20260521-llm-cec-survey.xdv" 1781840929.63314 1441020 79196cc24593f3fe3cc69675af2731a3 "xelatex"
+["xdvipdfmx"] 1781858877.88741 "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey.pdf" "20260521-llm-cec-survey" 1781858878.0317 0
+  "20260521-llm-cec-survey.xdv" 1781858877.81742 1494852 031de81b60315f1d0ea73d7a3ceac0ac "xelatex"
   (generated)
   "20260521-llm-cec-survey.pdf"
   (rewritten before read)
-["xelatex"] 1781840928.42459 "20260521-llm-cec-survey.tex" "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey" 1781840929.89761 0
+["xelatex"] 1781858876.62267 "20260521-llm-cec-survey.tex" "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey" 1781858878.03104 0
   "/System/Library/Fonts/Menlo.ttc" 1779353822 2156036 ec05dfca6821d85440da0899493002c3 ""
   "/usr/local/texlive/2026basic/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/usr/local/texlive/2026basic/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -76,7 +76,6 @@
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype-xetex.def" 1772383374 28582 5b3d64bb402942e40230fb37f10ea7b9 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype.cfg" 1772383374 27642 f0cea12315babf4d40608f4eeb5c8458 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype.sty" 1772383374 102845 043c56602c7d94c8a716319df1af5479 ""
-  "/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-LatinModernRoman.cfg" 1772383374 10016 5896aba9c46b11b73f31aca702250e00 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-cmr.cfg" 1772226603 22906 2122f73c0e7dc828f24240c2422dfe25 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/refcount/refcount.sty" 1576624809 9878 9e94e8fa600d95f9c7731bb21dfb67a4 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1750533675 9684 a33a14b82ce60d6e77cb9be689d79ee6 ""
@@ -95,10 +94,10 @@
   "/usr/local/texlive/2026basic/texmf-dist/web2c/texmf.cnf" 1770478701 43630 e9fa012910491fe5ae08a72c3c2997a7 ""
   "/usr/local/texlive/2026basic/texmf-var/web2c/xetex/xelatex.fmt" 1772405592 5411330 a9f71f02640f08d181d83650a436ab3f ""
   "/usr/local/texlive/2026basic/texmf.cnf" 1772405582 628 bbc09d6d38872d53c11bb48dc9b14e88 ""
-  "20260521-llm-cec-survey.aux" 1781840929.63182 16659 a3a84373952a0b2ac61221c48993927c "xelatex"
-  "20260521-llm-cec-survey.out" 1781840929.6328 11581 d6754c76b37744a8090be09a631c97cc "xelatex"
-  "20260521-llm-cec-survey.tex" 1781840920.40863 205417 e16719e40e2b73500af13b2fc77f6457 ""
-  "20260521-llm-cec-survey.toc" 1781840929.63306 6920 309865c6b22d5f8da743850f23c1e34d "xelatex"
+  "20260521-llm-cec-survey.aux" 1781858877.81606 16756 d25742cfe902ecfb144f4451514c8ffa "xelatex"
+  "20260521-llm-cec-survey.out" 1781858877.81705 11659 02d9ef1f604c8f0b61937aa687ff9445 "xelatex"
+  "20260521-llm-cec-survey.tex" 1781858869.28406 214425 b094fa182708c4a72ace3838b827e4a7 ""
+  "20260521-llm-cec-survey.toc" 1781858877.81733 6976 d6de1b60d571591ff15469f4c5813a27 "xelatex"
   (generated)
   "20260521-llm-cec-survey.aux"
   "20260521-llm-cec-survey.log"
