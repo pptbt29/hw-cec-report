@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  19 JUN 2026 16:47
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  19 JUN 2026 18:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -727,31 +727,47 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@lastruleclass=\count330
 \@thisrulewidth=\dimen263
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/tabularx.sty
+(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: xetex.def on input line 106.
+)
+\Gin@req@height=\dimen264
+\Gin@req@width=\dimen265
+) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/tabularx.sty
 Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/array.sty
 Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
-\col@sep=\dimen264
+\col@sep=\dimen266
 \ar@mcellbox=\box57
-\extrarowheight=\dimen265
+\extrarowheight=\dimen267
 \NC@list=\toks19
 \extratabsurround=\skip60
 \backup@length=\skip61
 \ar@cellbox=\box58
 )
-\TX@col@width=\dimen266
-\TX@old@table=\dimen267
-\TX@old@col=\dimen268
-\TX@target=\dimen269
-\TX@delta=\dimen270
+\TX@col@width=\dimen268
+\TX@old@table=\dimen269
+\TX@old@col=\dimen270
+\TX@target=\dimen271
+\TX@delta=\dimen272
 \TX@cols=\count331
 \TX@ftn=\toks20
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/enumitem/enumitem.sty
 Package: enumitem 2025/02/06 v3.11 Customized lists
 \labelindent=\skip62
-\enit@outerparindent=\dimen271
+\enit@outerparindent=\dimen273
 \enit@toks=\toks21
 \enit@inbox=\box59
 \enit@count@id=\count332
@@ -762,12 +778,12 @@ Package: titlesec 2025/01/04 v2.17 Sectioning titles
 \ttl@box=\box60
 \beforetitleunit=\skip63
 \aftertitleunit=\skip64
-\ttl@plus=\dimen272
-\ttl@minus=\dimen273
+\ttl@plus=\dimen274
+\ttl@minus=\dimen275
 \ttl@toksa=\toks22
-\titlewidth=\dimen274
-\titlewidthlast=\dimen275
-\titlewidthfirst=\dimen276
+\titlewidth=\dimen276
+\titlewidthlast=\dimen277
+\titlewidthfirst=\dimen278
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype.sty
 Package: microtype 2026/03/01 v3.2d Micro-typographical refinements (RS)
@@ -779,7 +795,7 @@ LaTeX Info: Redefining \leftprotrusion on input line 1085.
 \MT@prot@toks=\toks24
 LaTeX Info: Redefining \rightprotrusion on input line 1104.
 LaTeX Info: Redefining \textls on input line 1449.
-\MT@outer@kern=\dimen277
+\MT@outer@kern=\dimen279
 LaTeX Info: Redefining \microtypecontext on input line 2053.
 LaTeX Info: Redefining \textmicrotypecontext on input line 2070.
 \MT@listname@count=\count335
@@ -809,14 +825,14 @@ Package: caption 2023/08/05 v3.6o Customizing captions (AR)
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/caption/caption3.sty
 Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
-\caption@tempdima=\dimen278
-\captionmargin=\dimen279
-\caption@leftmargin=\dimen280
-\caption@rightmargin=\dimen281
-\caption@width=\dimen282
-\caption@indent=\dimen283
-\caption@parindent=\dimen284
-\caption@hangindent=\dimen285
+\caption@tempdima=\dimen280
+\captionmargin=\dimen281
+\caption@leftmargin=\dimen282
+\caption@rightmargin=\dimen283
+\caption@width=\dimen284
+\caption@indent=\dimen285
+\caption@parindent=\dimen286
+\caption@hangindent=\dimen287
 Package caption Info: Standard document class detected.
 )
 \c@caption@flags=\count337
@@ -827,7 +843,7 @@ Package caption Info: hyperref package is loaded.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/setspace/setspace.sty
 Package: setspace 2022/12/04 v6.7b set line spacing
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 31.
+Package hyperref Info: Option `colorlinks' set `true' on input line 32.
 
 
 LaTeX Warning: Unused global option(s):
@@ -836,26 +852,26 @@ LaTeX Warning: Unused global option(s):
 (./20260521-llm-cec-survey.aux)
 \openout1 = `20260521-llm-cec-survey.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 52.
-LaTeX Font Info:    ... okay on input line 52.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 53.
+LaTeX Font Info:    ... okay on input line 53.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
@@ -863,64 +879,64 @@ Package fontspec Info:
 
 \symlegacymaths=\mathgroup4
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 52.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 52.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 52.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 52.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 52.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 52.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 52.
-LaTeX Font Info:    Redeclaring math accent \check on input line 52.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 52.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 52.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \colon on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 52.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 52.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 52.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 53.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 53.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 53.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 53.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 53.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 53.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 53.
+LaTeX Font Info:    Redeclaring math accent \check on input line 53.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 53.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 53.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \colon on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 53.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 53.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 53.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 52.
+(Font)              `operators' in the math version `normal' on input line 53.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> TU/TimesNewRoman(0)/m/n on input line 5
-2.
+3.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 52.
+(Font)              `operators' in the math version `bold' on input line 53.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/m/n on input line 
-52.
+53.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/m/n on 
-input line 52.
+input line 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> TU/TimesNewRoman(0)/m/it on input line
- 52.
+ 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/b/n on input line 
-52.
+53.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 52.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 52.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 53.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/b/n on 
-input line 52.
+input line 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> TU/TimesNewRoman(0)/b/it on input lin
-e 52.
+e 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 52.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 53.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 52.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 53.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -956,21 +972,21 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-Package hyperref Info: Link coloring ON on input line 52.
+Package hyperref Info: Link coloring ON on input line 53.
 (./20260521-llm-cec-survey.out) (./20260521-llm-cec-survey.out)
 \@outlinefile=\write3
 \openout3 = `20260521-llm-cec-survey.out'.
 
-LaTeX Info: Redefining \microtypecontext on input line 52.
-Package microtype Info: Applying patch `item' on input line 52.
-Package microtype Info: Applying patch `toc' on input line 52.
-Package microtype Info: Applying patch `eqnum' on input line 52.
+LaTeX Info: Redefining \microtypecontext on input line 53.
+Package microtype Info: Applying patch `item' on input line 53.
+Package microtype Info: Applying patch `toc' on input line 53.
+Package microtype Info: Applying patch `eqnum' on input line 53.
 
 
-Package microtype Warning: Unable to apply patch `footnote' on input line 52.
+Package microtype Warning: Unable to apply patch `footnote' on input line 53.
 
-Package microtype Info: Applying patch `verbatim' on input line 52.
-LaTeX Info: Redefining \microtypesetup on input line 52.
+Package microtype Info: Applying patch `verbatim' on input line 53.
+LaTeX Info: Redefining \microtypesetup on input line 53.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
 Package microtype Info: No adjustment of tracking.
@@ -1164,12 +1180,12 @@ Package microtype Info: Character `textquotedblright ' is missing
 (microtype)             Ignoring protrusion settings for this character.
 
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <10.53937> not available
-(Font)              size <10.95> substituted on input line 69.
+(Font)              size <10.95> substituted on input line 70.
 
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <7> on input line 69.
+(Font)              <7> on input line 70.
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <5> on input line 69.
+(Font)              <5> on input line 70.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
@@ -1318,7 +1334,7 @@ Package microtype Info: Character `textquotedblright ' is missing
 
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 94.
+(hyperref)                be the same. Added a new anchor on input line 95.
 
 [5
 
@@ -1326,7 +1342,7 @@ Package hyperref Warning: The anchor of a bookmark and its parent's must not
 ] [6] [7]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 181.
+(hyperref)                be the same. Added a new anchor on input line 182.
 
 [8
 
@@ -1370,54 +1386,57 @@ Package microtype Info: Character `textquotedblright ' is missing
  [9] [10] [11] [12] [13] [14] [15] [16] [17] [18] [19] [20]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 957.
+(hyperref)                be the same. Added a new anchor on input line 958.
 
 [21
 
-] [22] [23] [24] [25] [26] [27] [28] [29]
+] [22] [23] [24] [25] [26] [27]
+File: figures/taxonomy.png Graphic file (type bmp)
+<figures/taxonomy.png>
+ [28] [29] [30]
 
-LaTeX Warning: Float too large for page by 205.23894pt on input line 1655.
+LaTeX Warning: Float too large for page by 205.23894pt on input line 1665.
 
-[30
+[31
 
-] [31] [32] [33] [34] [35] [36] [37] [38] [39] [40
+] [32] [33] [34] [35] [36] [37] [38] [39] [40] [41
 
 ]
-Underfull \hbox (badness 10000) in alignment at lines 2042--2042
+Underfull \hbox (badness 10000) in alignment at lines 2052--2052
 [][][][][][] 
  []
 
-[41] [42] [43] [44] [45] [46] [47]
+[42] [43] [44] [45] [46] [47] [48]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2317.
+(hyperref)                be the same. Added a new anchor on input line 2327.
 
-[48
+[49
 
-] [49] [50] [51] [52] [53] [54]
+] [50] [51] [52] [53] [54] [55]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2487.
+(hyperref)                be the same. Added a new anchor on input line 2497.
 
-[55
+[56
 
-] [56] [57] [58] [59
+] [57] [58] [59] [60
 
 ]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2568.
+(hyperref)                be the same. Added a new anchor on input line 2578.
 
-[60
+[61
 
-] [61]
+] [62]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2610.
+(hyperref)                be the same. Added a new anchor on input line 2620.
 
-[62
+[63
 
-] [63] [64
+] [64] [65
 
 ]
 
@@ -1457,15 +1476,15 @@ Package fontspec Info:
 (fontspec)             - 'normal' (m/n) with NFSS spec.:
 (fontspec)             <->"STFangsong/OT:script=hani;language=dflt;"
 
- [65
+ [66
 
-] [66] [67] [68]
-Overfull \hbox (0.96266pt too wide) in paragraph at lines 2817--2818
+] [67] [68] [69]
+Overfull \hbox (0.96266pt too wide) in paragraph at lines 2827--2828
 []\TU/TimesNewRoman(0)/m/n/10.53937 [68] ”Serving Long-Context LLMs at the Mobi
 le Edge: Test-Time Reinforcement Learning-based Model
  []
 
-[69] (./20260521-llm-cec-survey.aux)
+[70] (./20260521-llm-cec-survey.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2022/07/14>
@@ -1477,15 +1496,15 @@ LaTeX Font Warning: Size substitutions with differences
 
 Package rerunfilecheck Info: File `20260521-llm-cec-survey.out' has not changed
 .
-(rerunfilecheck)             Checksum: 02D9EF1F604C8F0B61937AA687FF9445;11659.
+(rerunfilecheck)             Checksum: 148A2F4BA00660C7721A59B9BC106AB5;11708.
  ) 
 Here is how much of TeX's memory you used:
- 18533 strings out of 469709
- 410451 string characters out of 5466024
- 940017 words of memory out of 5000000
- 46906 multiletter control sequences out of 15000+600000
+ 18838 strings out of 469709
+ 415820 string characters out of 5466024
+ 944117 words of memory out of 5000000
+ 47197 multiletter control sequences out of 15000+600000
  632465 words of font info for 109 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 93i,13n,114p,1102b,516s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,13n,114p,1102b,555s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on 20260521-llm-cec-survey.xdv (70 pages, 1494852 bytes).
+Output written on 20260521-llm-cec-survey.xdv (71 pages, 1500016 bytes).

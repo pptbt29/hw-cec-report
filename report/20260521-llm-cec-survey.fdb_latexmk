@@ -1,10 +1,10 @@
 # Fdb version 4
-["xdvipdfmx"] 1781858877.88741 "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey.pdf" "20260521-llm-cec-survey" 1781858878.0317 0
-  "20260521-llm-cec-survey.xdv" 1781858877.81742 1494852 031de81b60315f1d0ea73d7a3ceac0ac "xelatex"
+["xdvipdfmx"] 1781864650.87725 "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey.pdf" "20260521-llm-cec-survey" 1781864654.8293 0
+  "20260521-llm-cec-survey.xdv" 1781864650.80968 1500016 323d18a4d6edd65a9d1c8c4020e8168b "xelatex"
   (generated)
   "20260521-llm-cec-survey.pdf"
   (rewritten before read)
-["xelatex"] 1781858876.62267 "20260521-llm-cec-survey.tex" "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey" 1781858878.03104 0
+["xelatex"] 1781864649.76285 "20260521-llm-cec-survey.tex" "20260521-llm-cec-survey.xdv" "20260521-llm-cec-survey" 1781864654.8286 0
   "/System/Library/Fonts/Menlo.ttc" 1779353822 2156036 ec05dfca6821d85440da0899493002c3 ""
   "/usr/local/texlive/2026basic/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/usr/local/texlive/2026basic/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -57,10 +57,14 @@
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec.sty" 1759176595 3804 debc05110ffb506cef68ea4e72c7bcee ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/geometry/geometry.sty" 1578002852 41601 9cf6c5257b1bc7af01a58859749dd37a ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/color.cfg" 1459978653 1213 620bba36b25224fa9b7e1ccb4ecb76fd ""
+  "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/graphics.cfg" 1465944070 1224 978390e9c2234eab29404bc21b268d1e ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-def/xetex.def" 1762027770 14788 68cddb076430acc268ef4203b6523355 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/color.sty" 1748806692 7245 a7e8457a46cda4920df85d975267efb4 ""
+  "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphics.sty" 1748806692 18363 69bb4f5538964bfea50d1e6d89cbe69f ""
+  "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphicx.sty" 1748806692 8118 43b99e52946c33a23f5f43b52d5cc5ec ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/keyval.sty" 1748806692 2671 d9941f4bf4750e9b0603c9a2ec54693b ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/mathcolor.ltx" 1667332637 2885 9c645d672ae17285bba324998918efd8 ""
+  "/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/trig.sty" 1748806692 4023 e66acf578d6b564c4670fb57ff336a7a ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/hycolor/hycolor.sty" 1580250785 17914 4c28a13fc3d975e6e81c9bea1d697276 ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/hxetex.def" 1769721417 44484 d6780d86fced9c26093d4489ab44cf7d ""
   "/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/hyperref.sty" 1769721417 223349 c7928c099a8656537a829ba316c95536 ""
@@ -94,10 +98,11 @@
   "/usr/local/texlive/2026basic/texmf-dist/web2c/texmf.cnf" 1770478701 43630 e9fa012910491fe5ae08a72c3c2997a7 ""
   "/usr/local/texlive/2026basic/texmf-var/web2c/xetex/xelatex.fmt" 1772405592 5411330 a9f71f02640f08d181d83650a436ab3f ""
   "/usr/local/texlive/2026basic/texmf.cnf" 1772405582 628 bbc09d6d38872d53c11bb48dc9b14e88 ""
-  "20260521-llm-cec-survey.aux" 1781858877.81606 16756 d25742cfe902ecfb144f4451514c8ffa "xelatex"
-  "20260521-llm-cec-survey.out" 1781858877.81705 11659 02d9ef1f604c8f0b61937aa687ff9445 "xelatex"
-  "20260521-llm-cec-survey.tex" 1781858869.28406 214425 b094fa182708c4a72ace3838b827e4a7 ""
-  "20260521-llm-cec-survey.toc" 1781858877.81733 6976 d6de1b60d571591ff15469f4c5813a27 "xelatex"
+  "20260521-llm-cec-survey.aux" 1781864650.80781 17085 80304b7096a0ce02afe7d2de3870c84c "xelatex"
+  "20260521-llm-cec-survey.out" 1781864650.80905 11708 148a2f4ba00660c7721a59b9bc106ab5 "xelatex"
+  "20260521-llm-cec-survey.tex" 1781864639.35833 215304 4a32fd5eb9c03cf7a59a2ae80fca85f6 ""
+  "20260521-llm-cec-survey.toc" 1781864650.80957 6989 1b0120795672e48fc49aff743b38b00c "xelatex"
+  "figures/taxonomy.png" 1781864125.67111 1400674 8f655b9d346ff936a46978e382d0d137 ""
   (generated)
   "20260521-llm-cec-survey.aux"
   "20260521-llm-cec-survey.log"

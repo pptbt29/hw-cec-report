@@ -37,45 +37,45 @@
 \contentsline {subsubsection}{3.3.3 CEC 场景下的 Runtime-Level 优化重心}{25}{section*.7}%
 \contentsline {subsubsection}{3.3.4 CEC 场景下的 Serving Policy \& Routing 优化重心}{27}{section*.7}%
 \contentsline {subsection}{3.4 本文采用的 CEC LLM Inference 综述框架}{28}{section*.7}%
-\contentsline {subsection}{3.5 小结}{29}{section*.7}%
-\contentsline {section}{四、CEC 下的资源自适应的模型部署方法}{30}{section*.7}%
-\contentsline {subsection}{4.1 Layer-wise / Vertical Partitioning}{32}{table.caption.8}%
-\contentsline {subsection}{4.2 Tensor / Operator-level Partitioning}{33}{table.caption.9}%
-\contentsline {subsection}{4.3 Expert / Component-level Partitioning}{34}{table.caption.10}%
-\contentsline {subsection}{4.4 Inference Phase Partitioning}{35}{table.caption.11}%
-\contentsline {subsection}{4.5 Semantic / Token-level Collaborative Partitioning}{36}{table.caption.12}%
-\contentsline {subsection}{4.6 小结}{37}{table.caption.13}%
-\contentsline {section}{五、CEC中的业务感知的 batching 参数优化算法}{40}{table.caption.14}%
-\contentsline {subsection}{5.1 Queue-level Dynamic / Admission Batching}{41}{table.caption.15}%
-\contentsline {subsection}{5.2 Continuous Batching / Iteration-level Batching}{42}{table.caption.16}%
-\contentsline {subsection}{5.3 Chunked Prefill / Blended Batching}{44}{table.caption.17}%
-\contentsline {subsection}{5.4 Disaggregated Prefill-Decode Batching}{45}{table.caption.18}%
-\contentsline {subsection}{5.5 小结}{46}{table.caption.19}%
-\contentsline {section}{六、CEC中的 LLM Inference Task Offloading}{48}{table.caption.20}%
-\contentsline {subsection}{6.1 Request / Session-level Routing and Offloading}{48}{section*.21}%
-\contentsline {subsection}{6.2 Multi-model / Multi-agent Workflow Orchestration}{50}{table.caption.22}%
-\contentsline {subsection}{6.3 Context / KV / Runtime State Offloading and Migration}{51}{table.caption.23}%
-\contentsline {subsection}{6.4 小结与趋势}{53}{table.caption.24}%
-\contentsline {section}{七、三类算法的协同优化框架}{55}{table.caption.24}%
-\contentsline {subsection}{7.1 三类算法的基本耦合关系}{55}{section*.25}%
-\contentsline {subsection}{7.2 模型/服务部署与请求卸载的双时间尺度协同}{55}{section*.25}%
-\contentsline {subsection}{7.3 模型切分、阶段解耦与 batching/scheduling 的协同}{56}{section*.25}%
-\contentsline {subsection}{7.4 请求/工作流路由与 runtime state 管理的协同}{56}{section*.25}%
-\contentsline {subsection}{7.5 多用户移动场景下的跨层闭环}{57}{section*.25}%
-\contentsline {subsection}{7.6 控制面、数据面与状态面的工程实现}{58}{section*.25}%
-\contentsline {subsection}{7.7 小结}{58}{section*.25}%
-\contentsline {section}{八、面向华为无线软件实现的技术方案选择与论证}{59}{section*.25}%
-\contentsline {section}{九、实验评估与对比指标}{60}{section*.25}%
-\contentsline {subsection}{9.1 实验场景}{60}{section*.26}%
-\contentsline {subsection}{9.2 Baseline 设置}{60}{section*.26}%
-\contentsline {subsection}{9.3 指标体系}{60}{section*.26}%
-\contentsline {subsection}{9.4 消融实验}{60}{section*.26}%
-\contentsline {subsection}{9.5 预期收益分析}{61}{section*.26}%
-\contentsline {section}{十、挑战与未来方向}{62}{section*.26}%
-\contentsline {subsection}{10.1 异构资源与性能建模}{62}{section*.27}%
-\contentsline {subsection}{10.2 状态迁移与一致性}{62}{section*.27}%
-\contentsline {subsection}{10.3 在线策略稳定性}{62}{section*.27}%
-\contentsline {subsection}{10.4 隐私与合规}{62}{section*.27}%
-\contentsline {subsection}{10.5 未来研究方向}{62}{section*.27}%
-\contentsline {section}{十一、总结}{64}{section*.27}%
-\contentsline {section}{参考文献}{65}{section*.27}%
+\contentsline {subsection}{3.5 小结}{30}{figure.caption.8}%
+\contentsline {section}{四、CEC 下的资源自适应的模型部署方法}{31}{figure.caption.8}%
+\contentsline {subsection}{4.1 Layer-wise / Vertical Partitioning}{33}{table.caption.9}%
+\contentsline {subsection}{4.2 Tensor / Operator-level Partitioning}{34}{table.caption.10}%
+\contentsline {subsection}{4.3 Expert / Component-level Partitioning}{35}{table.caption.11}%
+\contentsline {subsection}{4.4 Inference Phase Partitioning}{36}{table.caption.12}%
+\contentsline {subsection}{4.5 Semantic / Token-level Collaborative Partitioning}{37}{table.caption.13}%
+\contentsline {subsection}{4.6 小结}{38}{table.caption.14}%
+\contentsline {section}{五、CEC中的业务感知的 batching 参数优化算法}{41}{table.caption.15}%
+\contentsline {subsection}{5.1 Queue-level Dynamic / Admission Batching}{42}{table.caption.16}%
+\contentsline {subsection}{5.2 Continuous Batching / Iteration-level Batching}{43}{table.caption.17}%
+\contentsline {subsection}{5.3 Chunked Prefill / Blended Batching}{45}{table.caption.18}%
+\contentsline {subsection}{5.4 Disaggregated Prefill-Decode Batching}{46}{table.caption.19}%
+\contentsline {subsection}{5.5 小结}{47}{table.caption.20}%
+\contentsline {section}{六、CEC中的 LLM Inference Task Offloading}{49}{table.caption.21}%
+\contentsline {subsection}{6.1 Request / Session-level Routing and Offloading}{49}{section*.22}%
+\contentsline {subsection}{6.2 Multi-model / Multi-agent Workflow Orchestration}{51}{table.caption.23}%
+\contentsline {subsection}{6.3 Context / KV / Runtime State Offloading and Migration}{52}{table.caption.24}%
+\contentsline {subsection}{6.4 小结与趋势}{54}{table.caption.25}%
+\contentsline {section}{七、三类算法的协同优化框架}{56}{table.caption.25}%
+\contentsline {subsection}{7.1 三类算法的基本耦合关系}{56}{section*.26}%
+\contentsline {subsection}{7.2 模型/服务部署与请求卸载的双时间尺度协同}{56}{section*.26}%
+\contentsline {subsection}{7.3 模型切分、阶段解耦与 batching/scheduling 的协同}{57}{section*.26}%
+\contentsline {subsection}{7.4 请求/工作流路由与 runtime state 管理的协同}{57}{section*.26}%
+\contentsline {subsection}{7.5 多用户移动场景下的跨层闭环}{58}{section*.26}%
+\contentsline {subsection}{7.6 控制面、数据面与状态面的工程实现}{59}{section*.26}%
+\contentsline {subsection}{7.7 小结}{59}{section*.26}%
+\contentsline {section}{八、面向华为无线软件实现的技术方案选择与论证}{60}{section*.26}%
+\contentsline {section}{九、实验评估与对比指标}{61}{section*.26}%
+\contentsline {subsection}{9.1 实验场景}{61}{section*.27}%
+\contentsline {subsection}{9.2 Baseline 设置}{61}{section*.27}%
+\contentsline {subsection}{9.3 指标体系}{61}{section*.27}%
+\contentsline {subsection}{9.4 消融实验}{61}{section*.27}%
+\contentsline {subsection}{9.5 预期收益分析}{62}{section*.27}%
+\contentsline {section}{十、挑战与未来方向}{63}{section*.27}%
+\contentsline {subsection}{10.1 异构资源与性能建模}{63}{section*.28}%
+\contentsline {subsection}{10.2 状态迁移与一致性}{63}{section*.28}%
+\contentsline {subsection}{10.3 在线策略稳定性}{63}{section*.28}%
+\contentsline {subsection}{10.4 隐私与合规}{63}{section*.28}%
+\contentsline {subsection}{10.5 未来研究方向}{63}{section*.28}%
+\contentsline {section}{十一、总结}{65}{section*.28}%
+\contentsline {section}{参考文献}{66}{section*.28}%
