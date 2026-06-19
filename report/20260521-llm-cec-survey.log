@@ -1,17 +1,20 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  19 JUN 2026 18:24
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex 2026.6.19)  19 JUN 2026 20:56
 entering extended mode
  restricted \write18 enabled.
+ file:line:error style messages enabled.
  %&-line parsing enabled.
-**20260521-llm-cec-survey.tex
-(./20260521-llm-cec-survey.tex
+**E:/Projects/2026.6/hw-cec-report/report/20260521-llm-cec-survey.tex
+(E:/Projects/2026.6/hw-cec-report/report/20260521-llm-cec-survey.tex
 LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/extsizes/extarticle.cls
+L3 programming layer <2025-12-24>
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/extsizes\extarti
+cle.cls
 Document Class: extarticle 1996/10/08 v1.0 Non Standard LaTeX document class
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/size10.clo
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo
 File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/exscale.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/base\exscale.sty
 Package: exscale 2025/06/05 v2.1i Standard LaTeX package exscale
 LaTeX Font Info:    Redeclaring symbol font `largesymbols' on input line 57.
 LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `normal'
@@ -31,29 +34,32 @@ LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `bold'
 \abovecaptionskip=\skip49
 \belowcaptionskip=\skip50
 \bibindent=\dimen149
-)
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/ctex.sty
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3kernel/expl3.sty
-Package: expl3 2026-01-19 L3 programming layer (loader) 
+) (C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex\ctex.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.s
+ty
+Package: expl3 2025-12-24 L3 programming layer (loader) 
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3backend/l3backend-xetex.de
-f
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3back
+end-xetex.def
 File: l3backend-xetex.def 2025-10-09 L3 backend support: XeTeX
 \g__graphics_track_int=\count279
 \g__pdfannot_backend_int=\count280
 \g__pdfannot_backend_link_int=\count281
 ))
 Package: ctex 2022/07/14 v2.5.10 Chinese adapter in LaTeX (CTEX)
- (/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/ctexhook.sty
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex\ctexhook.st
+y
 Package: ctexhook 2022/07/14 v2.5.10 Document and package hooks (CTEX)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/ctexpatch.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex\ctexpatch.s
+ty
 Package: ctexpatch 2022/07/14 v2.5.10 Patching commands (CTEX)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/fix-cm.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/base\fix-cm.sty
 Package: fix-cm 2020/11/24 v1.1t fixes to LaTeX
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/ts1enc.def
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/base\ts1enc.def
 File: ts1enc.def 2001/06/05 v3.0e (jk/car/fm) Standard LaTeX file
 LaTeX Font Info:    Redeclaring font encoding TS1 on input line 47.
 LaTeX Encoding Info:    Redeclaring text command \capitalcedilla (encoding TS1)
@@ -317,17 +323,20 @@ t line 194.
 \g__ctex_section_depth_int=\count283
 \g__ctex_font_size_int=\count284
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/config/ctexopts.cfg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/config\ctex
+opts.cfg
 File: ctexopts.cfg 2022/07/14 v2.5.10 Option configuration file (CTEX)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/engine/ctex-engine-xete
-x.def
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/engine\ctex
+-engine-xetex.def
 File: ctex-engine-xetex.def 2022/07/14 v2.5.10 XeLaTeX adapter (CTEX)
- (/usr/local/texlive/2026basic/texmf-dist/tex/xelatex/xecjk/xeCJK.sty
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/xelatex/xecjk\xeCJK.st
+y
 Package: xeCJK 2022/08/05 v3.9.1 Typesetting CJK scripts with XeLaTeX
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3packages/xtemplate/xtempla
-te.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xtemp
+late\xtemplate.sty
 Package: xtemplate 2025-10-09 L3 Experimental prototype document functions
 )
 \l__xeCJK_tmp_int=\count285
@@ -391,13 +400,16 @@ LaTeX template Info: Declaring template type 'xeCJK/punctuation' taking 0
 \l__xeCJK_verb_case_int=\count296
 \l__xeCJK_verb_exspace_skip=\skip57
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec.sty
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3packages/xparse/xparse.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspe
+c.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xpars
+e\xparse.sty
 Package: xparse 2025-10-09 L3 Experimental document command parser
 )
 Package: fontspec 2025/09/29 v2.9g Font selection for XeLaTeX and LuaLaTeX
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspe
+c-xetex.sty
 Package: fontspec-xetex 2025/09/29 v2.9g Font selection for XeLaTeX and LuaLaTe
 X
 \l__fontspec_script_int=\count297
@@ -415,11 +427,13 @@ X
 \l__fontspec_tmpb_dim=\dimen179
 \l__fontspec_tmpc_dim=\dimen180
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/fontenc.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
 Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec.cfg)))
-(/usr/local/texlive/2026basic/texmf-dist/tex/xelatex/xecjk/xeCJK.cfg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspe
+c.cfg)))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/xelatex/xecjk\xeCJK.cf
+g
 File: xeCJK.cfg 2022/08/05 v3.9.1 Configuration file for xeCJK package
 ))
 \ccwd=\dimen181
@@ -427,73 +441,67 @@ File: xeCJK.cfg 2022/08/05 v3.9.1 Configuration file for xeCJK package
 )
 \l__ctex_ziju_dim=\dimen182
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/zhnumber/zhnumber.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/zhnumber\zhnumbe
+r.sty
 Package: zhnumber 2022/07/14 v3.0 Typesetting numbers with Chinese glyphs
 \l__zhnum_scale_int=\count308
 \l__zhnum_tmp_int=\count309
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/zhnumber/zhnumber-utf8.cfg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/zhnumber\zhnumbe
+r-utf8.cfg
 File: zhnumber-utf8.cfg 2022/07/14 v3.0 Chinese numerals with UTF8 encoding
 ))
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/scheme/ctex-scheme-chin
-ese.def
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/scheme\ctex
+-scheme-chinese.def
 File: ctex-scheme-chinese.def 2022/07/14 v2.5.10 Chinese scheme for generic (CT
 EX)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/config/ctex-name-utf8.c
-fg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/config\ctex
+-name-utf8.cfg
 File: ctex-name-utf8.cfg 2022/07/14 v2.5.10 Caption with encoding UTF-8 (CTEX)
-)) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/ctex-c5size.clo
+))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex\ctex-c5size
+.clo
 File: ctex-c5size.clo 2022/07/14 v2.5.10 c5size option (CTEX)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/fontset/ctex-fontset-ma
-c.def
-File: ctex-fontset-mac.def 2022/07/14 v2.5.10 macOS fonts definition (CTEX)
-
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/fontset/ctex-fontset-ma
-cold.def
-File: ctex-fontset-macold.def 2022/07/14 v2.5.10 macOS fonts definition for Yos
-emite or earlier version (CTEX)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/fontset\cte
+x-fontset-windows.def
+File: ctex-fontset-windows.def 2022/07/14 v2.5.10 Windows fonts definition (CTE
+X)
 
 Package fontspec Info: 
-(fontspec)             Script 'CJK' not explicitly supported within font
-(fontspec)             'STSong'. Check the typeset output, and if it is okay
-(fontspec)             then ignore this warning. Otherwise a different font
-(fontspec)             should be chosen.
-
-
-Package fontspec Info: 
-(fontspec)             Could not resolve font "STKaiti/B" (it probably doesn't
+(fontspec)             Could not resolve font "KaiTi/B" (it probably doesn't
 (fontspec)             exist).
 
 
 Package fontspec Info: 
-(fontspec)             Could not resolve font "STHeiti/I" (it probably doesn't
+(fontspec)             Could not resolve font "SimHei/I" (it probably doesn't
 (fontspec)             exist).
 
 
 Package fontspec Info: 
-(fontspec)             Could not resolve font "STSong/BI" (it probably doesn't
+(fontspec)             Could not resolve font "SimSun/BI" (it probably doesn't
 (fontspec)             exist).
 
 
 Package fontspec Info: 
-(fontspec)             Font family 'STSong(0)' created for font 'STSong' with
+(fontspec)             Font family 'SimSun(0)' created for font 'SimSun' with
 (fontspec)             options
-(fontspec)             [Script={CJK},BoldFont={STHeiti},ItalicFont={STKaiti}].
+(fontspec)             [Script={CJK},BoldFont={SimHei},ItalicFont={KaiTi}].
 (fontspec)              
 (fontspec)              This font family consists of the following NFSS
 (fontspec)             series/shapes:
 (fontspec)              
 (fontspec)             - 'normal' (m/n) with NFSS spec.:
-(fontspec)             <->"STSong/OT:script=hani;language=dflt;"
+(fontspec)             <->"SimSun/OT:script=hani;language=dflt;"
 (fontspec)             - 'bold' (b/n) with NFSS spec.:
-(fontspec)             <->"STHeiti/OT:script=hani;language=dflt;"
+(fontspec)             <->"SimHei/OT:script=hani;language=dflt;"
 (fontspec)             - 'italic' (m/it) with NFSS spec.:
-(fontspec)             <->"STKaiti/OT:script=hani;language=dflt;"
+(fontspec)             <->"KaiTi/OT:script=hani;language=dflt;"
 
-)))
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/ctex/config/ctex.cfg
+))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/ctex/config\ctex
+.cfg
 File: ctex.cfg 2022/07/14 v2.5.10 Configuration file (CTEX)
 )
 
@@ -506,42 +514,55 @@ Package fontspec Info:
 (fontspec)              
 (fontspec)             - 'normal' (m/n) with NFSS spec.: <->"Times New
 (fontspec)             Roman/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'small caps'  (m/sc) with NFSS spec.: <->"Times New
+(fontspec)             Roman/OT:script=latn;language=dflt;+smcp;mapping=tex-tex
+t;"
 (fontspec)             - 'bold' (b/n) with NFSS spec.: <->"Times New
 (fontspec)             Roman/B/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'bold small caps'  (b/sc) with NFSS spec.: <->"Times
+(fontspec)             New
+(fontspec)             Roman/B/OT:script=latn;language=dflt;+smcp;mapping=tex-t
+ext;"
 (fontspec)             - 'italic' (m/it) with NFSS spec.: <->"Times New
 (fontspec)             Roman/I/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)             - 'italic small caps'  (m/scit) with NFSS spec.:
+(fontspec)             <->"Times New
+(fontspec)             Roman/I/OT:script=latn;language=dflt;+smcp;mapping=tex-t
+ext;"
 (fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"Times New
 (fontspec)             Roman/BI/OT:script=latn;language=dflt;mapping=tex-text;"
 
+(fontspec)             - 'bold italic small caps'  (b/scit) with NFSS spec.:
+(fontspec)             <->"Times New
+(fontspec)             Roman/BI/OT:script=latn;language=dflt;+smcp;mapping=tex-
+text;"
 
 
 
-Package xeCJK Warning: Redefining CJKfamily `\CJKrmdefault' (STSong(0)).
+Package xeCJK Warning: Redefining CJKfamily `\CJKrmdefault' (SimSun(0)).
 
 
-Package fontspec Info: 
-(fontspec)             Script 'CJK' not explicitly supported within font
-(fontspec)             'STSong'. Check the typeset output, and if it is okay
-(fontspec)             then ignore this warning. Otherwise a different font
-(fontspec)             should be chosen.
+Package xeCJK Warning: Redefining CJKfamily `\CJKsfdefault' (Microsoft YaHei).
 
 
-Package xeCJK Warning: Redefining CJKfamily `\CJKsfdefault' (STXihei).
+Package xeCJK Warning: Redefining CJKfamily `\CJKttdefault' (FangSong).
 
 
-Package xeCJK Warning: Redefining CJKfamily `\CJKttdefault' (STFangsong).
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometr
+y.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/geometry/geometry.sty
-Package: geometry 2020/01/02 v5.9 Page Geometry
-
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/keyval.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.
+sty
 Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
 \KV@toks@=\toks17
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/iftex/ifvtex.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.s
+ty
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/iftex/iftex.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.st
+y
 Package: iftex 2024/12/12 v1.0g TeX engine tests
 ))
 \Gm@cnth=\count310
@@ -556,19 +577,25 @@ Package: iftex 2024/12/12 v1.0g TeX engine tests
 \Gm@layouthoffset=\dimen189
 \Gm@layoutvoffset=\dimen190
 \Gm@dimlist=\toks18
-)
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/xcolor/xcolor.sty
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometr
+y.cfg))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.st
+y
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/color.cfg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\col
+or.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package xcolor Info: Driver file: xetex.def on input line 274.
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-def/xetex.def
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xet
+ex.def
 File: xetex.def 2025/11/01 v5.0p Graphics/color driver for xetex
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcol
+or.ltx)
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
 Package xcolor Info: Model `RGB' extended on input line 1365.
 Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
@@ -578,55 +605,68 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/hyperref.sty
-Package: hyperref 2026-01-29 v7.01p Hypertext links for LaTeX
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperre
+f.sty
+Package: hyperref 2025-07-12 v7.01o Hypertext links for LaTeX
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetk
+eys.sty
 Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.
-sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\k
+vdefinekeys.sty
 Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/pdfescape/pdfescape.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfe
+scape.sty
 Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmd
+s.sty
 Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdf
+texcmds.sty
 Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
 )
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/infwarerr/infwarerr.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infw
+arerr.sty
 Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
 )
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode not found.
-)) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/hycolor/hycolor.sty
+))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.
+sty
 Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/nameref.sty
-Package: nameref 2026-01-29 v2.58 Cross-referencing by name of section
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref
+.sty
+Package: nameref 2025-06-21 v2.57 Cross-referencing by name of section
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/refcount/refcount.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcoun
+t.sty
 Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/gettitlestring/gettitlestr
-ing.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring
+\gettitlestring.sty
 Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/kvoptions/kvoptions.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvopti
+ons.sty
 Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
 ))
 \c@section@level=\count313
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/etoolbox/etoolbox.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbo
+x.sty
 Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
 \etb@tempcnta=\count314
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/stringenc/stringenc.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stri
+ngenc.sty
 Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 )
 )
@@ -634,80 +674,88 @@ Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 \Hy@linkcounter=\count315
 \Hy@pagecounter=\count316
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/pd1enc.def
-File: pd1enc.def 2026-01-29 v7.01p Hyperref: PDFDocEncoding definition (HO)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.
+def
+File: pd1enc.def 2025-07-12 v7.01o Hyperref: PDFDocEncoding definition (HO)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/intcalc/intcalc.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcal
+c.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
 \Hy@SavedSpaceFactor=\count317
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/puenc.def
-File: puenc.def 2026-01-29 v7.01p Hyperref: PDF Unicode definition (HO)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.d
+ef
+File: puenc.def 2025-07-12 v7.01o Hyperref: PDF Unicode definition (HO)
 )
-Package hyperref Info: Option `unicode' set `true' on input line 4072.
-Package hyperref Info: Hyper figures OFF on input line 4201.
-Package hyperref Info: Link nesting OFF on input line 4206.
-Package hyperref Info: Hyper index ON on input line 4209.
-Package hyperref Info: Plain pages OFF on input line 4216.
-Package hyperref Info: Backreferencing OFF on input line 4221.
+Package hyperref Info: Option `unicode' set `true' on input line 4066.
+Package hyperref Info: Hyper figures OFF on input line 4195.
+Package hyperref Info: Link nesting OFF on input line 4200.
+Package hyperref Info: Hyper index ON on input line 4203.
+Package hyperref Info: Plain pages OFF on input line 4210.
+Package hyperref Info: Backreferencing OFF on input line 4215.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
-Package hyperref Info: Bookmarks ON on input line 4468.
+Package hyperref Info: Bookmarks ON on input line 4462.
 \c@Hy@tempcnt=\count318
-
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/url/url.sty
+ (C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
 \Urlmuskip=\muskip17
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
-LaTeX Info: Redefining \url on input line 4807.
+LaTeX Info: Redefining \url on input line 4801.
 \XeTeXLinkMargin=\dimen192
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/bitset/bitset.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.
+sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\big
+intcalc.sty
 Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
 \Fld@menulength=\count319
 \Field@Width=\dimen193
 \Fld@charsize=\dimen194
-Package hyperref Info: Hyper figures OFF on input line 6084.
-Package hyperref Info: Link nesting OFF on input line 6089.
-Package hyperref Info: Hyper index ON on input line 6092.
-Package hyperref Info: backreferencing OFF on input line 6099.
-Package hyperref Info: Link coloring OFF on input line 6104.
-Package hyperref Info: Link coloring with OCG OFF on input line 6109.
-Package hyperref Info: PDF/A mode OFF on input line 6114.
+Package hyperref Info: Hyper figures OFF on input line 6078.
+Package hyperref Info: Link nesting OFF on input line 6083.
+Package hyperref Info: Hyper index ON on input line 6086.
+Package hyperref Info: backreferencing OFF on input line 6093.
+Package hyperref Info: Link coloring OFF on input line 6098.
+Package hyperref Info: Link coloring with OCG OFF on input line 6103.
+Package hyperref Info: PDF/A mode OFF on input line 6108.
 \Hy@abspage=\count320
 \c@Item=\count321
 \c@Hfootnote=\count322
 )
 Package hyperref Info: Driver (autodetected): hxetex.
- (/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/hxetex.def
-File: hxetex.def 2026-01-29 v7.01p Hyperref driver for XeTeX
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.
+def
+File: hxetex.def 2025-07-12 v7.01o Hyperref driver for XeTeX
 \pdfm@box=\box56
 \c@Hy@AnnotLevel=\count323
 \HyField@AnnotCount=\count324
 \Fld@listcount=\count325
 \c@bookmark@seq@number=\count326
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/rerunfilecheck/rerunfilechec
-k.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\r
+erunfilecheck.sty
 Package: rerunfilecheck 2025-06-21 v1.11 Rerun checks for auxiliary files (HO)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/generic/uniquecounter/uniquecounte
-r.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\
+uniquecounter.sty
 Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
 )
 Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 84.
 )
 \Hy@SectionHShift=\skip59
-) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/xurl/xurl.sty
+)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/xurl\xurl.sty
 Package: xurl 2022/01/09 v 0.10 modify URL breaks
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/booktabs/booktabs.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktab
+s.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \heavyrulewidth=\dimen195
 \lightrulewidth=\dimen196
@@ -727,151 +775,191 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@lastruleclass=\count330
 \@thisrulewidth=\dimen263
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphicx.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/tools\longtable.
+sty
+Package: longtable 2025-10-13 v4.24 Multi-page Table package (DPC)
+\LTleft=\skip60
+\LTright=\skip61
+\LTpre=\skip62
+\LTpost=\skip63
+\LTchunksize=\count331
+\LTcapwidth=\dimen264
+\LT@head=\box57
+\LT@firsthead=\box58
+\LT@foot=\box59
+\LT@lastfoot=\box60
+\LT@gbox=\box61
+\LT@cols=\count332
+\LT@rows=\count333
+\c@LT@tables=\count334
+\c@LT@chunks=\count335
+\LT@p@ftn=\toks19
+)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphic
+x.sty
 Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphics.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphic
+s.sty
 Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/trig.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.st
+y
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\gra
+phics.cfg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: xetex.def on input line 106.
 )
-\Gin@req@height=\dimen264
-\Gin@req@width=\dimen265
-) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/tabularx.sty
+\Gin@req@height=\dimen265
+\Gin@req@width=\dimen266
+)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.s
+ty
 Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/array.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
 Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
-\col@sep=\dimen266
-\ar@mcellbox=\box57
-\extrarowheight=\dimen267
-\NC@list=\toks19
-\extratabsurround=\skip60
-\backup@length=\skip61
-\ar@cellbox=\box58
+\col@sep=\dimen267
+\ar@mcellbox=\box62
+\extrarowheight=\dimen268
+\NC@list=\toks20
+\extratabsurround=\skip64
+\backup@length=\skip65
+\ar@cellbox=\box63
 )
-\TX@col@width=\dimen268
-\TX@old@table=\dimen269
-\TX@old@col=\dimen270
-\TX@target=\dimen271
-\TX@delta=\dimen272
-\TX@cols=\count331
-\TX@ftn=\toks20
+\TX@col@width=\dimen269
+\TX@old@table=\dimen270
+\TX@old@col=\dimen271
+\TX@target=\dimen272
+\TX@delta=\dimen273
+\TX@cols=\count336
+\TX@ftn=\toks21
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/enumitem/enumitem.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/enumitem\enumite
+m.sty
 Package: enumitem 2025/02/06 v3.11 Customized lists
-\labelindent=\skip62
-\enit@outerparindent=\dimen273
-\enit@toks=\toks21
-\enit@inbox=\box59
-\enit@count@id=\count332
-\enitdp@description=\count333
+\labelindent=\skip66
+\enit@outerparindent=\dimen274
+\enit@toks=\toks22
+\enit@inbox=\box64
+\enit@count@id=\count337
+\enitdp@description=\count338
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/titlesec/titlesec.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/titlesec\titlese
+c.sty
 Package: titlesec 2025/01/04 v2.17 Sectioning titles
-\ttl@box=\box60
-\beforetitleunit=\skip63
-\aftertitleunit=\skip64
-\ttl@plus=\dimen274
-\ttl@minus=\dimen275
-\ttl@toksa=\toks22
-\titlewidth=\dimen276
-\titlewidthlast=\dimen277
-\titlewidthfirst=\dimen278
+\ttl@box=\box65
+\beforetitleunit=\skip67
+\aftertitleunit=\skip68
+\ttl@plus=\dimen275
+\ttl@minus=\dimen276
+\ttl@toksa=\toks23
+\titlewidth=\dimen277
+\titlewidthlast=\dimen278
+\titlewidthfirst=\dimen279
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microt
+ype.sty
 Package: microtype 2026/03/01 v3.2d Micro-typographical refinements (RS)
-\MT@toks=\toks23
-\MT@tempbox=\box61
-\MT@count=\count334
+\MT@toks=\toks24
+\MT@tempbox=\box66
+\MT@count=\count339
 LaTeX Info: Redefining \noprotrusionifhmode on input line 1084.
 LaTeX Info: Redefining \leftprotrusion on input line 1085.
-\MT@prot@toks=\toks24
+\MT@prot@toks=\toks25
 LaTeX Info: Redefining \rightprotrusion on input line 1104.
 LaTeX Info: Redefining \textls on input line 1449.
-\MT@outer@kern=\dimen279
+\MT@outer@kern=\dimen280
 LaTeX Info: Redefining \microtypecontext on input line 2053.
 LaTeX Info: Redefining \textmicrotypecontext on input line 2070.
-\MT@listname@count=\count335
+\MT@listname@count=\count340
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype-xetex.de
-f
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microt
+ype-xetex.def
 File: microtype-xetex.def 2026/03/01 v3.2d Definitions specific to xetex (RS)
 LaTeX Info: Redefining \lsstyle on input line 443.
 LaTeX Info: Redefining \lslig on input line 451.
-\MT@outer@space=\skip65
+\MT@outer@space=\skip69
 )
 Package microtype Info: Loading configuration file microtype.cfg.
- (/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/microtype.cfg
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microt
+ype.cfg
 File: microtype.cfg 2026/03/01 v3.2d microtype main configuration file (RS)
 )
 LaTeX Info: Redefining \microtypesetup on input line 3065.
-) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/float/float.sty
-Package: float 2001/11/08 v1.3d Float enhancements (AL)
-\c@float@type=\count336
-\float@exts=\toks25
-\float@box=\box62
-\@float@everytoks=\toks26
-\@floatcapt=\box63
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/caption/caption.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count341
+\float@exts=\toks26
+\float@box=\box67
+\@float@everytoks=\toks27
+\@floatcapt=\box68
+)
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption.
+sty
 Package: caption 2023/08/05 v3.6o Customizing captions (AR)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/caption/caption3.sty
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption3
+.sty
 Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
-\caption@tempdima=\dimen280
-\captionmargin=\dimen281
-\caption@leftmargin=\dimen282
-\caption@rightmargin=\dimen283
-\caption@width=\dimen284
-\caption@indent=\dimen285
-\caption@parindent=\dimen286
-\caption@hangindent=\dimen287
+\caption@tempdima=\dimen281
+\captionmargin=\dimen282
+\caption@leftmargin=\dimen283
+\caption@rightmargin=\dimen284
+\caption@width=\dimen285
+\caption@indent=\dimen286
+\caption@parindent=\dimen287
+\caption@hangindent=\dimen288
 Package caption Info: Standard document class detected.
 )
-\c@caption@flags=\count337
-\c@continuedfloat=\count338
+\c@caption@flags=\count342
+\c@continuedfloat=\count343
 Package caption Info: float package is loaded.
 Package caption Info: hyperref package is loaded.
-)
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/setspace/setspace.sty
+Package caption Info: longtable package is loaded.
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/caption\ltcaptio
+n.sty
+Package: ltcaption 2021/01/08 v1.4c longtable captions (AR)
+))
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/setspace\setspac
+e.sty
 Package: setspace 2022/12/04 v6.7b set line spacing
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 32.
+Package hyperref Info: Option `colorlinks' set `true' on input line 33.
 
 
 LaTeX Warning: Unused global option(s):
     [13.5pt].
 
-(./20260521-llm-cec-survey.aux)
+(E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-survey.aux)
 \openout1 = `20260521-llm-cec-survey.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 53.
-LaTeX Font Info:    ... okay on input line 53.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 54.
+LaTeX Font Info:    ... okay on input line 54.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
@@ -879,64 +967,64 @@ Package fontspec Info:
 
 \symlegacymaths=\mathgroup4
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 53.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 53.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 53.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 53.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 53.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 53.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 53.
-LaTeX Font Info:    Redeclaring math accent \check on input line 53.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 53.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 53.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \colon on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 53.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 53.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 53.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 54.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 54.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 54.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 54.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 54.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 54.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 54.
+LaTeX Font Info:    Redeclaring math accent \check on input line 54.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 54.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 54.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \colon on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 54.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 54.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 54.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 53.
+(Font)              `operators' in the math version `normal' on input line 54.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> TU/TimesNewRoman(0)/m/n on input line 5
-3.
+4.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 53.
+(Font)              `operators' in the math version `bold' on input line 54.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/m/n on input line 
-53.
+54.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/m/n on 
-input line 53.
+input line 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> TU/TimesNewRoman(0)/m/it on input line
- 53.
+ 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
 (Font)                  OT1/cmr/bx/n --> TU/TimesNewRoman(0)/b/n on input line 
-53.
+54.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 53.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 53.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 54.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  TU/TimesNewRoman(0)/m/n --> TU/TimesNewRoman(0)/b/n on 
-input line 53.
+input line 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> TU/TimesNewRoman(0)/b/it on input lin
-e 53.
+e 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 53.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 54.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 53.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 54.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -972,21 +1060,22 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-Package hyperref Info: Link coloring ON on input line 53.
-(./20260521-llm-cec-survey.out) (./20260521-llm-cec-survey.out)
+Package hyperref Info: Link coloring ON on input line 54.
+(E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-survey.out)
+(E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-survey.out)
 \@outlinefile=\write3
 \openout3 = `20260521-llm-cec-survey.out'.
 
-LaTeX Info: Redefining \microtypecontext on input line 53.
-Package microtype Info: Applying patch `item' on input line 53.
-Package microtype Info: Applying patch `toc' on input line 53.
-Package microtype Info: Applying patch `eqnum' on input line 53.
+LaTeX Info: Redefining \microtypecontext on input line 54.
+Package microtype Info: Applying patch `item' on input line 54.
+Package microtype Info: Applying patch `toc' on input line 54.
+Package microtype Info: Applying patch `eqnum' on input line 54.
 
 
-Package microtype Warning: Unable to apply patch `footnote' on input line 53.
+Package microtype Warning: Unable to apply patch `footnote' on input line 54.
 
-Package microtype Info: Applying patch `verbatim' on input line 53.
-LaTeX Info: Redefining \microtypesetup on input line 53.
+Package microtype Info: Applying patch `verbatim' on input line 54.
+LaTeX Info: Redefining \microtypesetup on input line 54.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
 Package microtype Info: No adjustment of tracking.
@@ -1180,13 +1269,15 @@ Package microtype Info: Character `textquotedblright ' is missing
 (microtype)             Ignoring protrusion settings for this character.
 
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <10.53937> not available
-(Font)              size <10.95> substituted on input line 70.
+(Font)              size <10.95> substituted on input line 71.
 
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <7> on input line 70.
+(Font)              <7> on input line 71.
 LaTeX Font Info:    External font `cmex7' loaded for size
-(Font)              <5> on input line 70.
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/microtype/mt-cmr.cfg
+(Font)              <5> on input line 71.
+
+(C:\Users\MrPumpkinsss\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-cmr
+.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
 )
@@ -1208,8 +1299,7 @@ Package microtype Info: Character `textquotedblleft ' is missing
 Package microtype Info: Character `textquotedblright ' is missing
 (microtype)             in font `TU/TimesNewRoman(0)/b/n/10.53937'.
 (microtype)             Ignoring protrusion settings for this character.
-
-[1
+ [1
 
 ]
 Package microtype Info: Character `textendash ' is missing
@@ -1287,10 +1377,12 @@ Package microtype Info: Character `textquotedblleft ' is missing
 Package microtype Info: Character `textquotedblright ' is missing
 (microtype)             in font `TU/TimesNewRoman(0)/b/n/15.05624'.
 (microtype)             Ignoring protrusion settings for this character.
- (./20260521-llm-cec-survey.toc [2
+
+(E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-survey.toc [2
 
 
-] [3])
+]
+[3])
 \tf@toc=\write4
 \openout4 = `20260521-llm-cec-survey.toc'.
 
@@ -1334,7 +1426,7 @@ Package microtype Info: Character `textquotedblright ' is missing
 
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 95.
+(hyperref)                be the same. Added a new anchor on input line 96.
 
 [5
 
@@ -1342,7 +1434,7 @@ Package hyperref Warning: The anchor of a bookmark and its parent's must not
 ] [6] [7]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 182.
+(hyperref)                be the same. Added a new anchor on input line 183.
 
 [8
 
@@ -1386,79 +1478,75 @@ Package microtype Info: Character `textquotedblright ' is missing
  [9] [10] [11] [12] [13] [14] [15] [16] [17] [18] [19] [20]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 958.
+(hyperref)                be the same. Added a new anchor on input line 959.
 
 [21
 
 ] [22] [23] [24] [25] [26] [27]
 File: figures/taxonomy.png Graphic file (type bmp)
 <figures/taxonomy.png>
- [28] [29] [30]
-
-LaTeX Warning: Float too large for page by 205.23894pt on input line 1665.
-
-[31
-
-] [32] [33] [34] [35] [36] [37] [38] [39] [40] [41
+ [28] [29] [30] [31
 
 ]
-Underfull \hbox (badness 10000) in alignment at lines 2052--2052
-[][][][][][] 
- []
+E:/Projects/2026.6/hw-cec-report/report/20260521-llm-cec-survey.tex:1652: ignor
+ed error: Infinite glue shrinkage found in box being split [32]
+E:/Projects/2026.6/hw-cec-report/report/20260521-llm-cec-survey.tex:1652: ignor
+ed error: Infinite glue shrinkage found in box being split [33]
+File: figures/ch4_model_partition_taxonomy.png Graphic file (type bmp)
+<figures/ch4_model_partition_taxonomy.png>
+ [34] [35]
+[36] [37] [38] [39] [40] [41] [42] [43
 
-[42] [43] [44] [45] [46] [47] [48]
+]
+File: figures/ch5_batching_taxonomy.png Graphic file (type bmp)
+<figures/ch5_batching_taxonomy.png>
+ [44] [45] [46] [47] [48] [49] [50]
+[51]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2327.
+(hyperref)                be the same. Added a new anchor on input line 1903.
 
-[49
+[52
 
-] [50] [51] [52] [53] [54] [55]
+] [53] [54] [55] [56] [57] [58]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2497.
+(hyperref)                be the same. Added a new anchor on input line 2073.
 
-[56
+[59
 
-] [57] [58] [59] [60
+] [60] [61] [62] [63
 
 ]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2578.
+(hyperref)                be the same. Added a new anchor on input line 2154.
 
-[61
+[64
 
-] [62]
+] [65]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 2620.
+(hyperref)                be the same. Added a new anchor on input line 2196.
 
-[63
+[66
 
-] [64] [65
+] [67] [68
 
 ]
 
 Package fontspec Info: 
-(fontspec)             Script 'CJK' not explicitly supported within font
-(fontspec)             'STFangsong'. Check the typeset output, and if it is
-(fontspec)             okay then ignore this warning. Otherwise a different
-(fontspec)             font should be chosen.
-
-
-Package fontspec Info: 
-(fontspec)             Could not resolve font "STFangsong/BI" (it probably
+(fontspec)             Could not resolve font "FangSong/BI" (it probably
 (fontspec)             doesn't exist).
 
 
 Package fontspec Info: 
-(fontspec)             Could not resolve font "STFangsong/B" (it probably
+(fontspec)             Could not resolve font "FangSong/B" (it probably
 (fontspec)             doesn't exist).
 
 
 Package fontspec Info: 
-(fontspec)             Could not resolve font "STFangsong/I" (it probably
+(fontspec)             Could not resolve font "FangSong/I" (it probably
 (fontspec)             doesn't exist).
 
 Package microtype Info: Loading generic protrusion settings for font family
@@ -1467,24 +1555,24 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             See the microtype manual for details.
 
 Package fontspec Info: 
-(fontspec)             Font family 'STFangsong(0)' created for font
-(fontspec)             'STFangsong' with options [Script={CJK}].
+(fontspec)             Font family 'FangSong(0)' created for font 'FangSong'
+(fontspec)             with options [Script={CJK}].
 (fontspec)              
 (fontspec)              This font family consists of the following NFSS
 (fontspec)             series/shapes:
 (fontspec)              
 (fontspec)             - 'normal' (m/n) with NFSS spec.:
-(fontspec)             <->"STFangsong/OT:script=hani;language=dflt;"
+(fontspec)             <->"FangSong/OT:script=hani;language=dflt;"
 
- [66
+ [69
 
-] [67] [68] [69]
-Overfull \hbox (0.96266pt too wide) in paragraph at lines 2827--2828
+] [70] [71] [72]
+Overfull \hbox (0.96266pt too wide) in paragraph at lines 2403--2404
 []\TU/TimesNewRoman(0)/m/n/10.53937 [68] ”Serving Long-Context LLMs at the Mobi
 le Edge: Test-Time Reinforcement Learning-based Model
  []
 
-[70] (./20260521-llm-cec-survey.aux)
+[73] (E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-survey.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2022/07/14>
@@ -1496,15 +1584,16 @@ LaTeX Font Warning: Size substitutions with differences
 
 Package rerunfilecheck Info: File `20260521-llm-cec-survey.out' has not changed
 .
-(rerunfilecheck)             Checksum: 148A2F4BA00660C7721A59B9BC106AB5;11708.
+(rerunfilecheck)             Checksum: 10A46702AE116ED40950248F304C6710;12018.
  ) 
 Here is how much of TeX's memory you used:
- 18838 strings out of 469709
- 415820 string characters out of 5466024
- 944117 words of memory out of 5000000
- 47197 multiletter control sequences out of 15000+600000
+ 19025 strings out of 402987
+ 416186 string characters out of 5447075
+ 953653 words of memory out of 5000000
+ 47486 multiletter control sequences out of 15000+600000
  632465 words of font info for 109 fonts, out of 8000000 for 9000
- 319 hyphenation exceptions out of 8191
- 93i,13n,114p,1102b,555s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 1348 hyphenation exceptions out of 8191
+ 93i,13n,111p,1142b,592s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on 20260521-llm-cec-survey.xdv (71 pages, 1500016 bytes).
+Output written on E:\Projects\2026.6\hw-cec-report\report\20260521-llm-cec-surv
+ey.pdf (74 pages).
