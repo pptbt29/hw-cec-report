@@ -1,7 +1,6 @@
-# macOS metadata
 .DS_Store
+.vscode/
 
-# LaTeX intermediate files
 *.aux
 *.bcf
 *.bbl
