@@ -322,6 +322,7 @@ def simulate_trace(
     mode_counts = {m.value: 0 for m in StateMode}
     records: List[Dict] = []
     last_t = 0.0
+    offload_cost_ms = 0.0  # cumulative network + state-transfer cost
 
     for r in reqs:
         for n in cluster.nodes.values():
@@ -345,6 +346,8 @@ def simulate_trace(
         router.commit(r, decision, r.arrival_ms)
         e2e_list.append(decision.e2e_ms)
         ttft_list.append(decision.ttft_ms)
+        state_cost = decision.t_state_ms if decision.t_state_ms != float("inf") else 0.0
+        offload_cost_ms += decision.t_network_ms + decision.t_queue_ms + state_cost
         last_t = r.arrival_ms
 
         if collect_records:
@@ -352,6 +355,10 @@ def simulate_trace(
                 "t": round(r.arrival_ms, 2),
                 "ttft": round(decision.ttft_ms, 3),
                 "e2e": round(decision.e2e_ms, 3),
+                "t_network": round(decision.t_network_ms, 3),
+                "t_queue": round(decision.t_queue_ms, 3),
+                "t_state": round(decision.t_state_ms, 3),
+                "t_prefill": round(decision.t_prefill_ms, 3),
                 "mode": decision.action.mode.value,
                 "entry": r.entry_node,
                 "exec": decision.action.exec_node,
@@ -387,6 +394,7 @@ def simulate_trace(
         "recompute_count": mode_counts["recompute"],
         "owner_switch_count": cluster.kv.stats["owner_switch_count"],
         "migrate_bytes_mb": cluster.kv.stats["migrate_bytes"] / 1e6,
+        "offload_cost_ms": offload_cost_ms,
     }
     if collect_records:
         window = max(last_t, 1.0)

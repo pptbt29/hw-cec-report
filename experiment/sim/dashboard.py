@@ -179,6 +179,14 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   </div>
 
   <div class="panel">
+    <h3>累计卸载相关成本对比（几种 routing 方法）</h3>
+    <div class="hint">累计 (网络传输 + 排队 + 状态获取) 时间，即卸载决策直接影响的成本（不含固定 prefill/decode）。
+      竖线为用户移动时刻。注意：greedy 把小请求转发到 KV 所在节点，即时成本最低，但代价是状态黏附与负载集中
+      （见上方“黏附曲线”“跨节点比例”）；long-term 牺牲一部分前期迁移成本以降低黏附与负载热点。</div>
+    <div id="cumCost"></div>
+  </div>
+
+  <div class="panel">
     <h3>链路利用率</h3>
     <div class="hint">100G 直连 vs 25G 跨主机 RDMA 在各策略下的占用与传输字节。</div>
     <div id="linkUtil"></div>
@@ -258,6 +266,7 @@ function summaryTable(){
     ["recompute 次数","recompute_count",0,"min"],
     ["owner 切换","owner_switch_count",0,"min"],
     ["迁移字节 (MB)","migrate_bytes_mb",1,"min"],
+    ["累计卸载成本 (ms)","offload_cost_ms",0,"min"],
   ];
   let h="<table><thead><tr><th>指标</th>"+POLICIES.map(p=>`<th>${PLABEL[p]}</th>`).join("")+"</tr></thead><tbody>";
   rows.forEach(r=>{
@@ -280,19 +289,21 @@ function barCharts(){
     ["迁移字节 (MB)","migrate_bytes_mb",1],
     ["owner 切换","owner_switch_count",1],
   ];
-  const W=560,rowH=78,pad=120,barH=14,gap=4;
-  const s=svg(W, metrics.length*rowH+10);
+  const W=560,titleH=20,barH=15,gap=5,groupGap=16,pad=120;
+  const rowH=titleH+POLICIES.length*(barH+gap)+groupGap;
+  const s=svg(W, metrics.length*rowH+8);
   metrics.forEach((m,mi)=>{
-    const y0=mi*rowH+8;
-    s.appendChild(txt(0,y0+10,m[0],"axlab"));
+    const y0=mi*rowH+6;
+    const title=el("text",{x:0,y:y0+12,class:"axlab",fill:"var(--fg)","font-size":"12"});
+    title.textContent=m[0]; s.appendChild(title);
     const vals=POLICIES.map(p=>M[p][m[1]]*m[2]);
     const mx=Math.max(...vals,1e-9);
     POLICIES.forEach((p,pi)=>{
-      const v=vals[pi], y=y0+18+pi*(barH+gap);
+      const v=vals[pi], y=y0+titleH+pi*(barH+gap);
       const w=(W-pad-10)*v/mx;
       s.appendChild(el("rect",{x:pad,y,width:Math.max(w,1),height:barH,rx:3,fill:PCOLOR[p]}));
-      s.appendChild(txt(pad-6,y+barH-2,PLABEL[p],"axlab","end"));
-      s.appendChild(txt(pad+Math.max(w,1)+6,y+barH-2,fmt(v, m[2]===100?1:(m[1]==="migrate_bytes_mb"?0:1)),"axlab"));
+      s.appendChild(txt(pad-6,y+barH-3,PLABEL[p],"axlab","end"));
+      s.appendChild(txt(pad+Math.max(w,1)+6,y+barH-3,fmt(v, m[2]===100?1:(m[1]==="migrate_bytes_mb"?0:1)),"axlab"));
     });
   });
   const box=document.getElementById("barCharts"); box.innerHTML=""; box.appendChild(s);
@@ -397,6 +408,24 @@ function stickiness(){
   lineChart("stickiness",series,dur,"累计跨节点请求数");
 }
 
+function cumulativeCost(){
+  const M=DATA.models[currentModel], dur=meta.duration_ms, nb=60;
+  const series={};
+  POLICIES.forEach(p=>{
+    const recs=[...M[p].records].sort((a,b)=>a.t-b.t);
+    let cum=0; const cumAt=[];
+    recs.forEach(r=>{cum+=(r.t_network||0)+(r.t_queue||0)+(r.t_state||0); cumAt.push([r.t,cum]);});
+    const arr=Array(nb).fill(null);
+    for(let i=0;i<nb;i++){
+      const t=dur*(i+1)/nb; let v=0;
+      for(const [tt,cc] of cumAt){ if(tt<=t) v=cc; else break; }
+      arr[i]=v;
+    }
+    series[p]=arr;
+  });
+  lineChart("cumCost",series,dur,"累计 ms");
+}
+
 function linkUtil(){
   const M=DATA.models[currentModel];
   const links=Object.keys(M.nearest.link_utilization||{});
@@ -423,7 +452,7 @@ function linkUtil(){
 
 function render(){
   tabs(); legend(); cards(); summaryTable(); barCharts();
-  actionDist(); ttftSeries(); stickiness(); linkUtil();
+  actionDist(); ttftSeries(); stickiness(); cumulativeCost(); linkUtil();
 }
 render();
 </script>
