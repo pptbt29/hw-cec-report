@@ -1,0 +1,49 @@
+\phantomsection
+\section*{十、挑战与未来方向}
+\addcontentsline{toc}{section}{十、挑战与未来方向}
+
+\phantomsection
+\subsection*{10.1 异构资源与性能建模}
+\addcontentsline{toc}{subsection}{10.1 异构资源与性能建模}
+
+CEC LLM 推理中的性能建模比云端 serving 更难，因为影响时延的因素不再只是模型大小和 GPU 利用率。端侧 NPU、边缘 GPU、CPU 内存、显存容量、无线链路、边缘间链路和云端队列都会进入同一条服务路径。即使模型和请求相同，只要入口位置、batch 组成或 KV 状态位置不同，TTFT 和 TPOT 都可能出现明显差异。HexGen、HexGen-2 和端-边-云协同智能综述均表明，异构资源建模是跨设备、跨节点推理优化的基础难点 \refcite{3}, \refcite{12}, \refcite{13}。
+
+因此，未来更可行的方向不是建立一个全局精确模型，而是构建可在线校准的分层性能画像。模型画像记录不同 prompt/output 长度下的 prefill、decode 和 KV 增长特征；硬件画像记录不同 batch、并行度和量化配置下的吞吐与显存水位；链路画像记录端-边、边-边、边-云的 RTT、带宽和抖动；状态画像记录 prefix cache、KV Cache 和 session state 的位置与复用价值。调度器再基于这些画像做近似决策，并用线上观测持续修正误差。这个方向的关键不是预测得多精细，而是预测误差不能把系统带入错误的路由或切分策略。
+
+
+\phantomsection
+\subsection*{10.2 状态迁移与一致性}
+\addcontentsline{toc}{subsection}{10.2 状态迁移与一致性}
+
+KV Cache、prefix cache 和 session state 让 LLM 推理天然带有强状态性。传统边缘 offloading 往往把任务看成可独立迁移的计算单元，但 LLM 会话不是这样：一次 prefill 生成的 KV 可能在后续数百个 decode step 中持续使用，多轮对话还会不断累积上下文。用户移动后，如果只把新请求路由到最近节点，却忽略旧状态的位置，就可能出现重复 prefill、远程访问延迟升高或上下文连续性破坏。PagedAttention、CacheGen、Mooncake、Preble 和 CachedAttention 分别从 KV 分页、KV 压缩/流式传输、KVCache-centric architecture、prompt scheduling 和多轮会话缓存复用角度说明了该问题的重要性 \refcite{5}, \refciterange{21}{24}。
+
+未来需要研究的是状态生命周期管理，而不只是状态迁移。系统应能判断哪些状态值得保留，哪些状态可以压缩、降精度、迁移、复制或淘汰；还要判断在 handover 前是否预热候选边缘节点，在 handover 后是否临时远程访问旧状态，何时再把状态真正迁移过去。更进一步，状态一致性也不能只用数据库式强一致性来理解。LLM serving 更需要的是服务连续性一致性：用户看到的上下文、权限、个性化信息和生成流不能中断，但底层 KV 是否完全同步可以根据成本和剩余生成长度做权衡。
+
+
+\phantomsection
+\subsection*{10.3 在线策略稳定性}
+\addcontentsline{toc}{subsection}{10.3 在线策略稳定性}
+
+动态 batching、动态路由和动态切分都可能带来策略震荡。一个典型例子是：调度器看到某个边缘实例负载低，于是把更多请求转过去；转发后该实例排队升高，下一轮调度又把请求切回原实例；与此同时 prefix cache 命中下降，KV 状态在多个实例之间来回移动，最终平均负载看似均衡，尾延迟却变差。类似问题在无线移动场景中会更明显，因为链路抖动和入口变化本身就是高频扰动。动态调度和迁移相关系统通常都会显式讨论 SLO、尾延迟、迁移开销或公平性边界，这也是 CEC 推理调度需要继承的工程原则 \refcite{7}, \refcite{19}, \refcite{26}。
+
+因此，在线策略需要从“每次都选当前最优”转向“在收益足够大时才切换”。可研究的机制包括切换冷却时间、收益阈值、置信区间、状态迁移预算、SLA 违约保护和灰度发布。对于生产系统，还应保留影子调度能力：新策略先在旁路计算推荐决策，与线上实际决策比较一段时间，再逐步接管小比例流量。这样的机制看起来不如端到端强化学习漂亮，但在无线软件环境中更容易解释、回滚和验收。
+
+
+\phantomsection
+\subsection*{10.4 隐私与合规}
+\addcontentsline{toc}{subsection}{10.4 隐私与合规}
+
+无线场景中的用户位置、业务上下文、终端标识和会话历史都可能具有隐私敏感性。CEC 推理如果只按时延和负载选择路径，可能把敏感上下文转发到不合适的节点或区域。尤其是长上下文会话中，KV Cache 与 prefix cache 虽然不是原始文本，但仍可能包含与用户输入相关的隐含信息，因此状态放置和状态迁移也应纳入隐私约束。
+
+未来更合理的做法是把隐私边界作为调度约束，而不是事后补丁。请求进入系统时就应带有数据等级、可出域范围、是否允许云端处理、是否允许跨边缘复制状态等标签。路由、batching 和模型切分都必须在这些约束下优化：隐私敏感请求可以优先端侧或接入边缘处理，复杂但敏感的请求可以采用本地小模型 + 云端非敏感摘要的协同方式，状态迁移也可以只迁移必要的 session metadata，而不迁移完整 KV。这个方向的难点在于同时维持性能、质量和合规，而不是简单地把敏感请求全部留在本地。
+
+
+\phantomsection
+\subsection*{10.5 未来研究方向}
+\addcontentsline{toc}{subsection}{10.5 未来研究方向}
+
+后续研究可以沿着五条线推进。第一是云边端一体化 LLM serving，把模型模板、batching 策略、状态索引和路由策略纳入统一控制面，而不是分别优化。第二是面向无线移动性的 KV/state 管理，重点研究状态何时保留、何时迁移、何时远程访问、何时重算。第三是多模型多租户调度，在 SLM、LLM、LoRA adapter、MoE expert 和云端大模型共存时，同时保证资源隔离、公平性和 SLA。第四是隐私保护协同推理，把数据本地性、状态脱敏、token-wise partition 和模型路径选择结合起来。第五是面向生产系统的 MLOps 与策略治理，包括监控、灰度、回滚、异常检测和策略审计。其中，云边端协同和移动服务连续性可由端-边-云协同智能综述与 mobility-aware service placement 工作支撑 \refcite{13}, \refcite{25}；KV/cache runtime 可由 Mooncake、CacheGen、Preble 和 CachedAttention 等工作支撑 \refciterange{21}{24}；多用户公平调度可由 Fairness in Serving LLMs 支撑 \refcite{26}。
+
+从项目落地角度看，最值得优先投入的是“预测-决策-回退”一体化框架。预测模块不追求完美，只要能够估计请求长度、实例服务时间、链路状态和移动风险；决策模块基于有限模板做 batching、routing 和部署选择；回退模块在预测失准、SLA 风险升高或状态迁移失败时快速切回保守策略。这样的框架既能承接前文三类算法，也能符合无线系统对稳定性和可解释性的要求。
+
+

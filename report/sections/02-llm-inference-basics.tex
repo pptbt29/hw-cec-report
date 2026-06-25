@@ -1,0 +1,409 @@
+\phantomsection
+\section*{二、LLM 推理基础、问题空间与优化分类}
+\addcontentsline{toc}{section}{二、LLM 推理基础、问题空间与优化分类}
+
+\phantomsection
+\subsection*{2.1 LLM 推理的基本执行机制}
+\addcontentsline{toc}{subsection}{2.1 LLM 推理的基本执行机制}
+
+LLM 推理可以理解为一个在线生成服务过程：系统接收用户输入上下文，并以自回归方式逐 token 生成输出。与传统 DNN 推理相比，LLM 推理的特殊性在于输入长度和输出长度动态变化，decode 阶段存在强状态依赖，KV Cache 会随上下文长度和生成长度持续增长，系统需要在吞吐、时延、显存占用和服务质量之间持续权衡。
+
+
+\phantomsection
+\subsubsection*{2.1.1 Prefill 与 Decode}
+\addcontentsline{toc}{subsubsection}{2.1.1 Prefill 与 Decode}
+
+LLM 推理通常分为两个阶段：\textbf{Prefill} 和 \textbf{Decode}。
+
+
+\textbf{Prefill 阶段}负责处理完整输入上下文，包括用户 prompt、历史对话、系统提示词和检索增强内容等。模型会对整段上下文并行计算 attention 和 FFN，并为每一层生成后续 decode 需要复用的初始 KV Cache。该阶段矩阵规模较大、并行度较高，通常更偏 compute-bound，主要影响 TTFT，即 Time To First Token。
+
+
+\textbf{Decode 阶段}负责逐 token 生成输出。每一步 decode 输入上一步生成的新 token，同时读取历史 KV Cache，计算当前 token 的 attention 和 FFN，并将当前 token 对应的新 KV 写回缓存。该阶段每步计算粒度较小、状态依赖强、访存频繁，通常更偏 memory-bound 或 latency-bound，主要影响 TPOT、ITL 和持续生成吞吐。
+
+
+Prefill 和 Decode 的资源特征差异是 LLM serving 优化的核心背景之一。Prefill 更像大矩阵并行计算，Decode 更像高频、小粒度、状态密集的在线执行。因此，很多 serving 系统会围绕 prefill/decode 的差异设计 batching、调度、KV 管理和分布式执行策略。
+
+
+
+
+\phantomsection
+\subsubsection*{2.1.2 KV Cache}
+\addcontentsline{toc}{subsubsection}{2.1.2 KV Cache}
+
+KV Cache 是 LLM decode 阶段最核心的运行时状态。自回归生成中，第 t 个 token 的 attention 需要访问前面所有 token 的 key/value。如果每一步都重新计算历史 token 的 key/value，会产生大量重复计算。KV Cache 的作用是在 prefill 阶段保存历史 token 的 key/value，在 decode 阶段复用这些历史 KV，只为新 token 计算新增 KV。
+
+
+KV Cache 降低了 decode 阶段的重复计算，但也引入了显著的内存状态问题。KV 占用会随 batch size、上下文长度、输出长度、模型层数和 KV head 数增长。在长上下文、多轮对话和高并发场景中，KV Cache 往往成为显存容量和显存带宽的重要瓶颈。近期 inference systems survey 也将 memory management 单独作为 LLM inference systems 的关键主题，覆盖 paged memory、eviction、offloading、quantization 和 cache persistence 等方向。
+
+
+典型 KV 相关优化如表~\ref{tab:kv-cache-optimizations} 所示：
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{典型 KV Cache 相关优化及作用}}
+    \label{tab:kv-cache-optimizations}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.55\hsize\raggedright\arraybackslash}X >{\hsize=1.45\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{方向} & \textbf{作用} \\
+        \midrule
+        PagedAttention / memory paging & 降低 KV 分配碎片，提高显存利用率 \\
+        \tabrowrule
+        Prefix cache / RadixAttention & 复用共享前缀，减少重复 prefill \\
+        \tabrowrule
+        KV compression / quantization & 降低 KV 存储和传输成本 \\
+        \tabrowrule
+        KV eviction & 在显存不足时淘汰低价值 KV \\
+        \tabrowrule
+        KV offloading & 将部分 KV 放到 CPU、本地存储、远端内存或其他节点 \\
+        \tabrowrule
+        Distributed KV cache & 在多 worker / 多节点场景下管理 KV 状态分布 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+
+
+\phantomsection
+\subsubsection*{2.1.3 Batching 与 Scheduling}
+\addcontentsline{toc}{subsubsection}{2.1.3 Batching 与 Scheduling}
+
+Batching 是 LLM serving 提高硬件利用率和吞吐量的核心机制。单个请求，尤其是 decode 阶段，每一步计算粒度较小。如果只服务单请求，加速器容易出现算力空闲。Batching 通过把多个请求合并执行，扩大矩阵运算规模，提高 GPU/NPU occupancy，并摊薄 kernel launch、调度和访存开销。
+
+
+但 LLM batching 与传统 DNN batching 不同。LLM 请求的输入长度、到达时间和输出长度差异很大；decode 阶段请求会逐步完成，batch slot 会动态空出；长 prompt prefill 可能阻塞短请求 decode。因此，现代 LLM serving 系统通常需要 dynamic batching、continuous batching、iteration-level scheduling 和 chunked prefill 等机制。近期 inference-system survey 也将 batching 和 scheduling 与 kernel design、memory management 一起作为 LLM inference systems 的核心组成部分。
+
+
+典型调度机制如表~\ref{tab:serving-scheduling-mechanisms} 所示：
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{典型 LLM Serving 调度机制及作用}}
+    \label{tab:serving-scheduling-mechanisms}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.55\hsize\raggedright\arraybackslash}X >{\hsize=1.45\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{机制} & \textbf{作用} \\
+        \midrule
+        Dynamic batching & 根据请求到达情况动态组成 batch \\
+        \tabrowrule
+        Continuous batching & 在每个 decode iteration 动态加入新请求、移除完成请求 \\
+        \tabrowrule
+        Iteration-level scheduling & 以 token iteration 为粒度调度请求 \\
+        \tabrowrule
+        Chunked prefill & 将长 prompt prefill 拆成多个 chunk，降低对 decode 的阻塞 \\
+        \tabrowrule
+        Priority / fairness scheduling & 根据 SLA、优先级和公平性调整请求顺序 \\
+        \tabrowrule
+        Admission control & 在资源紧张时控制进入系统的请求量 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+Batching 的核心目标不是简单最大化 batch size，而是在 throughput、TTFT、TPOT、ITL、显存占用和 SLA 达标率之间做动态平衡。
+
+
+
+
+\phantomsection
+\subsubsection*{2.1.4 主要性能指标}
+\addcontentsline{toc}{subsubsection}{2.1.4 主要性能指标}
+
+LLM inference 通常同时关注表~\ref{tab:llm-inference-metrics} 中的指标：
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{LLM 推理主要性能指标}}
+    \label{tab:llm-inference-metrics}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.55\hsize\raggedright\arraybackslash}X >{\hsize=1.45\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{指标} & \textbf{含义} \\
+        \midrule
+        TTFT & Time To First Token，首 token 延迟 \\
+        \tabrowrule
+        TPOT & Time Per Output Token，平均每个输出 token 的生成时间 \\
+        \tabrowrule
+        ITL & Inter-token Latency，相邻 token 输出间隔 \\
+        \tabrowrule
+        E2E latency & 从请求到完整响应结束的端到端时延 \\
+        \tabrowrule
+        Throughput & 单位时间处理的 request 数或 token 数 \\
+        \tabrowrule
+        Goodput & 满足 SLA 的有效吞吐 \\
+        \tabrowrule
+        GPU/NPU utilization & 加速器计算单元利用率 \\
+        \tabrowrule
+        Memory footprint & 权重、activation、KV Cache 等占用 \\
+        \tabrowrule
+        Cost per token & 单位 token 的计算、显存和服务成本 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+
+
+\phantomsection
+\subsection*{2.2 LLM 推理的问题空间：从执行机制到系统瓶颈}
+\addcontentsline{toc}{subsection}{2.2 LLM 推理的问题空间：从执行机制到系统瓶颈}
+
+LLM inference 的主要问题不是来自单一环节，而是由模型规模、自回归生成、KV 状态增长、请求动态性和服务化部署共同导致的。已有 overview survey 通常采用 \textbf{problem-oriented taxonomy}，即按照“主要解决什么问题”来组织文献。
+
+
+例如，A Survey on Efficient Inference for Large Language Models \refcite{73} 将 LLM inference 低效的主要来源概括为模型规模大、attention 二次复杂度高和自回归 decoding，并将优化工作组织为 data-level、model-level 和 system-level 三类。  面向 serving 的 Taming the Titans: A Survey of Efficient LLM Inference Serving \refcite{74} 则采用 serving-oriented taxonomy，将方法组织为 instance-level approaches、cluster-level strategies、emerging scenarios 和 miscellaneous areas；其中 instance level 包括 model placement、request scheduling、decoding length prediction、storage management 和 disaggregation，cluster level 则关注 GPU cluster deployment、multi-instance load balancing 和 cloud service solutions。  另一篇 A Survey of LLM Inference Systems \refcite{75} 则按 inference-system pipeline 组织，先讨论 request processing operators and algorithms，再讨论 model optimization and execution，其中包括 kernel design、batching、scheduling，最后讨论 memory management，包括 paged memory、eviction、offloading、quantization 和 cache persistence；随后再讨论 single-replica、multi-replica、disaggregated 和 serverless inference systems。
+
+
+综合这些 survey 的 problem-oriented view，可以将 LLM inference 的问题空间概括为以下几类。
+
+
+
+
+\phantomsection
+\subsubsection*{2.2.1 计算复杂度与模型规模问题}
+\addcontentsline{toc}{subsubsection}{2.2.1 计算复杂度与模型规模问题}
+
+LLM 参数规模大，单次 forward 的 FLOPs 高，attention 和 FFN 都会带来大量矩阵计算。长上下文进一步放大 attention 的计算和存储开销。相关优化通常关注如何从模型结构、参数表示或算子执行上降低计算复杂度。
+
+这一类瓶颈首先体现为权重加载和常驻显存成本高，其次体现为 attention 与 FFN 带来的高计算量。长上下文会进一步推高 attention 计算和 KV 存储压力；MoE 等条件计算结构虽然降低了单 token 激活参数量，却引入 expert routing、expert placement 和 all-to-all 通信等新的系统问题。因此，相关优化通常沿着两条路径展开：一是通过量化、剪枝、蒸馏、低秩分解等方法降低模型参数和计算量；二是通过 GQA/MQA/MLA、efficient attention、MoE 优化、低比特执行和高效 attention kernel 改善模型结构或执行路径。
+
+
+
+
+\phantomsection
+\subsubsection*{2.2.2 KV Cache 与内存状态问题}
+\addcontentsline{toc}{subsubsection}{2.2.2 KV Cache 与内存状态问题}
+
+KV Cache 将 decode 从重复计算历史上下文变为增量计算当前 token，但代价是引入持续增长的运行时状态。上下文越长、batch 越大、并发越高，KV Cache 越容易成为显存容量和带宽瓶颈。
+
+KV 问题的难点在于它不是静态模型权重，而是随请求生命周期动态增长和释放的状态。KV Cache 的显存占用会随上下文长度和并发度增长，动态分配释放又容易产生碎片；在多轮对话和共享 prompt 场景中，不同请求可能重复执行相同前缀的 prefill；在跨 worker 或跨节点 serving 中，KV 的传输、迁移、复用和远程访问会进入端到端时延关键路径。相应地，PagedAttention、prefix cache、KV compression、KV quantization、KV eviction、KV offloading、distributed KV cache 和 remote KV serving 等方法，都是围绕“如何降低状态成本、提高状态复用、控制状态移动”展开。
+
+
+
+
+\phantomsection
+\subsubsection*{2.2.3 请求动态性与调度问题}
+\addcontentsline{toc}{subsubsection}{2.2.3 请求动态性与调度问题}
+
+LLM 请求具有高度动态性：prompt 长度不同、输出长度未知、请求到达时间随机、服务质量目标不同。Prefill 和 decode 的资源特征也不同，长 prefill 可能阻塞短 decode，请求完成时间差异又会导致 batch 内部动态变化。
+
+调度问题的核心是吞吐和时延之间的动态权衡。等待凑 batch 可以提高硬件利用率，但会增加 TTFT；过大的 batch 会推高单请求延迟和显存占用；长 prompt prefill 可能阻塞已经进入流式输出的 decode 请求；不同租户、优先级和 SLA 又会使简单 FIFO 策略失效。因此，现代 LLM serving 通常采用 dynamic batching、continuous batching、iteration-level scheduling、chunked prefill、deadline-aware scheduling、priority scheduling 和 admission control 等机制，在 batch 形成、active set 更新和请求优先级之间做在线决策。
+
+
+
+
+\phantomsection
+\subsubsection*{2.2.4 Decode 串行性与生成加速问题}
+\addcontentsline{toc}{subsubsection}{2.2.4 Decode 串行性与生成加速问题}
+
+LLM decode 是自回归过程，每一步依赖前一步输出，天然存在串行依赖。即使单步 forward 被加速，逐 token 生成仍可能造成较高 TPOT 和 ITL。
+
+这一瓶颈与模型规模无关，即使单步 decode 的 kernel 足够快，自回归依赖仍会限制输出速度。单步 decode 的计算粒度较小，硬件利用率往往不如 prefill；sampling、beam search 或复杂 decoding policy 还会增加控制开销。Speculative decoding、assisted decoding、parallel decoding、tree decoding、beam search optimization、multi-token prediction 和 adaptive drafter selection 等方法，试图通过草稿生成、批量验证或多 token 预测减少目标模型的串行调用次数，但它们也必须在 acceptance rate、额外计算、输出质量和系统复杂度之间取得平衡。
+
+
+
+
+\phantomsection
+\subsubsection*{2.2.5 多实例、多 GPU 与服务级编排问题}
+\addcontentsline{toc}{subsubsection}{2.2.5 多实例、多 GPU 与服务级编排问题}
+
+当模型规模、并发量或服务可用性需求超过单设备能力时，系统需要跨多个 GPU、worker、replica 或节点协同。此时问题从单个 engine 内部执行扩展为分布式执行和服务级调度。
+
+分布式化带来的收益与代价同时存在。Tensor、pipeline、expert 或 context parallel 可以突破单设备容量和吞吐限制，但会引入 activation、KV 和中间状态的跨设备传输；prefill 与 decode 的资源特征差异使 disaggregation 成为可能，也使 KV handoff 成为新的关键路径；多 replica 和多模型服务可以提高可用性和弹性，却需要在负载均衡、质量、时延和成本之间做服务级选择。因此，distributed parallelism、prefill/decode disaggregation、distributed KV cache、KV transfer、replica routing、cluster load balancing、cascade serving 和 speculative serving orchestration 等方法，本质上都在处理“如何把单实例推理扩展成可控的分布式服务”这一问题。
+
+
+
+
+\phantomsection
+\subsection*{2.3 LLM Inference Optimization Taxonomy：以优化对象为主轴的分类}
+\addcontentsline{toc}{subsection}{2.3 LLM Inference Optimization Taxonomy：以优化对象为主轴的分类}
+
+已有 overview survey 通常从不同角度组织 LLM inference optimization。A Survey on Efficient Inference for Large Language Models \refcite{73} 倾向于将方法划分为 data-level、model-level 和 system-level optimization；A Survey of LLM Inference Systems \refcite{75} 进一步将 system-level 方法拆解为 kernel design、batching/scheduling、memory management 和 single-/multi-replica systems；Taming the Titans: A Survey of Efficient LLM Inference Serving \refcite{74} 则强调 instance-level approaches、cluster-level strategies 和 emerging scenarios。综合这些视角，本报告采用一个更适合工程分析的 \textbf{Layer–Scope Taxonomy}：以优化对象所在的系统抽象层作为主轴，以 Local / Distributed 作为执行范围副轴。
+
+
+其中，Layer 轴包括四类：Model-Level、Kernel-Level、Runtime-Level 和 Serving Policy \& Routing-Level。Scope 轴包括两类：Local 和 Distributed。Local 表示优化限制在单个 serving instance 或本地控制域内，可以包含 CPU-GPU/NPU/本地存储等本地异构资源协同；Distributed 表示优化需要跨多个 GPU、device、worker、replica、service 或 node 协同，并涉及 computation、request、KV state、activation 或 routing decision 的跨实体分布。
+
+
+该 taxonomy 不要求所有方法完全互斥。真实 LLM serving 系统通常是 cross-layer co-design。对于一项具体工作，本报告主要关注三个问题：它解决什么 inference problem，主要优化对象在哪一层，以及该优化发生在 Local 还是 Distributed scope。
+
+
+
+
+\phantomsection
+\subsubsection*{2.3.1 Model-Level Optimization}
+\addcontentsline{toc}{subsubsection}{2.3.1 Model-Level Optimization}
+
+Model-Level Optimization 的核心是改变模型本身，从源头降低 inference complexity。它优化的是模型参数、参数表示、结构设计或算法语义。只要优化后的模型即使脱离具体 serving engine 仍然成立，就可以认为主要属于 Model-Level。
+
+这一层的优化对象包括参数量、权重表示、FLOPs、activation 计算量、attention complexity、KV size 以及条件计算路径。在 Local scope 下，常见方法包括 weight quantization、pruning、distillation、low-rank、weight sharing、GQA/MQA/MLA、linear 或 sparse attention、state space model、early exit、token pruning 和 dynamic sparsity 等；它们主要服务于单实例或单设备上的模型压缩和结构简化。在 Distributed scope 下，Model-Level 更强调模型结构是否适合跨设备执行，例如面向 expert parallelism 的 MoE architecture、更适合 tensor/context parallel 的 attention 或 KV 结构、更容易按 layer、expert、context 或 activation 切分的模型结构，以及由 small / medium / large model 组成的多层级 model family。
+
+需要注意，Model-Level 不包括一般的 execution graph optimization。CUDA Graph、operator fusion、TensorRT execution graph 优化等主要改变的是执行路径或部署图，而不是模型语义本身，应归入 Runtime-Level 或 Kernel-Level。
+
+
+
+
+\phantomsection
+\subsubsection*{2.3.2 Kernel-Level Optimization}
+\addcontentsline{toc}{subsubsection}{2.3.2 Kernel-Level Optimization}
+
+Kernel-Level Optimization 的核心是在不改变模型数学语义的前提下，优化 tensor operator 或 communication primitive 在硬件上的执行效率。它关注的是 attention、GEMM、normalization、sampling、collective communication 等底层执行单元如何更快、更省显存带宽、更高效地利用硬件。
+
+它的直接目标通常是提高 GPU/NPU utilization、降低 HBM traffic、增强 SRAM/cache reuse、提升 Tensor Core 或 NPU special unit 利用率，并改善 operator throughput。在 Local scope 下，典型方法包括 FlashAttention、FlashDecoding、paged attention kernel path、fused MLP、fused RMSNorm、fused softmax、low-bit GEMM、FP8/INT8/INT4 kernels、hardware-aware tiling、memory layout 优化和 GPU-side sampling 等。在 Distributed scope 下，Kernel-Level 主要体现为 collective 或 P2P communication primitive 的实现优化，例如 all-reduce、all-gather、reduce-scatter、all-to-all、RDMA/NVLink transfer path、fused communication primitive、collective algorithm selection 以及 MoE expert dispatch / combine primitive。
+
+需要区分的是，如果优化对象是 collective / P2P primitive 的实现路径，归为 Kernel-Level × Distributed；如果优化对象是通信与计算在 runtime pipeline 中的编排、重叠和调度，则归为 Runtime-Level × Distributed。
+
+
+
+
+\phantomsection
+\subsubsection*{2.3.3 Runtime-Level Optimization}
+\addcontentsline{toc}{subsubsection}{2.3.3 Runtime-Level Optimization}
+
+Runtime-Level Optimization 是现代 LLM serving 的核心层。它发生在请求进入 inference engine 之后，围绕在线 token execution、KV state、batch composition、decode loop 和 execution pipeline 做动态管理。Runtime-Level 不改变模型本身，也不一定改变单个 kernel，而是决定请求到达后如何高效执行。
+
+
+Runtime-Level 可以进一步细分为四类：KV / Memory Runtime、Batching / Scheduling Runtime、Decoding Runtime 和 Execution Runtime。
+
+
+\paragraph*{A. KV / Memory Runtime}
+
+KV / Memory Runtime 关注 KV lifecycle、memory state 和 cache reuse。它的核心问题是：KV Cache 如何存储、复用、压缩、淘汰、迁移或远程访问。
+
+在 Local scope 下，它主要表现为 KV cache management、PagedAttention / memory paging、Prefix cache / RadixAttention、KV compression / quantization、KV eviction、KV offloading、cache persistence 和 runtime memory allocator 等机制。在 Distributed scope 下，问题进一步扩展为 distributed KV cache、KV transfer / migration、remote KV serving、multi-replica KV reuse、distributed prefix cache、KV-aware placement 和 cross-worker state synchronization。
+
+这一类优化的核心目标是降低 KV 显存占用、减少重复 prefill、提升 cache reuse，并在分布式场景下控制 KV 传输和状态迁移成本。
+
+
+\paragraph*{B. Batching / Scheduling Runtime}
+
+Batching / Scheduling Runtime 关注请求和 token 在 inference engine 内如何组织执行。它回答的是：哪些请求何时执行，哪些 token 可以组成 batch，prefill 和 decode 如何交错，如何在 throughput、TTFT、TPOT、ITL、公平性和 SLA 之间做权衡。
+
+在 Local scope 下，典型机制包括 dynamic batching、continuous batching、iteration-level scheduling、chunked prefill、prefill/decode interleaving、engine-local admission control、priority / fair scheduling 和 deadline-aware scheduling。在 Distributed scope 下，调度对象会跨越 worker、replica 或资源池，因此需要 cross-worker scheduling、distributed continuous batching、prefill worker / decode worker scheduling、heterogeneous GPU scheduling、multi-replica queue coordination、distributed admission control 和 SLO-aware worker scheduling。
+
+这一类优化的核心目标是在动态请求负载下提高硬件利用率，同时控制排队时延和服务质量。
+
+
+\paragraph*{C. Decoding Runtime}
+
+Decoding Runtime 关注在线 token generation procedure。它回答的是：输出 token 如何生成、验证、选择和接受。它不主要决定请求如何组 batch，也不主要决定计算如何 launch，而是改变 decode loop 的生成逻辑。
+
+在 Local scope 下，这类方法包括 speculative decoding、assisted decoding、parallel decoding、tree decoding、beam search optimization、n-gram speculation、prompt lookup decoding 和 serving-time multi-token prediction / verification。在 Distributed scope 下，decoding runtime 会涉及 distributed verification、draft / target execution split、multi-draft execution、batched verification across workers、draft model 与 target model 分布式协同，以及 speculative decoding 与 prefill/decode disaggregation 的结合。
+
+Speculative decoding 这类方法有时也被称为 decoding algorithm。本报告将其归入 Runtime-Level，是因为其主要改变 serving 时的在线 token generation procedure，而不是模型参数或架构本身。但如果某种 multi-token prediction 方法引入额外训练 heads 或改变模型结构，则应标注 Model-Level primary 或 secondary。
+
+
+\paragraph*{D. Execution Runtime}
+
+Execution Runtime 关注 scheduled work 如何 launch、overlap、replay 和执行。当前面的 runtime 已经决定哪些请求要运行、batch 如何组成、decode 如何进行之后，Execution Runtime 负责将计算、数据搬运和通信高效提交到硬件，并组织成流水线执行。
+
+在 Local scope 下，它包括 CUDA Graph / HIP Graph replay、async execution、stream scheduling、CPU-GPU overlap、host-device communication hiding、compute / memory-copy overlap、runtime metadata / buffer reuse 和 GPU-side sampling execution path。在 Distributed scope 下，它对应 tensor parallel runtime、pipeline parallel runtime、expert parallel runtime、context / sequence parallel runtime、prefill/decode disaggregation、distributed execution pipeline、communication-computation overlap scheduling 以及 activation / KV transfer orchestration。
+
+Execution Runtime 与 Kernel-Level 的边界在于：Kernel-Level 优化单个 operator 或 communication primitive 的实现；Execution Runtime 优化一组 operator、copy 和 communication 的 launch、同步、overlap 和流水化组织方式。
+
+
+
+
+\phantomsection
+\subsubsection*{2.3.4 Serving Policy \& Routing-Level Optimization}
+\addcontentsline{toc}{subsubsection}{2.3.4 Serving Policy \& Routing-Level Optimization}
+
+Serving Policy \& Routing-Level Optimization 关注更粗粒度的服务级控制决策。它不直接优化单个 engine 内部 token 如何执行，而是决定请求进入哪个模型、adapter、replica、worker pool 或 service path，以及是否进行 fallback、cascade、escalation 或多服务编排。
+
+这一层的典型优化对象包括 request assignment、model / adapter selection、replica / worker selection、service path selection、fallback / escalation、cascade policy、SLO / cost / latency policy 和 multi-service orchestration。在 Local scope 下，它可以表现为 local model selection、adapter / LoRA routing、local cascade serving、normal decoding 与 speculative decoding path selection、drafter selection、local/cloud fallback、budget-aware local inference 和 latency-aware local policy。在 Distributed scope 下，它进一步扩展为 replica routing、worker-pool routing、cluster load balancing、SLO-aware routing、cost-aware routing、region-aware routing、KV-aware routing、speculative serving orchestration、draft-target worker orchestration 和 multi-service graph orchestration。
+
+Runtime-Level 和 Serving Policy \& Routing-Level 在真实系统中强耦合，但 primary decision object 不同。Runtime-Level 解决“请求进入某个 engine 后如何执行”；Serving Policy \& Routing-Level 解决“请求应该交给哪个模型、worker、replica 或服务路径”。后者经常依赖 runtime feedback，例如 queue length、KV cache pressure、batch state 和 SLO slack。
+
+
+
+
+\phantomsection
+\subsection*{2.4 工业级 LLM Inference Framework 代表性机制映射}
+\addcontentsline{toc}{subsection}{2.4 工业级 LLM Inference Framework 代表性机制映射}
+
+为了避免分类停留在抽象概念层面，表~\ref{tab:framework-mechanism-mapping} 选取若干主流工业级 LLM inference framework 中最具有代表性的机制，并将其映射到前述 Layer–Scope Taxonomy。该表不追求覆盖各框架的全部功能，而是展示每个框架最核心、最能体现其系统设计特点的若干机制。
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{工业级 LLM Inference Framework 代表性机制映射}}
+    \label{tab:framework-mechanism-mapping}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.20\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{Framework} & \textbf{代表性方法 / 机制} & \textbf{解决的具体问题} & \textbf{优化方向分类层 \& Scope} & \textbf{具体方法说明} \\
+        \midrule
+        \frameworkcell{\textbf{vLLM \refcite{5}}} & PagedAttention & KV Cache 动态分配和显存碎片问题 & Runtime / KV-Memory × Local & 通过分页式 KV 管理降低显存碎片，提高 KV Cache 利用率 \\
+        \cmidrule(l){2-5}
+         & Continuous batching & Decode 阶段请求动态进出，静态 batch 利用率低 & Runtime / Batching-Scheduling × Local & 在 decode iteration 动态加入和移除请求，提高高并发吞吐 \\
+        \cmidrule(l){2-5}
+         & Chunked prefill & 长 prompt prefill 阻塞 decode，影响 TTFT / ITL & Runtime / Batching-Scheduling × Local & 将长 prefill 拆分为 chunk，与 decode 交错执行 \\
+        \cmidrule(l){2-5}
+         & Prefix caching & 多请求共享前缀导致重复 prefill & Runtime / KV-Memory × Local/Distributed & 复用共享 prompt 或 prefix，减少重复 prefill 计算 \\
+        \tabrowrule
+        \frameworkcell{\textbf{TensorRT-LLM \refcite{9}}} & In-flight batching & 高并发请求长度不同，传统 batching 效率低 & Runtime / Batching-Scheduling × Local & 对不同阶段和长度的请求进行动态批处理 \\
+        \cmidrule(l){2-5}
+         & Paged KV Cache & KV Cache 分配、复用和显存管理问题 & Runtime / KV-Memory × Local & 通过 paged KV 管理改善 KV Cache 利用率 \\
+        \cmidrule(l){2-5}
+         & FP8 / INT8 / INT4 execution & 权重、activation 和算子执行成本高 & Model + Kernel × Local/Distributed & 通过低比特模型表示和低比特 kernel 降低显存和计算成本 \\
+        \cmidrule(l){2-5}
+         & Overlap scheduler & compute、copy、communication、prefill/decode 没有充分重叠 & Runtime / Execution × Local/Distributed & 将计算、通信和数据搬运流水线化，减少等待 \\
+        \tabrowrule
+        \frameworkcell{\textbf{SGLang \refcite{8}}} & RadixAttention & 多轮、多分支请求存在大量共享前缀 & Runtime / KV-Memory × Local & 用 radix tree 组织 prefix cache，提高共享前缀复用 \\
+        \cmidrule(l){2-5}
+         & Zero-overhead CPU scheduler & 高并发场景下 CPU 调度开销影响吞吐 & Runtime / Batching-Scheduling × Local & 降低 CPU 侧调度和 metadata 管理开销 \\
+        \cmidrule(l){2-5}
+         & Prefill-decode disaggregation & Prefill 和 decode 资源特征不同，混部互相干扰 & Runtime / Execution × Distributed & 将 prefill 与 decode 分离到不同资源池，减少资源干扰 \\
+        \cmidrule(l){2-5}
+         & Multi-LoRA batching & 多 adapter 请求混合服务时 batch composition 复杂、吞吐下降 & Serving Policy \& Routing + Runtime/Scheduling × Local/Distributed & 将不同 LoRA / adapter 请求合并调度，提高多 LoRA serving 效率 \\
+        \tabrowrule
+        \frameworkcell{\textbf{Hugging Face TGI \refcite{11}}} & Continuous batching & incoming requests 动态变化，传统 batching 吞吐不足 & Runtime / Batching-Scheduling × Local & 动态合并请求，提高在线 serving 吞吐 \\
+        \cmidrule(l){2-5}
+         & Flash Attention & attention HBM traffic 高，operator throughput 受限 & Kernel × Local & 通过高效 attention kernel 降低显存访问并提升算子吞吐 \\
+        \cmidrule(l){2-5}
+         & Paged Attention & KV Cache / attention memory 管理效率不足 & Runtime / KV-Memory × Local & 通过 paged attention 改善 attention/KV memory 管理 \\
+        \cmidrule(l){2-5}
+         & Tensor parallelism & 单 GPU 容量或吞吐不足，需要跨 GPU 执行 & Runtime / Execution × Distributed & 将模型执行切分到多个 GPU，提高模型容量和吞吐 \\
+        \tabrowrule
+        \frameworkcell{\textbf{LMDeploy / TurboMind \refcite{70}}} & Persistent batching & 高并发请求动态调度，提高吞吐 & Runtime / Batching-Scheduling × Local & 通过持续批处理机制维持 batch 执行效率 \\
+        \cmidrule(l){2-5}
+         & Blocked KV Cache & KV Cache 显存管理和访问效率问题 & Runtime / KV-Memory × Local & 通过 block-based KV 管理改善显存利用率 \\
+        \cmidrule(l){2-5}
+         & Dynamic split \& fuse & 长 prompt 和 decode 混合执行效率低 & Runtime / Batching-Scheduling × Local & 动态拆分和融合 prefill / decode 任务，提高混合负载效率 \\
+        \cmidrule(l){2-5}
+         & Tensor parallelism & 大模型需要跨 GPU 执行 & Runtime / Execution × Distributed & 支持模型在多 GPU 上并行执行 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+
+
+\phantomsection
+\subsection*{2.5 小结}
+\addcontentsline{toc}{subsection}{2.5 小结}
+
+本章首先介绍了 LLM inference 的基本执行机制，包括 prefill/decode、KV Cache、batching/scheduling 和主要性能指标。随后，从执行机制出发，总结了 LLM inference 的主要问题空间，包括计算复杂度与模型规模、KV Cache 与内存状态、请求动态性与调度、decode 串行性与生成加速，以及多实例、多 GPU 与服务级编排问题。
+
+
+在已有 survey 的 problem-oriented taxonomy 基础上，本章进一步采用 Layer–Scope taxonomy 组织 LLM inference optimization：以 Model、Kernel、Runtime、Serving Policy \& Routing 作为优化对象主轴，以 Local / Distributed 作为执行范围副轴，并在 Runtime-Level 内部细分为 KV / Memory Runtime、Batching / Scheduling Runtime、Decoding Runtime 和 Execution Runtime。该分类方式保留了既有 survey 对问题空间的概括能力，同时更适合分析具体优化机制的实现位置、主要优化对象和分布式边界。
+
+
+最后，本章通过主流工业级 inference framework 的代表性机制映射，展示了真实系统通常不是单点优化，而是组合模型表示、kernel、KV/memory runtime、batching/scheduling、execution runtime、distributed execution 和 serving policy 等多层机制。该分类框架将作为后续分析 CEC/MEC 场景下模型部署、请求调度、KV 状态迁移、服务路径选择和端-边-云资源协同优化的基础。
+
+
+
+

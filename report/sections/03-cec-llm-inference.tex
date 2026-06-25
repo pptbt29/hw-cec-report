@@ -1,0 +1,70 @@
+\phantomsection
+\section*{三、CEC 场景下的大模型推理}
+\addcontentsline{toc}{section}{三、CEC 场景下的大模型推理}
+
+\phantomsection
+\subsection*{3.1 CEC LLM 推理的系统形态}
+\addcontentsline{toc}{subsection}{3.1 CEC LLM 推理的系统形态}
+
+CEC 场景下的大模型推理面向端侧设备、接入边缘、区域边缘和中心云组成的多层协同系统。请求可以从终端、基站、边缘网关或区域入口进入，模型权重、adapter、KV Cache、prefix cache、session state 和中间状态也可能分布在不同层级。一次推理既可能在单个端侧或边缘实例内完成，也可能经过端-边、边-云或端-边-云联合执行。
+
+与云侧集中式 LLM serving 相比，CEC 的根本变化在于系统边界被拉长了。云侧 serving 通常假设资源相对集中、互联稳定、控制面统一，优化重点是单实例或集群内部的吞吐、显存和调度效率。CEC 则把地理位置、无线链路、异构硬件、移动接入、状态分布和隐私边界都纳入推理路径。此时，推理系统不只是选择一个 GPU 实例执行请求，而是要决定请求在哪一层服务、模型如何部署、状态如何保留、网络传输是否值得、以及服务路径何时调整。
+
+因此，CEC LLM inference 可以看作是三类决策的叠加。第一类是空间部署决策，即模型层、张量、专家组件、推理阶段或生成职责如何放在端、边、云不同资源上。第二类是时间调度决策，即请求、token、prefill/decode 阶段和 active batch 如何在动态负载下组织执行。第三类是服务路径决策，即完整请求、会话、workflow 和运行时状态如何在多层网络中路由、卸载、迁移或复用。后续章节的三条主线正是从这三个角度展开。
+
+\phantomsection
+\subsection*{3.2 CEC 相较云侧集中式 LLM Serving 新增的问题空间}
+\addcontentsline{toc}{subsection}{3.2 CEC 相较云侧集中式 LLM Serving 新增的问题空间}
+
+云侧集中式 serving 的核心瓶颈通常来自模型规模、KV Cache、batching、并行执行和多实例调度。CEC 并没有消除这些问题，而是把它们放到一个更不稳定的物理环境中。端侧和边缘节点的算力、显存、内存、功耗和散热预算有限，同一个模型未必能完整放入目标设备；即便能够部署，也可能受到低比特 kernel 支持、operator coverage、runtime backend 和 layout conversion 的限制。由此，模型部署问题从“如何在一组相似 GPU 上高效执行”，转变为“如何在能力差异显著的端-边-云节点之间选择模型形态和执行拓扑”。
+
+网络约束是 CEC 区别于数据中心 serving 的第二个关键因素。端-边、边-边和边-云链路的带宽、RTT、抖动和拥塞状态会直接影响模型切分、task offloading、prefill/decode 分离和 KV 迁移是否值得执行。对于普通 DNN 推理，跨节点传输的主要对象通常是输入或中间 activation；而在 LLM inference 中，KV Cache、prefix cache、session state 和多轮上下文也会成为需要迁移或远程访问的状态资源。网络成本因此不再只是请求入口到服务实例的传输延迟，而是贯穿推理全过程的状态移动成本。
+
+边缘请求的动态性也不同于云侧大请求池。单个接入边缘节点往往并发规模有限，请求到达具有地理局部性和突发性，简单等待大 batch 会显著增加 TTFT；但如果完全放弃 batching，又会降低 GPU/NPU 利用率并抬高单位 token 成本。与此同时，prefill 和 decode 的资源画像差异、长 prompt 和短 prompt 的混合、不同业务的 SLA 差异，都会使固定 batch size 和 FIFO 队列难以稳定工作。边缘 runtime 因此更需要短窗口、SLO-aware、phase-aware 和状态感知的在线调度。
+
+用户移动进一步引入服务连续性问题。对于单轮短请求，移动可能只改变入口节点；对于多轮对话、长上下文和 agent workflow，移动会改变服务实例与状态位置之间的关系。KV Cache、prefix cache、session state 或 agent memory 可能仍然停留在旧边缘节点，新请求却已经从新入口进入系统。系统此时需要在迁移状态、远程访问旧状态、重新 prefill 或降低上下文质量之间做选择。这个问题使 CEC LLM inference 的优化目标从单次请求时延扩展到会话连续性、状态复用和移动场景下的 QoS 稳定性。
+
+隐私和数据本地性则决定了哪些服务路径根本不可选。部分 prompt、传感器数据、业务上下文或用户状态可能不能上传到云端；某些行业应用还要求推理过程中的中间状态不离开边缘域。隐私约束会限制模型选择、offloading 范围、KV 迁移路径和 fallback 策略，使系统不能仅按最小时延或最低成本选择节点。换言之，CEC 中的推理优化必须同时处理资源可行性、链路代价、状态位置、隐私边界和业务 QoS。
+
+\phantomsection
+\subsection*{3.3 CEC 场景下 LLM Inference 优化重心的转移}
+\addcontentsline{toc}{subsection}{3.3 CEC 场景下 LLM Inference 优化重心的转移}
+
+前文提出的 Layer–Scope taxonomy 仍然适用于 CEC 场景，但每一层的关注点都会发生迁移。Model-Level 不再只是压缩模型或降低 FLOPs，而是要形成端侧小模型、边缘中等模型、云端大模型及其 adapter / MoE / 分层模型族之间的协同体系。模型结构是否容易按 layer、tensor、expert、stage 或 semantic responsibility 切分，会直接影响后续部署和 offloading 的可行性。
+
+Kernel-Level 的重心从单一 GPU 后端优化，转向异构硬件上的可执行性和稳定性能。CEC 系统可能同时包含端侧 NPU、移动 GPU、边缘 GPU/NPU、CPU 和云端 GPU，不同后端对 precision、operator、attention kernel、KV layout 和通信 primitive 的支持并不一致。一个模型或 runtime 在云端高效，并不意味着它能在边缘设备上稳定运行；unsupported operator、layout conversion 和 fallback 甚至可能抵消协同执行带来的收益。
+
+Runtime-Level 的变化最为直接。云侧 runtime 主要管理单个 serving engine 或 GPU cluster 内的 KV、batch、decode loop 和 execution pipeline；CEC runtime 则必须把网络状态、节点负载、KV 位置、用户移动和业务 SLA 纳入同一个在线控制面。KV / Memory Runtime 从单实例显存管理扩展为分层状态管理；Batching / Scheduling Runtime 从大请求池吞吐优化转向低并发、短等待、SLO-aware 和 phase-aware 调度；Decoding Runtime 需要考虑端侧或边缘小模型作为 drafter 的可用性；Execution Runtime 则要把端侧执行、网络传输和边缘/云端计算组织成可重配置的流水线。
+
+Serving Policy \& Routing-Level 在 CEC 中不再只是 replica selection 或 load balancing，而是端-边-云服务路径、模型层级、任务 offloading、状态位置和隐私约束的联合决策。一个请求是否应该本地执行、卸载到接入边缘、升级到区域边缘或转发到云端，取决于请求复杂度、模型能力、链路状态、节点负载、KV/cache 位置、用户移动趋势和 SLA 风险。该层还需要处理 fallback、escalation、state-aware routing 和 mobility-aware routing，使服务策略能够随着环境变化而调整。
+
+因此，CEC 并不是在 LLM inference taxonomy 之外新增一个孤立层，而是显著强化了 Distributed Scope 和 Serving Policy \& Routing-Level 的作用，并使 Model、Runtime 和 Routing 之间的边界更紧密。模型是否可切分会影响部署空间，batching 是否可调整会影响请求 offloading 收益，KV 是否可迁移会影响服务路径选择。后续章节不再按单一抽象层展开，而是围绕最能体现 CEC 特征的三类算法问题组织相关工作。
+
+\phantomsection
+\subsection*{3.4 本文采用的 CEC LLM Inference 综述框架}
+\addcontentsline{toc}{subsection}{3.4 本文采用的 CEC LLM Inference 综述框架}
+
+基于上述分析，本文将 CEC 场景下的 LLM inference 优化归纳为三条主线。第一条是资源自适应模型部署方法，它对应空间部署问题，关注模型结构、模型组件、推理阶段和生成职责如何根据端、边、云资源能力进行切分、放置和动态调整。该方向覆盖 layer-wise / vertical partitioning、tensor / operator-level partitioning、expert / component-level partitioning、inference phase partitioning 和 semantic / token-level partitioning，第 4 章将围绕这一类方法展开。
+
+第二条是业务感知 batching 参数优化算法，它对应时间调度问题，关注请求进入推理实例后如何被组织成 batch、active set 和阶段执行流。在边缘低并发、强时延约束、请求动态到达、KV Cache 压力和 QoS 差异条件下，系统需要动态选择 batching window、batch size、admission threshold、continuous batching 策略、chunked prefill 粒度和 prefill/decode 分池方式。第 5 章将围绕这一类方法展开。
+
+第三条是 LLM inference task offloading，它对应服务路径问题，关注完整请求、会话、复杂 workflow、模型/agent 组合以及 context、KV cache、prefix cache、session state 等运行时状态如何在端、边、云之间路由、卸载、迁移、复用或重新计算。该方向包含 request/session-level routing and offloading、multi-model / multi-agent workflow orchestration、context / KV / runtime state offloading and migration，并与用户移动、隐私边界和 QoS 目标密切相关。第 6 章将围绕这一类方法展开。
+
+如图~\ref{fig:cec-taxonomy} 所示，这三条主线分别从空间部署、时间调度和服务路径三个角度刻画 CEC LLM inference 的关键优化问题。它们并非彼此独立：模型部署决定可用的执行拓扑，batching 决定实例内部的时间组织，task offloading 决定请求和状态如何在多层系统中移动。第 7 章将进一步讨论三类算法之间的协同优化关系。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/taxonomy.png}
+    \caption{\textbf{CEC LLM inference 优化主线、子分类与优化目标}}
+    \label{fig:cec-taxonomy}
+\end{figure}
+
+\phantomsection
+\subsection*{3.5 小结}
+\addcontentsline{toc}{subsection}{3.5 小结}
+
+本章从系统形态出发，说明 CEC 将 LLM inference 从云侧集中式 serving 推向端、边、云多层协同服务。相较数据中心环境，CEC 额外引入资源异构、网络波动、边缘低并发、用户移动、状态连续性、隐私边界和 QoS 差异等约束，使推理优化从单点执行效率转向跨节点、跨状态和跨服务路径的联合决策。
+
+基于 Layer–Scope taxonomy，本章进一步指出：CEC 不改变 LLM inference 优化的基本抽象层，但会改变各层的优化重心。Model-Level 更关注可部署、可切分和可协同的模型体系；Kernel-Level 更关注异构硬件适配；Runtime-Level 更关注网络、状态、batch 和执行流水线的在线管理；Serving Policy \& Routing-Level 更关注服务路径、模型层级、task offloading、状态位置和 QoS 的联合决策。
+
+基于这些变化，本报告后续围绕三类 CEC LLM inference 优化主线展开：CEC 下的资源自适应模型部署方法、CEC 中的业务感知 batching 参数优化算法，以及 CEC 中的 LLM inference task offloading。

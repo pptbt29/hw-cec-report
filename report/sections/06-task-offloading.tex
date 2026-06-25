@@ -1,0 +1,328 @@
+\phantomsection
+\section*{六、CEC中的 LLM Inference Task Offloading}
+\addcontentsline{toc}{section}{六、CEC中的 LLM Inference Task Offloading}
+
+传统 CEC 计算卸载通常将任务建模为具有给定输入数据量、计算量、deadline 和能耗约束的计算 job，其核心问题是在本地设备、邻居设备、边缘服务器和云端之间选择执行位置，并联合优化通信资源和计算资源分配。在这一范式下，任务卸载的主要决策对象通常是完整任务、子任务、任务链断点或 DAG 节点，优化目标也多集中在时延、能耗、系统成本和队列稳定性等方面。
+
+
+LLM inference task 改变了这一问题形态。与普通计算任务不同，LLM 推理的执行时间不仅由输入 prompt 决定，还受到输出长度、decode step 数、batch 状态、模型队列和上下文长度影响；一次请求也不一定只由单个模型独立完成，而可能需要多个模型、多个 agent、多个工具或多个 verifier 协作完成；多轮对话和长上下文服务则进一步引入 KV cache、prefix cache、session state、agent memory 和 user context 等运行时状态。因此，在 CEC 场景下，LLM inference task offloading 不再只是决定“一个任务是否卸载到边缘”，而是需要决定完整请求如何路由、多个模型或 agent 如何编排，以及支撑后续推理的 context/KV/runtime state 如何迁移、复用或重新计算。
+
+
+基于上述特性，本章从一次 LLM 服务请求在 CEC 系统中的执行过程出发组织相关工作。具体而言，当一个 LLM request 到达系统后，首先需要决定该请求或会话应由哪个设备、边缘节点、云端服务或模型实例处理；对于复杂请求，系统可能进一步需要编排多个模型、agent 或工具形成协作式工作流；在请求执行和多轮交互过程中，context、KV cache、prefix cache、session state 和 agent memory 等运行时状态还需要在不同节点之间保留、迁移、复用或重新计算。因此，本章将现有方法划分为三类：request/session-level routing and offloading、multi-model/multi-agent workflow orchestration，以及 context/KV/runtime state offloading and migration，三类代表性工作分别在表~\ref{tab:request-session-routing}、表~\ref{tab:workflow-orchestration} 和表~\ref{tab:runtime-state-offloading} 中展开。
+
+\textbf{代表工作总览。} 表~\ref{tab:cec-offloading-overview} 汇总了 LLM inference task offloading 相关工作的主归属、相关机制和方法关键词。前三类对应本章 6.1--6.3 的文献脉络，最后一类面向项目场景，将 request routing、KV/state management、SLA/memory 约束和长期 session cost 放入同一决策闭环。
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{1.4pt}
+\renewcommand{\arraystretch}{1.35}
+\emergencystretch=2em
+\begin{longtable}{@{}>{\raggedright\arraybackslash\hspace{0pt}}p{0.035\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.175\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.095\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.170\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.155\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.330\textwidth}@{}}
+\caption{\textbf{CEC 下 LLM Inference Task Offloading 代表工作总览}}
+\label{tab:cec-offloading-overview}\\
+\toprule
+\textbf{序号} & \textbf{代表工作} & \textbf{发表在哪} & \textbf{主归属} & \textbf{相关机制} & \textbf{方法关键词} \\
+\midrule
+1 & QoS-LLM-Router \refcite{55} & TMC 2025 & Request / Session-level Routing and Offloading & QoS-aware routing；state-aware scheduling & 结合请求质量、响应长度、GPU memory 和队列状态，将 edge LLM expert routing 建模为长期 QoS 优化问题 \\
+\tabrowrule
+2 & CES-CB \refcite{56} & TSC 2025 & Request / Session-level Routing and Offloading & request cost prediction；combinatorial bandit & 利用 prompt embedding 和历史执行数据预测请求成本，在 edge/cloud 之间选择可提升吞吐并缓解长请求阻塞的请求集合 \\
+\tabrowrule
+3 & RouteLLM \refcite{57} & ICLR 2025 & Request / Session-level Routing and Offloading & strong/weak model routing & 基于 query 难度和偏好数据判断是否调用强模型，在保持质量的同时降低强模型调用成本 \\
+\tabrowrule
+4 & Training-Free Router \refcite{58} & NeurIPS 2025 & Request / Session-level Routing and Offloading & budget-aware multi-LLM routing & 通过近邻检索估计不同 LLM 的质量和成本，并用预算影子价格实现低训练成本的在线模型路由 \\
+\tabrowrule
+5 & ActiveInfer-Offload \refcite{59} & TMC 2024 & Request / Session-level Routing and Offloading & offloading；resource allocation & 使用 active inference 在不确定 cloud-edge 环境中联合决定 LLM inference task offloading 和资源分配 \\
+\tabrowrule
+6 & SLM-LLM-Collab \refcite{60} & TMC 2026 & Request / Session-level Routing and Offloading & SLM caching；D2D / edge collaboration & 在本地 SLM、邻居 SLM 和 edge LLM 之间做短时卸载决策，并将长期 SLM caching 作为请求路由前置条件 \\
+\tabrowrule
+7 & MGCO \refcite{61} & TSC 2026 & Request / Session-level Routing and Offloading & mobility-aware offloading & 用 Transformer MHA encoder 建模历史决策和未来移动状态，使 generative computation offloading 避免短视路由 \\
+\tabrowrule
+8 & MasRouter \refcite{62} & ACL 2025 & Multi-model / Multi-agent Workflow Orchestration & multi-agent routing & 联合选择协作模式、agent 数量、角色分工和底层 LLM，使 multi-agent system configuration 匹配 query 难度 \\
+\tabrowrule
+9 & Conductor \refcite{63} & ICLR 2026 & Multi-model / Multi-agent Workflow Orchestration & natural-language workflow control & 训练元控制器用自然语言生成多模型 workflow，控制 subtask、model id 和上下文访问范围 \\
+\tabrowrule
+10 & AFLOW \refcite{64} & ICLR 2025 & Multi-model / Multi-agent Workflow Orchestration & automatic agentic workflow search & 将 agentic workflow 表示为代码形式的 LLM 调用图，通过搜索和执行反馈自动优化复杂任务 workflow \\
+\tabrowrule
+11 & DT-MADTO \refcite{65} & TMC 2025 & Multi-model / Multi-agent Workflow Orchestration & mobility-aware DAG offloading & 用 digital twin 预测移动和资源状态，联合决策 DAG 子任务卸载、带宽分配和中间数据等待时间 \\
+\tabrowrule
+12 & FuseSpill \refcite{66} & TPDS 2026 & Context / KV / Runtime State Offloading and Migration & KV spillover；auxiliary GPU scheduling & 在显存受限 GPU 上按代价模型选择 KV cache 溢出策略，并将溢出序列调度到辅助 GPU 继续 decode \\
+\tabrowrule
+13 & Weaver \refcite{67} & USENIX ATC 2025 & Context / KV / Runtime State Offloading and Migration & attention offloading & 通过 attention offloading 缓解 multi-LLM serving 中的资源压力，提高多模型服务吞吐和资源利用率 \\
+\tabrowrule
+14 & Mooncake \refcite{21} & USENIX FAST 2025 & Context / KV / Runtime State Offloading and Migration & distributed KV cache；global scheduling & 将 CPU/DRAM/SSD/RDMA 组织为全局 KVCache Store，并按缓存命中、节点负载和 TTFT/TBT SLO 调度请求 \\
+\tabrowrule
+15 & CA-AIGC-Migration \refcite{69} & TSC 2026 & Context / KV / Runtime State Offloading and Migration & context migration；mobility-aware service migration & 将模型迁移转化为 context migration，在 reward 中联合考虑 context relevance、AoI、计算延迟和传输成本 \\
+\tabrowrule
+16 & 长期成本感知请求卸载方案 & 本报告 & Project-oriented Long-term Cost-aware Offloading & SLA/memory filtering；KV migration/recompute；block-level KV management & 面向三节点项目场景枚举 local/migrate/recompute 动作，在满足 P99 TTFT 和 memory 约束下最小化 session 长期服务成本 \\
+\bottomrule
+\end{longtable}
+\endgroup
+
+
+
+
+\phantomsection
+\subsection*{6.1 Request / Session-level Routing and Offloading}
+\addcontentsline{toc}{subsection}{6.1 Request / Session-level Routing and Offloading}
+
+Request/session-level routing 是最接近传统 task offloading 的 LLM inference offloading 形式。它将完整 LLM 请求、query、conversation turn 或 session 作为基本决策对象，决定其应该由本地设备、邻居设备、接入边缘、区域边缘还是云端服务处理。与普通任务不同，LLM request 的处理时间往往难以在执行前准确确定，因为它不仅取决于 prompt length，还受到 output length、decode step 数、batch 状态和模型当前队列影响。对于多个 edge LLM experts、多个 SLM/LLM 服务或多层 device-edge-cloud 网络，系统还需要根据请求复杂度、模型能力、响应质量、时延约束、GPU memory、队列状态和云端成本进行联合决策。
+
+
+这一类问题的核心矛盾是：edge 具有低时延、低回传开销和隐私优势，但计算资源和显存有限，长输出请求可能占据 batch 并造成 head-of-line blocking；cloud 算力充足且模型能力更强，但会带来更高 RTT、带宽开销和数据出域风险。对于 CEC 系统而言，请求路由不应只回答“是否卸载到边缘”，还需要回答“卸载到哪个 edge server”“调用哪个 LLM expert”“是否先由 SLM 处理”“是否需要递归升级到更强模型或云端模型”等问题。表~\ref{tab:request-session-routing} 汇总了该方向的代表性工作。
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{Request / Session-level Routing and Offloading 代表性工作}}
+    \label{tab:request-session-routing}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.20\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{代表工作} & \textbf{发表在哪 \& 时间} & \textbf{问题表述} & \textbf{核心方法} & \textbf{优化目标} \\
+        \midrule
+        QoS-LLM-Router \refcite{55} & TMC, 2025 & 多个 edge LLM experts 在生成质量、响应长度、GPU memory 和队列状态上异构；动态到达的请求需要实时选择 expert，以同时保证 response quality 和 latency requirement。 & 将请求路由建模为 infinite-horizon MDP；使用 DistilBERT-based predictors 预测 response quality 和 length；使用 heterogeneous graph attention network 抽象系统状态，并用 SAC 学习 QoS-aware routing policy。 & 最大化长期 accumulated QoS，同时考虑 response quality 和 latency constraint。 \\
+        \tabrowrule
+        CES-CB \refcite{56} & TSC, 2025 & LLM request 的 output length 和处理时间不可预测；如果长请求留在 edge，会阻塞后续短请求并降低 edge throughput。 & 将 prompt embedding 作为 context，将每轮 edge batch selection 建模为 contextual combinatorial semi-bandit；使用 neural prediction 与 UCB 机制平衡 exploration/exploitation。 & 最大化 edge throughput，减少因长请求导致的 head-of-line blocking。 \\
+        \tabrowrule
+        RouteLLM \refcite{57} & ICLR, 2025 & 给定一个 query，如何在推理前决定调用强模型还是弱模型，使系统在满足质量目标的同时尽量少调用强模型。 & 使用偏好数据训练 router，预测强模型相比弱模型是否具有明显优势；根据阈值决定调用强模型还是弱模型。 & 在保持回复质量的同时降低强模型调用比例和推理成本。 \\
+        \tabrowrule
+        Training-Free Router \refcite{58} & NeurIPS, 2025\newline  & 在高流量、多 LLM 在线服务中，如何在不知道未来请求、预算有限且不能频繁训练 router 的情况下，快速把每个 query 分配给最合适的 LLM，以最大化整体回答质量并控制成本。 & 先用历史 query 的近邻检索（ANNS）快速估计当前 query 在各个 LLM 上的质量和成本，再用最开始一小部分在线 query 做一次轻量优化，学习每个 LLM 的预算“影子价格” $\gamma$。之后每个新 query 只需按 “估计质量收益 − 预算成本惩罚” 打分，选择得分最高的 LLM，从而实现无需训练、低延迟、预算感知的在线路由。 & 在每个 LLM 的 token 预算约束下，为在线到达的 queries 选择路由模型，使所有已处理 queries 的总体回答质量/性能最大化。 \\
+        \tabrowrule
+        ActiveInfer-Offload \refcite{59} & TMC, 2024 & Cloud-edge LLM inference 需要同时考虑任务卸载和资源分配；传统 DRL 方法数据效率低，且难以适应动态任务负载和 latency requirement。 & 使用 active inference 框架建模 LLM inference task offloading 和 resource allocation，在不确定环境下进行在线决策。 & 优化 cloud-edge LLM inference 的服务性能、资源利用和时延表现。 \\
+        \tabrowrule
+        SLM-LLM-Collab \refcite{60} & TMC, 2026 & 在给定 SLM/LLM 服务能力和缓存状态下，每个请求需要决定本地 SLM 执行、D2D 卸载给邻居 SLM，还是卸载到 edge LLM 与 cached SLM plugins 协同推理。 & 在短时间尺度上使用 factor graph 和 belief propagation 进行分布式 inference offloading 决策；长期 SLM caching 部分作为请求路由的前置条件，而非本节重点。 & 在时延和显存约束下最大化长期平均推理准确率。 \\
+        \tabrowrule
+        MGCO \refcite{61} & TSC, 2026 & 移动场景下，generative computation offloading action 会受到历史决策和未来移动状态影响；短程决策容易短视，且传统 RNN/LSTM 对长序列建模能力有限。 & 使用 Transformer MHA encoder 建模长程移动和历史决策信息；通过候选移动区域约束缩减 action space，提高收敛效率。 & 在移动 edge-cloud 系统中实现更高效的 generative computation offloading，降低长期服务开销。 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+从 CEC 角度看，上述工作共同说明，LLM request routing 不能简单沿用传统 task offloading 中“输入数据量 + CPU cycles + deadline”的建模方式。一方面，请求执行时间受到输出长度和 batch 状态影响，具有更强的不确定性；另一方面，请求质量取决于模型能力、prompt 语义和模型选择，而不是单纯取决于计算资源是否充足。因此，CEC 中的 request-level offloading 需要同时感知 semantic complexity、model capability、network condition 和 queue state。
+
+
+多用户和移动性会进一步放大这一复杂性。用户位置变化会改变接入边缘、链路质量、候选服务节点和区域请求热点；请求执行过程中可能发生 handover，多轮会话的 context 或 KV cache 也可能留在旧 edge。因此，request/session routing 不能只根据当前时隙的队列和链路状态做短视选择，而需要同时考虑未来位置变化、会话连续性、状态位置和模型可用性。未来可以进一步研究 mobility-aware session routing，使请求路径选择同时感知用户移动趋势、后续多轮会话、模型缓存位置和 context/KV 可复用性。
+
+
+
+
+\phantomsection
+\subsection*{6.2 Multi-model / Multi-agent Workflow Orchestration}
+\addcontentsline{toc}{subsection}{6.2 Multi-model / Multi-agent Workflow Orchestration}
+
+随着 LLM 从单轮问答走向复杂推理、代码生成、工具调用、科学问答和长期任务执行，一个 request 到来后，系统不一定只调用一个模型完成回答。更一般的形式是：系统根据请求复杂度和任务类型，动态选择多个模型、多个 agent 或多个工具，并决定它们之间的角色分工、通信拓扑、执行顺序、上下文可见性和结果聚合方式。这一类问题可以被称为 multi-model 或 multi-agent workflow orchestration。
+
+
+这一类问题与传统 stage-level offloading 或 splittable-request offloading 不同。Stage-level offloading 关注 prefill、decode、verification、diffusion steps 等底层执行阶段如何分布到不同计算节点；而 multi-agent workflow orchestration 关注的是语义层和任务层的协作结构，例如是否需要 planner、solver、critic、verifier、researcher、programmer 等角色，是否采用 Chain-of-Thought、Self-Consistency、LLM Debate、chain topology 或 complete graph 等协作模式，以及每个 agent 背后调用哪个 LLM 或 SLM。换言之，这里的决策对象不是 token、模型层或推理阶段，而是一个 request 的 problem-solving workflow。
+
+
+这一类问题的核心矛盾是：多 agent 协作可以提升复杂任务的推理能力、鲁棒性和可解释性，但也会带来额外模型调用成本、通信开销、上下文传输开销和调度复杂度。对于 CEC 系统而言，agent 背后的模型、工具、数据库、memory 和 verifier 可能分布在用户设备、边缘服务器、区域云和中心云上。因此，multi-agent workflow orchestration 不仅是算法层的协作模式选择问题，也是计算、通信、状态和隐私的联合编排问题。表~\ref{tab:workflow-orchestration} 列出了相关代表性工作。
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{Multi-model / Multi-agent Workflow Orchestration 代表性工作}}
+    \label{tab:workflow-orchestration}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.20\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{代表工作} & \textbf{发表在哪 \& 时间} & \textbf{问题表述} & \textbf{核心方法} & \textbf{优化目标} \\
+        \midrule
+        RouteLLM \refcite{57} & ICLR, 2025 & 现有 LLM serving 中，所有 query 都调用强模型会带来高成本，而固定使用弱模型又可能损害回答质量；需要根据 query 难度选择合适模型。 & 使用偏好数据训练一个 query-level router，预测强模型是否会显著优于弱模型；根据阈值进行强/弱模型选择。 & 在保持目标回答质量的同时减少强模型调用比例，降低推理成本。 \\
+        \tabrowrule
+        MasRouter \refcite{62} & ACL, 2025 & 现有 LLM routing 多解决“给单个 agent 选哪个 LLM”的问题，但在多智能体系统中，真正需要 routing 的还包括协作模式、agent 数量、角色分工以及每个角色对应的底层 LLM。 & 通过将 query 映射到 latent space 选择合作模式和 agent 数量；使用 structured probabilistic cascade 为 agent 分配角色；再用多项分布为每个角色选择底层 LLM；训练时使用 policy gradient 优化。 & 为每个 query 选择合适的 multi-agent system configuration，使回复质量和准确率尽可能高，同时控制推理成本。 \\
+        \tabrowrule
+        Conductor \refcite{63} & ICLR, 2026\newline  & 如何训练一个元控制器，让它用自然语言自动编排多个已有 LLM，使整体系统超过任一单个 worker。 & 使用一个 SLM 作为 Conductor，根据 query 生成自然语言 workflow；每个 step 包含 subtask、model id 和 access list；训练阶段采样多个 candidate workflows，根据最终答案正确性给 reward，并用 GRPO 更新 Conductor。 & 让 Conductor 学会任务拆解、模型选择、上下文可见性控制和 workflow 生成，使多模型协作后的最终答案尽可能正确。 \\
+        \tabrowrule
+        AFLOW \refcite{64} & ICLR, 2025 & 如何在尽量减少人工设计的情况下，自动生成并优化由多次 LLM 调用组成的 agentic workflow，从而提升 LLM 在问答、代码生成和数学推理等复杂任务上的表现。 & AFLOW 将 agentic workflow 表示为代码形式的 LLM 调用图/流程，并把 workflow 优化转化为一个搜索问题。选择已有高分 workflow，让 LLM 修改 prompt 或代码结构生成新 workflow，再执行评估，并把成功/失败经验回传到搜索树中，从而逐步找到更优工作流。 & 给定任务 T 和评价函数 G，在所有可能的 workflow 中找到使任务表现 G(W,T) 最大的工作流 W\newline  \\
+        \tabrowrule
+        DT-MADTO \refcite{65} & TMC, 2025\newline  & 移动用户产生具有 DAG 依赖关系的复杂任务；设备移动导致链路状态和中间数据流传输代价动态变化，同时多设备并发卸载会造成 flow congestion。 & 构建 device、physical CEC、digital twin 三层架构；使用 digital twin 预测未来移动和资源状态，并用 DDPG / actor-critic 联合决策 subtask offloading、bandwidth allocation 和 flow waiting time。 & 最小化任务完成时间和能耗的加权 QoS 指标。 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+从 LLM serving 角度看，RouteLLM 可以被视为 multi-agent routing 的基础形式：它只在强模型和弱模型之间做 query-level routing，尚未涉及 agent 数量、角色分配或协作拓扑。MasRouter 则进一步把 routing 扩展到 multi-agent system configuration，即根据 query 决定采用哪种协作模式、需要多少个 agent、每个 agent 扮演什么角色，以及每个角色调用哪个底层 LLM。Conductor 更进一步，不再只在预定义配置集合中选择，而是训练一个控制器用自然语言生成 workflow，包括任务拆解、模型调用和上下文访问控制。AFLOW则是将workflow表示为代码形式，通过搜索方法，实时根据当前任务执行情况自适应生成新的workflow。
+
+
+从 CEC 角度看，multi-agent workflow orchestration 需要被进一步物理化。现有 multi-agent orchestration 工作大多默认所有 worker LLM 都可以通过 API 调用，较少考虑模型、工具和 memory 的实际部署位置。但在 CEC 系统中，不同 agent 可能对应不同物理节点：本地设备上的 SLM 可以承担隐私敏感的初步理解任务，近端 edge 上的 LLM 可以承担低时延交互任务，区域边缘或云端的大模型可以承担复杂推理和 verification 任务，外部工具或数据库 agent 也可能位于不同网络位置。因此，agent workflow 的拓扑会直接影响端到端时延、带宽消耗、隐私风险和状态迁移成本。
+
+
+多用户移动性进一步使 multi-agent workflow orchestration 变得更复杂。用户移动会改变可访问的 edge agents、工具服务和 memory 节点；workflow 中间状态可能在多个 agent 之间传递，如果用户在执行过程中发生 handover，后续 agent 是否继续在旧 edge 执行、是否迁移到新 edge、是否远程访问旧 context，都会影响服务质量。虽然 DT-MADTO \refcite{65} 并不是 LLM agent workflow 工作，但其对 DAG 依赖关系、中间数据流和移动预测的建模，为 CEC 中的 multi-agent workflow offloading 提供了可借鉴思路。未来可以进一步研究 mobility-aware agent workflow orchestration，在 request 到达时联合决定协作模式、agent 位置、模型选择、上下文可见性和中间状态传输路径。
+
+
+
+
+\phantomsection
+\subsection*{6.3 Context / KV / Runtime State Offloading and Migration}
+\addcontentsline{toc}{subsection}{6.3 Context / KV / Runtime State Offloading and Migration}
+
+LLM inference 与普通计算任务的另一个关键区别在于运行时状态会持续影响后续请求。多轮对话、长上下文服务、prefix reuse 和 agent workflow 会产生 KV cache、prefix cache、session state、agent memory、tool outputs 和 intermediate reasoning traces。这些状态的位置会直接影响后续 TTFT、decode latency、重复计算成本、跨节点传输开销、隐私边界和服务连续性。因此，context/KV/runtime state offloading 关注的不是计算任务本身去哪执行，而是支撑后续推理的状态应该保留在哪里、何时迁移、是否远程访问、是否复用或是否重新计算。
+
+
+这一类问题的核心矛盾是：状态迁移可以保持多轮服务连续性、减少重复 prefill 计算并提升生成质量；但迁移或远程访问状态会消耗带宽、显存和存储资源，也可能增加一致性管理和隐私风险。对于长上下文 chatbot，KV cache 和 prefix cache 可能比单次请求本身更有价值；对于 multi-agent workflow，中间结果、工具调用结果和 agent memory 也可能在后续步骤或后续会话中被反复使用。因此，LLM inference offloading 的优化目标正在从 computation-aware 转向 computation-state co-optimization。表~\ref{tab:runtime-state-offloading} 汇总了 context、KV 和 runtime state 卸载迁移方向的代表性工作。
+
+
+\begin{table}[!htbp]
+    \centering
+    \caption{\textbf{Context / KV / Runtime State Offloading and Migration 代表性工作}}
+    \label{tab:runtime-state-offloading}
+    \renewcommand{\arraystretch}{1.45}
+    \scriptsize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{@{}>{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=0.75\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.15\hsize\raggedright\arraybackslash}X >{\hsize=1.20\hsize\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{代表工作} & \textbf{发表在哪 \& 时间} & \textbf{问题表述} & \textbf{核心方法} & \textbf{优化目标} \\
+        \midrule
+        FuseSpill \refcite{66} & TPDS, 2026 & 在显存受限 GPU 上进行 LLM 推理时，KV cache 容易溢出，现有 swap/recompute 策略处理低效，导致吞吐下降和溢出请求延迟增加。 & FuseSpill 通过代价模型自适应选择 KV cache 溢出策略，并把溢出或主动卸载的序列调度到辅助 GPU 继续 decode，从而释放主 GPU 显存、提高 prefill/decode 利用率。 & 在显存受限 GPU 上提高 LLM 推理吞吐量，同时降低发生 KV cache spillover 的请求延迟。 \\
+        \tabrowrule
+        Weaver \refcite{67} & USENIX ATC, 2025 & 多 LLM serving 中 attention computation 和模型实例管理会造成资源压力；attention 和相关状态如何 offload 会影响多模型服务效率。 & 通过 attention offloading 提升 multi-LLM serving 的资源效率，并缓解多模型服务中的资源压力。 & 提高多模型服务吞吐和资源利用率。 \\
+        \tabrowrule
+        Mooncake \refcite{21} & USENIX FAST, 2025 & 在长上下文 LLM 聊天服务中，如何用全局分布式 KV cache 复用历史前缀计算，减少昂贵的 prefill GPU 计算，从而在满足 TTFT/TBT 延迟要求的同时提升系统吞吐。 & 把 LLM 推理拆成 prefill 和 decoding 两个独立资源池，并把集群中 CPU/DRAM/SSD/RDMA 组织成全局分布式 KVCache Store；调度器根据缓存命中、节点负载和 TTFT/TBT SLO，把请求路由到合适的 prefill/decoding 节点。 & 用更多存储换取更少重复计算，提高长上下文 LLM serving 效率。 \\
+        \tabrowrule
+        DistServe \refcite{7} & USENIX OSDI, 2024 & Prefill 和 decode 混部执行会造成阶段间干扰，并耦合两阶段资源分配；两阶段分离后，KV handoff 和状态传输成为连接 prefill 与 decode 的关键问题。 & 将 prefill 和 decoding 分离到不同 worker/resource pool，并根据 TTFT/TPOT 需求分别优化资源分配和并行策略。 & 最大化满足 TTFT 和 TPOT 约束下的 goodput。 \\
+        \tabrowrule
+        T2DRL \refcite{68} & TON, 2026 & Mobile edge 难以支撑 long-context LLM agents 的多轮交互，因为 context window 会同时影响准确率、延迟和资源消耗；模型缓存和请求执行策略需要随上下文和使用模式变化。 & 提出 T2DRL 框架，在训练和测试阶段共同学习 cached models 与 service requests 的管理策略，并结合 double Dutch auction 做资源匹配。 & 降低系统成本，同时保证 long-context LLM agents 在感知和推理任务中的服务性能。 \\
+        \tabrowrule
+        CA-AIGC-Migration \refcite{69} & TSC, 2026\newline  & 用户移动到新边缘节点后，旧节点上的 long context 是有价值但迁移成本较高的状态资产；传统 service migration 迁移完整模型成本过高。 & 利用 LLM in-context learning 特性，将 model migration 转化为 context migration；在 reward 中联合考虑 context relevance、AoI、计算延迟和传输成本，并用 Transformer DRL 学习迁移策略。 & 在保持 AIGC 回复质量和准确性的同时降低 context migration 成本和服务时延。 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+从系统角度看，KV cache、prefix cache 和 context 不再只是 LLM inference 的内部实现细节，而是 CEC 中可以被 offload、cache、migrate 和 schedule 的重要资源。Mooncake 说明了长上下文服务中 KV cache 可以作为全局分布式存储资源被管理；DistServe 说明了 prefill/decode disaggregation 会使 KV handoff 成为连接不同资源池的关键状态传输；FuseSpill \refcite{66} 和 Weaver \refcite{67} 则从显存约束和 attention offloading 角度说明，runtime state 的位置会直接影响吞吐和时延。
+
+
+在 CEC 中，context/KV/runtime state offloading 需要进一步考虑边缘节点之间的异构资源和网络差异。对于多轮会话，如果每轮请求都重新 prefill 长上下文，会产生大量重复计算；如果跨节点远程访问 KV cache，则会引入额外 RTT 和带宽开销；如果主动迁移 context 或 KV，则可能占用边缘链路和存储资源。因此，系统需要在远程访问、状态迁移、状态压缩、状态丢弃和重新计算之间进行选择。
+
+
+多用户移动性使这一问题更加突出。用户移动后，计算路径可以重新选择，但 long context、KV cache、agent memory 或 session state 可能仍保留在旧 edge。此时系统需要在四种选择之间权衡：迁移状态到新 edge、远程访问旧状态、重新计算状态，或丢弃部分状态并降低上下文质量。不同选择会影响后续 decode latency、生成质量、带宽消耗和隐私边界。CA-AIGC-Migration \refcite{69} 已经开始从 context migration 的角度研究这一问题，但对 KV cache placement、remote KV access、prefix cache sharing 和 agent memory migration 的移动 CEC 场景研究仍然不足。未来可以进一步研究 mobility-aware KV and context management，将用户轨迹预测、session continuation probability、KV reuse probability、edge storage pressure 和链路状态联合纳入决策。
+
+
+
+
+
+
+
+
+\phantomsection
+\subsection*{6.4 面向项目场景的长期成本感知请求卸载方案}
+\addcontentsline{toc}{subsection}{6.4 面向项目场景的长期成本感知请求卸载方案}
+
+本项目包含三个相同模型的推理节点，每个节点同时作为请求入口和可选计算节点，并开启 prefix cache。其中两个节点通过 100 Gbps 高速链路互联，第三个节点通过 25 Gbps 跨主机 RDMA 链路接入。测试前半段，请求主要由对应入口节点处理；测试进行到总时长的 50\% 后，部分请求从其他节点接入，以模拟用户移动后请求入口与历史 KV cache 所在节点发生分离的场景。系统需要在满足 P99 TTFT SLA 和 GPU memory 约束的前提下，选择请求的计算节点及其 KV cache 获取方式，并最小化整个 session 的长期服务成本。
+
+三个节点分别部署本地路由器，并在后台持续同步节点与状态元数据。节点在接收或完成请求、显存和 KV cache 占用变化、状态迁移完成以及链路状态变化时，向其他节点发送增量更新，同时通过周期性心跳校准全局状态。同步信息包括各节点的请求负载、预计排队时间、近期 TTFT、剩余显存、可用 KV cache 容量、节点间 RTT 与带宽，以及 session ID、prefix hash、KV block 位置、状态大小和版本。请求数据和 KV cache 直接在入口节点、状态源节点与目标计算节点之间传输，避免额外的数据中转。
+
+第一，请求到达后，入口节点根据同步得到的全局状态枚举可选卸载动作。对于首次请求或不存在历史 KV cache 的请求，动作仅为选择三个节点之一执行。对于已有 KV cache 的 session，设当前有效 KV 位于节点 \(o_t\)，系统共有 \(N\) 个节点，则动作集合为：
+
+\[
+\mathcal A_t =
+\{(o_t,\mathrm{local})\}
+\cup
+\{(i,\mathrm{migrate}),(i,\mathrm{recompute})\mid i\neq o_t\}.
+\]
+
+其中，\((o_t,\mathrm{local})\) 表示在已有 KV 的节点直接执行；\((i,\mathrm{migrate})\) 表示将 KV 迁移到节点 \(i\) 后执行；\((i,\mathrm{recompute})\) 表示在节点 \(i\) 根据已有 context 重新计算 KV 后执行。对于三个节点且仅有一个 KV owner 的情况，动作总数为 \(2N-1=5\)。若 KV 已存在多个有效副本，则具有本地副本的节点可直接执行，KV 管理模块从已有副本中选择传输成本最低的迁移源节点。
+
+第二，根据 SLA 和 memory 约束过滤不可行动作。对于请求 \(r_t\) 和动作 \(a\)，系统预测其网络传输、排队、KV 迁移或重算、prefill 和 decode 开销，并估计该动作所需的显存，包括已有状态、新增 KV cache 和安全预留空间。可行动作集合定义为：
+
+\[
+\mathcal A_t^{F}
+=
+\left\{
+ a\in\mathcal A_t:
+ \widehat T^{\mathrm{TTFT}}_t(r_t,a)+\Delta_t(a)\leq SLA_{r_t},
+ \quad
+ \widehat M_t(r_t,a)+M_i^{\mathrm{reserve}}\leq M_i^{\mathrm{free}}
+\right\}.
+\]
+
+其中，\(\Delta_t(a)\) 用于补偿执行时间预测误差和元数据滞后。只有同时满足 TTFT SLA 和目标节点显存约束的动作才能进入后续选择过程；当可行动作集合为空时，该请求不进入正常执行流程。Cloud-Edge System for Scheduling Unpredictable LLM Requests With Combinatorial Bandit \refcite{56} 表明，LLM 的输出长度和处理时间难以预先确定，因此可根据 prompt 特征和历史执行数据预测服务时间，并通过实际运行结果持续修正预测模型。
+
+第三，在可行动作集合中选择请求卸载方案。最小时延基线仅考虑当前请求，选择预计端到端时延最低的动作：
+
+\[
+a_t^{\mathrm{greedy}}
+=
+\arg\min_{a\in\mathcal A_t^{F}}
+c_t(s_t,a),
+\]
+
+其中：
+
+\[
+c_t(s_t,a)
+=
+T_t^{\mathrm{network}}(a)
++
+T_t^{\mathrm{queue}}(a)
++
+T_t^{\mathrm{state}}(a)
++
+T_t^{\mathrm{inference}}(a).
+\]
+
+\(T_t^{\mathrm{state}}(a)\) 根据动作分别表示本地 KV 读取、KV 迁移或 KV 重算时间。该基线能够实现即时负载分流，但可能形成长期状态黏附。例如，节点 A 暂时负载较高时，某个 session 被卸载至节点 B，并在 B 上生成 KV cache。即使后续 A 已恢复空闲，只考虑当前请求时延的策略仍可能持续选择 B，因为单次访问 B 的成本低于立即迁移或重算 KV 的成本，从而长期产生 A 与 B 之间的通信开销。
+
+第四，以长期累计成本作为完整路由策略的优化目标。系统状态 \(s_t\) 包括当前请求入口、各节点负载和剩余显存、网络状态、用户移动趋势，以及 KV cache 的位置、大小和版本。对于每个可行动作，其长期价值定义为：
+
+\[
+Q(s_t,a)
+=
+c_t(s_t,a)
++
+\gamma
+\mathrm{E}
+\left[
+V(s_{t+1})\mid s_t,a
+\right],
+\]
+
+路由决策为：
+
+\[
+a_t^*
+=
+\arg\min_{a\in\mathcal A_t^{F}} Q(s_t,a).
+\]
+
+即时成本 \(c_t(s_t,a)\) 表示当前请求的直接服务成本；下一状态价值 \(V(s_{t+1})\) 表示执行该动作后，由新的 KV 位置、节点负载、显存占用和用户入口位置引起的未来最小累计成本。选择本地执行后，KV 继续保留在原节点；选择迁移或重算后，目标节点成为后续请求可复用 KV 的节点。因此，长期影响通过系统状态转移体现，而不需要扩展额外的高层状态动作。
+
+Quality-of-Service Aware LLM Routing for Edge Computing with Multiple Experts \refcite{55} 将动态请求路由建模为长期 QoS 优化问题，说明路由决策需要考虑当前动作对后续系统状态的影响；MGCO \refcite{61} 将历史决策和未来移动状态纳入卸载过程，说明移动场景下不能只依据当前节点负载做短视选择。在本项目的三节点规模下，可采用有限时域滚动规划：预测未来若干个 session 请求的入口位置、节点负载和 KV 增长，对每一步重新执行 SLA 与 memory 可行性过滤，并选择预测窗口内累计成本最低的当前动作。
+
+第五，采用面向低迁移成本的 KV cache 管理机制。借鉴 Mooncake 的 KVCache-centric 思路 \refcite{21}，KV cache 按固定大小的 block 进行组织，并根据模型版本、adapter、token 内容和 block 位置建立 block-level hash。迁移前，目标节点首先查询本地已有的 prefix 和 KV blocks，仅传输缺失部分；公共 prefix 可以被多个 session 共享，避免重复传输和重复计算。实际 KV 数据由状态源节点直接发送至目标节点，两个 100 Gbps 节点之间可以优先执行状态迁移，25 Gbps 跨主机链路则根据状态大小和长期复用收益决定是否迁移或重新计算。
+
+KV 迁移过程采用分块传输和流水化处理，稳定的历史 blocks 优先传输，新增状态以增量方式同步，并在目标节点完成状态校验后更新 KV owner。旧节点上的状态在切换后保留短时间，以支持迁移失败或节点负载突变时的快速回退。迁移成本模型同时考虑 KV 大小、链路带宽、设备间数据拷贝、目标节点写入开销和迁移对正常请求流量的影响，从而在真正发生 state transfer 时选择成本最低的源节点、目标节点和传输路径。
+
+第六，请求完成后，各节点同步实际 TTFT、端到端时延、显存变化、KV cache 增量、状态传输量和最终 KV 位置，并据此更新时延预测、memory 需求估计、节点负载预测和用户移动模型。由此形成“后台元数据同步—SLA 与 memory 可行性过滤—长期成本路由—低成本 KV 管理—在线反馈更新”的闭环，在保证当前请求可执行的同时，降低用户移动和状态黏附造成的长期跨节点通信成本。
+
+第七，通过对比实验验证长期成本感知请求卸载方案。对比方法包括：静态就近卸载，在入口节点直接执行请求；Greedy 卸载，在满足 SLA 和 memory 约束的动作中选择当前请求时延最低的方案；长期成本卸载，在可行动作中进一步考虑后续请求到达、用户移动、KV 位置、节点负载和显存压力；长期成本卸载与低成本 KV 管理联合方案，在前述策略基础上加入 block-level KV 索引、节点间直接传输和增量状态同步。
+
+实验首先验证请求卸载的可行性与服务质量，统计 P99 TTFT、SLA violation ratio、因显存不足导致的不可执行请求比例、平均端到端时延、系统吞吐和可支持并发数。项目目标是在满足 P99 TTFT SLA 的条件下，使总并发数较基线提升 50\%，平均端到端时延降低 20\%。
+
+随后从 session 维度评估长期优化效果，统计用户移动后的累计端到端时延、跨节点通信时延、请求转发次数、KV 迁移与重算次数、状态传输量、prefix/KV 命中率以及 session 的节点切换次数。重点比较 Greedy 与长期成本策略：前者可能因已有 KV 而使请求长期黏附在远端节点，后者应通过迁移或重算调整状态位置，降低后续请求的累计通信和执行成本。
+
+最后进行消融实验。移除移动性预测，验证未来入口信息对长期决策的作用；仅考虑当前 session 的未来成本，验证全局节点负载和显存压力的影响；关闭 block-level KV 管理和增量同步，评估低成本状态迁移机制的贡献；改变移动请求比例、session 长度、KV cache 规模和节点显存水位，验证方案在不同负载与状态规模下的稳定性。各组实验采用相同请求轨迹重复运行，并报告平均值、P95/P99 指标及波动范围。
+
+\phantomsection
+\subsection*{6.5 小结}
+\addcontentsline{toc}{subsection}{6.5 小结}
+
+总体来看，CEC 中的 LLM inference task offloading 已经明显超出传统 computation offloading 的范畴。传统任务卸载主要决定具有给定数据量、计算量和 deadline 的任务应在哪个节点执行，而 LLM inference 还需要处理完整请求与连续 session 的路由、多模型或多智能体 workflow 的跨节点编排，以及 context、prefix cache、KV cache 和 agent memory 等运行时状态的驻留、迁移与复用。多用户移动性会进一步改变请求入口、候选计算节点、网络路径和历史状态位置，使请求卸载从单次节点选择转变为受服务质量、资源容量和长期状态成本共同约束的动态决策问题。
+
+第一，request/session-level offloading 正在从简单的就近路由转向 SLA、资源和状态联合感知的语义路由。LLM 请求的执行成本不仅取决于输入规模，还受到输出长度、节点负载、网络条件、状态位置和模型服务能力影响。因此，请求到达后，需要根据各节点的实时负载、预计排队时间、剩余显存、可用 KV 容量和链路状态，预测请求在不同节点上的 TTFT 与端到端时延。只有同时满足 SLA 和 memory 约束的节点及状态处理动作才能进入候选集合，再由路由算法从可行动作中选择执行方案。已有 QoS-aware LLM routing 和 cloud-edge request scheduling 工作分别说明了长期 QoS 优化与请求执行时间预测的重要性，但在移动 CEC 中，还需要进一步将用户入口变化、状态位置和显存容量统一纳入路由决策。
+
+第二，LLM inference offloading 正在从 single-model serving 走向 multi-model/multi-agent workflow orchestration。复杂请求可能需要 planner、solver、critic、verifier、tool agent 和 memory agent 协同完成。现有 MasRouter、Conductor 和 AFLOW 等工作主要关注 agent 数量、角色、模型和 workflow 结构的选择，而在 CEC 系统中，各 agent 对应的模型、工具、数据库和 memory 可能位于不同物理节点。因此，workflow orchestration 还需要进一步考虑 agent 的计算节点、通信路径、中间状态位置和上下文访问成本，使算法层的协作结构能够映射为实际的 device-edge-cloud 执行方案。
+
+第三，LLM inference offloading 正在从 computation-aware 走向 computation-state co-optimization。对于连续 session，选择计算节点意味着同时选择 KV cache 的获取方式：在已有状态节点本地执行、将状态迁移到新节点，或者在新节点重新计算。状态处理时间和显存占用直接影响当前动作能否满足 SLA 与 memory 约束，而当前动作又会改变后续请求可复用 KV 的位置。因此，KV cache 不再只是推理实例内部的缓存，而是影响请求路由、节点负载和长期通信成本的系统级资源。
+
+第四，请求卸载的优化目标正在从当前请求最小时延转向整个 session 的长期累计成本。Greedy routing 可以在可行动作中选择当前端到端时延最低的节点，但容易产生状态黏附：当某个请求因原节点过载而被转发到远端节点后，远端生成的 KV cache 会使后续请求继续被路由至该节点；即使原节点已经恢复空闲，单次迁移或重算 KV 的成本仍可能高于一次远程访问成本，从而造成长期跨节点通信。为避免这一问题，路由器需要在满足当前 SLA 和 memory 条件的基础上，同时考虑动作对下一状态的影响，包括 KV 位置、节点显存、未来负载和用户移动趋势，并选择“当前成本与未来状态价值之和”最低的动作。MGCO 等移动性感知卸载工作说明，历史决策与未来位置变化需要被纳入长期优化过程，而不能只依据当前时隙状态进行路由。
+
+第五，低成本 KV 管理是长期路由决策能够落地的基础。借鉴 Mooncake 的 KVCache-centric 思路，可以采用 block-level hash 管理 prefix 和 KV cache，并在迁移时只传输目标节点缺失的 blocks。KV 数据由源节点直接发送至目标节点，并结合分块传输、增量同步、状态校验和旧副本短期保留降低迁移中断与失败风险。对于高速互联节点，可以更积极地迁移或复制高复用状态；对于低带宽跨主机链路，则需要根据状态大小、预计复用次数和未来通信收益决定迁移还是重算。KV 管理的目标不是单纯增加状态副本，而是在实际发生 state transfer 时降低数据移动、设备拷贝和服务中断成本。
+
+基于上述认识，本章面向项目场景形成了一个分布式请求卸载闭环。三个节点分别作为请求入口并执行本地路由，共享节点负载、显存、网络和 KV 状态元数据；请求到达后，系统枚举计算节点与 local、migrate、recompute 状态处理动作，并通过 SLA 与 memory 约束构造可行动作集合；Greedy 方法选择当前请求成本最低的动作，长期策略则进一步考虑动作执行后的 KV 位置、未来通信和用户移动状态；KV 管理模块通过 block-level 索引和节点间直接传输降低状态迁移成本；请求执行结果继续反馈至节点状态、时延预测和长期成本模型，形成持续更新的在线决策过程。
+
+未来工作可以沿着三个方向推进。一是 mobility-aware long-term request routing，将用户未来入口、节点负载、请求到达和 KV 增长纳入统一的状态转移模型。二是 CEC-native workflow offloading，将多 agent 的角色、模型、物理节点和中间状态路径联合优化。三是 distributed state-aware serving，在满足 SLA 和显存容量约束的基础上，联合决定 KV cache 的驻留、迁移、复制与重算，并进一步研究元数据一致性、迁移带宽控制和多入口并发决策。由此，CEC 中的 LLM inference task offloading 将从单次请求的执行位置选择，逐步发展为面向请求、workflow 和运行时状态的长期协同优化。

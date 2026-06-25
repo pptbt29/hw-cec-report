@@ -1,0 +1,89 @@
+\phantomsection
+\section*{七、三类算法的协同优化框架}
+\addcontentsline{toc}{section}{七、三类算法的协同优化框架}
+
+第七章的目标不是重新分类模型切分、batching 和 task offloading 工作，而是在前文基础上总结这些算法在真实 CEC-LLM 推理系统中的耦合关系。模型切分部署决定模型组件、服务实例和推理阶段的空间分布；业务感知 batching 决定请求和 token 在推理实例内部的时间组织；LLM inference task offloading 则决定完整请求、复杂 workflow 以及 context/KV/runtime state 在端、边、云之间的路由、迁移和复用。已有工作已经开始从不同角度研究这些耦合关系，例如 model caching 与 inference offloading 的双时间尺度优化、prefill/decode disaggregation 与 serving scheduling、KV cache-centric serving 与 state-aware routing、以及移动场景下的 context migration。本章将这些局部耦合关系组织为一个分层协同优化框架。
+
+
+\phantomsection
+\subsection*{7.1 三类算法的基本耦合关系}
+\addcontentsline{toc}{subsection}{7.1 三类算法的基本耦合关系}
+
+模型切分、batching 和 task offloading 共享同一组系统状态，包括模型副本位置、模型切分模板、prefill/decode worker 资源、batching window、实例队列长度、KV cache 位置、prefix cache 命中情况、session state、链路质量和用户移动趋势。模型切分如果改变 prefill 或 decode 的执行位置，就会改变 batching 的阶段容量和 KV handoff 成本；batching 如果改变请求等待时间和 token 生成节奏，就会影响 request routing 观察到的实例时延和 admission 边界；request/session routing 如果改变流量入口和服务实例选择，又会反过来改变模型实例负载、prefix cache 命中率和后续 context/KV 迁移成本。
+
+
+因此，三类算法之间不是简单的前后级联关系，而是多时间尺度上的闭环关系。低频部署层决定模型切分、模型副本和服务能力布局；中频 serving 层根据 workload 调节 batching、admission 和实例负载均衡；高频 offloading 层根据请求复杂度、用户位置、链路状态和状态位置执行 request routing、workflow placement 和 state migration。协同优化的关键不是把每一层都独立做到局部最优，而是让它们在统一 SLO、资源约束和状态约束下避免互相抵消。
+
+
+\phantomsection
+\subsection*{7.2 模型/服务部署与请求卸载的双时间尺度协同}
+\addcontentsline{toc}{subsection}{7.2 模型/服务部署与请求卸载的双时间尺度协同}
+
+模型/服务部署与请求卸载之间的耦合，是 CEC-LLM 推理系统中最直接的协同优化关系。由于边缘节点无法缓存所有 LLM、SLM、expert、adapter 或工具服务，模型能力是否提前部署会直接决定请求能否在近端被处理，以及是否需要跨边缘或上云。反过来，请求流量、用户会话分布和模型调用频率又会影响下一周期的模型缓存和服务部署收益。
+
+
+已有工作已经开始显式处理部署规划与请求卸载之间的时间尺度差异。SLM-LLM-Collab \refcite{60} 将 SLM caching 与 local/D2D/edge inference offloading 进行双时间尺度建模，说明模型缓存不是独立部署问题，而是为后续请求卸载提供可行路径。T2DRL \refcite{68} 进一步将 long-context LLM serving 中的 model caching、request management 和资源匹配联系起来，强调上下文长度和移动边缘资源会共同影响模型缓存与请求处理策略。H-MEC-Placement \refcite{71} 虽然不是 LLM-specific 工作，但从 general MEC 角度说明 service placement、task scheduling 和 resource allocation 在规划周期内存在强耦合。LVM-Offload \refcite{72} 则在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配。
+
+
+这些工作说明，模型部署层应当被视为协同优化框架中的低频规划层，而不是一次性静态配置。其输出不应只是某个模型放在哪个节点，而应包括模型能力布局、服务容量边界、可服务请求类型、切换条件和回退路径。请求卸载层则在给定部署状态下进行高频决策，并把流量、命中率、队列和质量反馈回部署层，用于下一周期更新模型缓存和服务布局。
+
+
+\phantomsection
+\subsection*{7.3 模型切分、阶段解耦与 batching/scheduling 的协同}
+\addcontentsline{toc}{subsection}{7.3 模型切分、阶段解耦与 batching/scheduling 的协同}
+
+模型切分与 batching/scheduling 的耦合主要体现在推理阶段的容量匹配和时延控制上。LLM inference 中 prefill、decode、verification 等阶段具有不同资源画像：prefill 更偏计算密集，decode 更偏 memory bandwidth 和低时延 token streaming。模型切分或阶段解耦改变这些阶段所在的资源池，而 batching 和 scheduling 决定请求如何进入这些资源池以及 token 如何被迭代生成。
+
+
+已有 LLM serving 工作从不同角度揭示了这种耦合。Splitwise 和 DistServe 通过 prefill/decode disaggregation 说明，将两类阶段部署到不同资源池可以提高 goodput，但也会引入阶段间协调和 KV handoff 成本。Orca \refcite{4} 和 vLLM \refcite{5} 等系统说明，iteration-level scheduling 和 continuous batching 可以显著提高 GPU 利用率，但其效果受到模型部署方式、decode worker 容量和 KV cache 管理策略影响。Llumnix 等工作进一步展示了动态请求迁移、实例调度和 serving 稳定性之间的关系。Mooncake 则从 KVCache-centric serving 出发，将 KV cache 管理、prefill/decode 分离和请求调度结合起来，说明状态位置会影响 batching 和阶段执行路径。Jupiter 将 generative LLM 在 edge devices 上的 collaborative inference 与 pipeline parallelism、speculative decoding 结合起来，进一步说明在 CEC 场景中，阶段拆分和 serving scheduling 必须一起考虑。
+
+
+因此，模型切分模板不能只描述模型层或阶段放在哪里，还需要暴露阶段容量、KV handoff 成本、batching 可容纳规模和 TTFT/TBT 估计。Batching 层也不能只根据当前队列最大化吞吐，而需要感知切分拓扑、状态位置和用户 SLA。对于 CEC 系统，尤其需要避免某一层优化破坏另一层目标：例如切分策略带来跨节点 decode 会损害 token latency，batching 策略追求高吞吐会放大移动用户 handover 下的尾延迟。
+
+
+\phantomsection
+\subsection*{7.4 请求/工作流路由与 runtime state 管理的协同}
+\addcontentsline{toc}{subsection}{7.4 请求/工作流路由与 runtime state 管理的协同}
+
+请求路由和 runtime state 管理之间的耦合，是 LLM inference 相比传统 task offloading 最突出的新问题之一。传统 offloading 中，任务完成后状态通常不再影响后续请求；而在 LLM 多轮对话、长上下文和 agent workflow 中，context、KV cache、prefix cache、agent memory 和 tool outputs 会持续影响后续推理。此时，请求应该路由到哪里，不仅取决于哪个节点算力空闲，还取决于相关状态是否已经在该节点或邻近节点存在。
+
+
+Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，prefix/KV cache 已经从单纯的内存优化对象变成影响请求调度和服务路径选择的核心资源。FuseSpill \refcite{66} 从显存受限场景出发说明，KV cache spillover 可能导致 decode 请求迁移到辅助 GPU 或其他资源位置，从而改变原有的执行路径。CA-AIGC-Migration \refcite{69} 则直接面向移动边缘场景，将用户 long context 视为可迁移状态，而不是迁移完整模型，从而在回复质量和迁移成本之间做权衡。QoS-LLM-Router \refcite{55} 和 CES-CB \refcite{56} 虽然主要关注 request-level routing，但它们也说明了 routing action 会改变队列状态、batch 组成和后续请求的等待时延。
+
+
+对于 multi-agent workflow，这种耦合更加复杂。MasRouter、Conductor 和 AFLOW 等工作主要从算法层研究如何选择 agent 数量、角色、模型和工作流结构，但在 CEC 系统中，每个 agent 背后的模型、工具、数据库和 memory 可能位于不同物理节点。因此，workflow orchestration 必须进一步转化为 workflow offloading：不仅决定 planner、solver、critic、verifier 等角色如何协作，还要决定这些组件在哪里执行、哪些 context 可以共享、哪些中间状态需要迁移，以及何时调用云端强模型进行 verification。
+
+
+\phantomsection
+\subsection*{7.5 多用户移动场景下的跨层闭环}
+\addcontentsline{toc}{subsection}{7.5 多用户移动场景下的跨层闭环}
+
+多用户移动性会同时影响模型部署、batching、请求路由和状态管理，因此它是三类算法协同优化中最重要的外部扰动之一。用户移动会改变区域请求热点，使原有 model placement 失效；会改变接入链路和候选 edge，使 request routing 的当前最优路径失效；会在请求或 workflow 执行过程中触发 handover，使中间状态和后续阶段的执行路径需要重新选择；也会使 long context、KV cache 和 agent memory 留在旧 edge，从而产生状态迁移、远程访问或重算之间的权衡。
+
+
+已有移动性相关工作提供了局部启发。MGCO \refcite{61} 说明，generative computation offloading 不能只根据当前状态短视决策，而需要利用长程移动信息进行规划。DT-MADTO \refcite{65} 通过 digital twin 建模 DAG task、用户移动和中间数据流，说明移动性会改变 workflow/subtask offloading 的传输代价和拥塞状态。CA-AIGC-Migration \refcite{69} 进一步将移动性与 long context migration 结合，说明状态迁移可以成为替代完整服务迁移的轻量机制。T2DRL \refcite{68} 则提示，在 mobile edge 场景中，long-context serving 的模型缓存、请求管理和资源匹配需要与移动场景共同考虑。
+
+
+这些工作还没有形成完整的 CEC-LLM 跨层闭环。现有研究通常只优化其中一层：有的关注 request offloading，有的关注 DAG subtask，有的关注 context migration，有的关注 model caching。未来更需要一个 mobility-aware hierarchical controller：低频层根据用户移动和服务热点调整模型/服务布局，中频层根据负载和状态命中率调整 batching 与实例分流，高频层根据 handover、链路抖动和 context/KV 位置进行 request/workflow/state routing。
+
+
+\phantomsection
+\subsection*{7.6 控制面、数据面与状态面的工程实现}
+\addcontentsline{toc}{subsection}{7.6 控制面、数据面与状态面的工程实现}
+
+为了支撑上述协同优化，系统需要同时设计控制面、数据面和状态面。控制面负责模型切分模板、模型/服务 placement、资源预算、routing policy 和长期优化；数据面负责请求转发、batching 执行、token streaming、workflow execution 和故障回退；状态面负责 KV cache、prefix cache、session state、agent memory、状态索引和迁移控制。三者需要通过统一接口交换必要状态，否则模型切分、batching 和 task offloading 无法形成闭环。
+
+
+在实现上，控制面需要下发部署模板、batching 参数、admission 门限、routing preference、状态迁移阈值和回退策略；数据面需要回传请求级时延、TTFT/TBT、实例利用率、queue length、cache hit ratio、handover 事件和失败记录；状态面需要支持轻量查询、异步更新、状态压缩和迁移限速。Llumnix、Mooncake、DistServe 等系统说明，动态调度、KV/cache 管理和阶段解耦如果没有稳定的系统接口，很容易导致尾延迟、状态迁移开销和调度震荡。
+
+
+\phantomsection
+\subsection*{7.7 小结}
+\addcontentsline{toc}{subsection}{7.7 小结}
+
+总体来看，三类算法的协同优化不是简单地把模型切分、batching 和 task offloading 合并成一个大优化问题，而是要在实际工作揭示的局部耦合关系基础上，建立分层、多时间尺度、状态感知的控制框架。已有工作已经分别展示了 model caching 与 inference offloading、prefill/decode disaggregation 与 scheduling、KV cache 与 request routing、context migration 与 mobility-aware serving 之间的耦合，但这些机制仍然缺少面向 CEC-LLM inference 的统一组织。
+
+
+未来工作可以从四个方向推进：第一，研究 model/service placement 与 request offloading 的双时间尺度闭环；第二，研究模型切分、prefill/decode 解耦与 continuous batching 的联合调节；第三，研究 request/workflow routing 与 context/KV/runtime state 管理的协同；第四，研究多用户移动场景下的 hierarchical control，使模型能力、请求路径、workflow 结构和状态位置能够随用户移动和 workload 变化自适应调整。
+
+
