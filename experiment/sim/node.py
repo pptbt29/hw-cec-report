@@ -128,9 +128,14 @@ def build_cluster(
     num_nodes: int = 3,
     staleness_ms: float = 0.0,
     kv_capacity_bytes: Optional[float] = None,
+    activation_reserve_bytes: float = 4e9,
 ) -> GlobalStateDirectory:
     nodes = {
-        i: ServingNode(i, model, hardware, kv_capacity_bytes=kv_capacity_bytes)
+        i: ServingNode(
+            i, model, hardware,
+            kv_capacity_bytes=kv_capacity_bytes,
+            activation_reserve_bytes=activation_reserve_bytes,
+        )
         for i in range(num_nodes)
     }
     kv_dir = GlobalKVDirectory(num_nodes=num_nodes)

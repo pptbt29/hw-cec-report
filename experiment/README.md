@@ -25,7 +25,10 @@ experiment/
 │   ├── data_generator.py              # 可复现工作负载轨迹生成
 │   ├── node.py                        # ServingNode + 共享状态目录（含 staleness）
 │   ├── router.py                      # 路由器：动作枚举+约束过滤+四策略+回放评估
-│   └── dashboard.py                   # 跑全部策略并生成自包含 HTML metrics 看板
+│   ├── dashboard.py                   # 跑全部策略并生成自包含 HTML metrics 看板
+│   └── config.py                      # 可手编 JSON 配置的加载/保存/默认
+├── configs/
+│   └── default.json                   # 节点/模型/网络/工作负载统一配置（手编）
 ├── output/                            # 生成物：dashboard.html / metrics.json（git 忽略）
 ├── demo.py                            # 端到端演示（含四策略对比 + 生成看板）
 └── README.md
@@ -72,7 +75,28 @@ python -m sim.node              # 集群节点状态一览
 python -m sim.router            # 四策略在同一轨迹上的指标对比
 python -m sim.dashboard         # 跑全部策略并生成 output/dashboard.html
 python -m sim.dashboard --open  # 生成后在浏览器打开
+python -m sim.dashboard --config configs/default.json  # 用手编配置跑
+python -m sim.config            # 重新生成 configs/default.json
 ```
+
+## 统一配置文件
+
+节点、模型、网络、请求生成四类配置全部抽到 `configs/default.json`，改实验不必动代码：
+
+- `cluster`：节点数、状态同步 staleness、KV 容量、激活预留；
+- `policies`：参与对比的策略子集；
+- `hardware`：单卡算力/带宽/显存与效率系数；
+- `models`：LLM/VLM/VLA 结构与 KV/SLA（已知模型可只写覆盖字段）；
+- `network.links`：链路带宽/时延（100G 直连、25G 跨主机）；
+- `workload`：时长、种子、移动性、各分组并发/SLA/长度分布。
+
+字段含义见 `docs/config_design.md`。用法：
+
+```bash
+python -m sim.dashboard --config configs/default.json
+```
+
+或代码内 `load_config(path)` 后修改再 `run_experiments(cfg)`。
 
 ## Metrics 看板
 

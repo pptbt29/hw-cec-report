@@ -295,6 +295,8 @@ def simulate_trace(
     gamma: float = 0.9,
     sla_margin_ms: float = 20.0,
     collect_records: bool = False,
+    kv_capacity_bytes: Optional[float] = None,
+    activation_reserve_bytes: float = 4e9,
 ) -> Dict:
     """Replay a request trace under a policy and return aggregate metrics.
 
@@ -304,7 +306,11 @@ def simulate_trace(
     from .node import build_cluster
 
     network.reset_stats()
-    cluster = build_cluster(model, hardware, network, num_nodes, staleness_ms)
+    cluster = build_cluster(
+        model, hardware, network, num_nodes, staleness_ms,
+        kv_capacity_bytes=kv_capacity_bytes,
+        activation_reserve_bytes=activation_reserve_bytes,
+    )
     routers = {
         i: Router(model, cluster, policy, gamma=gamma, sla_margin_ms=sla_margin_ms)
         for i in range(num_nodes)

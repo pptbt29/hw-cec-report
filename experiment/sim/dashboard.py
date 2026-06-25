@@ -5,65 +5,63 @@ workload trace, collects per-request records and aggregate metrics, and emits
 a single self-contained interactive HTML dashboard (no third-party deps).
 
 Usage:
-    python -m sim.dashboard                 # default experiment -> output/dashboard.html
-    python -m sim.dashboard --open          # also open in browser
+    python -m sim.dashboard                      # default config -> output/dashboard.html
+    python -m sim.dashboard --open               # also open in browser
+    python -m sim.dashboard --config my.json     # use a hand-edited config file
 """
 
 from __future__ import annotations
 
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-from .compute_simulator import get_hardware
-from .data_generator import DataGenerator, WorkloadConfig
+from .config import ExperimentConfig, default_config, load_config
+from .data_generator import DataGenerator
 from .large_model import get_model
-from .network import NetworkSimulator, default_topology
 from .router import Policy, simulate_trace
 
 
-def run_experiments(
-    models: Optional[List[str]] = None,
-    config: Optional[WorkloadConfig] = None,
-    hardware_name: str = "A800T-A2",
-    num_nodes: int = 3,
-    staleness_ms: float = 0.0,
-) -> Dict:
-    """Run all policies for each model on one shared trace; collect metrics."""
-    config = config or WorkloadConfig.default_experiment()
-    requests = DataGenerator(config).generate()
-    hw = get_hardware(hardware_name)
+def run_experiments(experiment: Optional[ExperimentConfig] = None) -> Dict:
+    """Run all configured policies for each model on one shared trace.
 
-    present = []
-    seen = set()
-    for r in requests:
-        if r.model_name not in seen:
-            seen.add(r.model_name)
-            present.append(r.model_name)
-    models = models or present
+    ``experiment`` is an :class:`ExperimentConfig`; when omitted the built-in
+    defaults are used. Edit ``configs/default.json`` (or pass a loaded config)
+    to reconfigure hardware / models / network / workload / cluster.
+    """
+    experiment = experiment or default_config()
+    experiment.apply()
+
+    cluster = experiment.cluster
+    hw = experiment.hardware
+    requests = DataGenerator(experiment.workload).generate()
+    policies = [Policy(p) for p in experiment.policies]
 
     data: Dict = {
         "meta": {
-            "hardware": hardware_name,
-            "num_nodes": num_nodes,
-            "staleness_ms": staleness_ms,
-            "duration_ms": config.duration_ms,
-            "mobility_ratio": config.mobility_ratio,
-            "mobility_start_frac": config.mobility_start_frac,
+            "hardware": hw.name,
+            "num_nodes": cluster.num_nodes,
+            "staleness_ms": cluster.staleness_ms,
+            "duration_ms": experiment.workload.duration_ms,
+            "mobility_ratio": experiment.workload.mobility_ratio,
+            "mobility_start_frac": experiment.workload.mobility_start_frac,
             "total_requests": len(requests),
+            "policies": experiment.policies,
         },
         "models": {},
     }
 
-    for model_name in models:
+    for model_name in experiment.workload_model_names():
         model = get_model(model_name)
         per_policy = {}
-        for pol in Policy:
-            net = NetworkSimulator(default_topology(num_nodes))
+        for pol in policies:
+            net = experiment.new_network()
             res = simulate_trace(
                 pol, requests, model, hw, net,
-                num_nodes=num_nodes, staleness_ms=staleness_ms,
+                num_nodes=cluster.num_nodes, staleness_ms=cluster.staleness_ms,
                 collect_records=True,
+                kv_capacity_bytes=cluster.kv_capacity_bytes,
+                activation_reserve_bytes=cluster.activation_reserve_bytes,
             )
             per_policy[pol.value] = res
         data["models"][model_name] = per_policy
@@ -469,8 +467,14 @@ if __name__ == "__main__":
     html_path = os.path.join(out_dir, "dashboard.html")
     json_path = os.path.join(out_dir, "metrics.json")
 
-    print("running experiments (4 policies x models on shared trace)...")
-    data = run_experiments()
+    experiment = None
+    if "--config" in sys.argv:
+        cfg_path = sys.argv[sys.argv.index("--config") + 1]
+        print(f"loading config: {cfg_path}")
+        experiment = load_config(cfg_path)
+
+    print("running experiments (policies x models on shared trace)...")
+    data = run_experiments(experiment)
     export_json(data, json_path)
     render_html(data, html_path)
 

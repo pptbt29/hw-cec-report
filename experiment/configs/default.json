@@ -1,0 +1,220 @@
+{
+  "cluster": {
+    "num_nodes": 3,
+    "staleness_ms": 0.0,
+    "kv_capacity_bytes": null,
+    "activation_reserve_bytes": 4000000000.0
+  },
+  "policies": [
+    "nearest",
+    "greedy",
+    "long_term",
+    "long_term_kv"
+  ],
+  "hardware": {
+    "name": "A800T-A2",
+    "num_devices": 8,
+    "peak_flops_per_device": 376000000000000.0,
+    "mem_bandwidth_per_device": 1600000000000.0,
+    "mem_capacity_per_device": 64000000000.0,
+    "compute_efficiency": 0.5,
+    "bandwidth_efficiency": 0.7,
+    "interconnect_bandwidth": 400000000000.0,
+    "fixed_overhead_ms": 0.2
+  },
+  "models": [
+    {
+      "name": "CodeLlama34B",
+      "model_type": "LLM",
+      "num_params": 33700000000.0,
+      "num_layers": 48,
+      "hidden_size": 8192,
+      "num_attention_heads": 64,
+      "num_kv_heads": 8,
+      "head_dim": 128,
+      "intermediate_size": 22016,
+      "vocab_size": 32016,
+      "dtype_bytes": 2,
+      "weight_bytes": null,
+      "vision_params": 0.0,
+      "patch_size": 14,
+      "spatial_merge": 1,
+      "tokens_per_image": null,
+      "default_output_dist": {
+        "kind": "lognormal",
+        "mean": 256.0,
+        "std": 200.0,
+        "minimum": 8,
+        "maximum": 2048
+      },
+      "default_sla_ms": 500.0,
+      "kv_block_size": 16
+    },
+    {
+      "name": "Qwen2-VL-7B-Instruct",
+      "model_type": "VLM",
+      "num_params": 7600000000.0,
+      "num_layers": 28,
+      "hidden_size": 3584,
+      "num_attention_heads": 28,
+      "num_kv_heads": 4,
+      "head_dim": 128,
+      "intermediate_size": 18944,
+      "vocab_size": 152064,
+      "dtype_bytes": 2,
+      "weight_bytes": null,
+      "vision_params": 675000000.0,
+      "patch_size": 14,
+      "spatial_merge": 2,
+      "tokens_per_image": null,
+      "default_output_dist": {
+        "kind": "lognormal",
+        "mean": 128.0,
+        "std": 96.0,
+        "minimum": 4,
+        "maximum": 1024
+      },
+      "default_sla_ms": 500.0,
+      "kv_block_size": 16
+    },
+    {
+      "name": "OpenVLA-7B",
+      "model_type": "VLA",
+      "num_params": 7500000000.0,
+      "num_layers": 32,
+      "hidden_size": 4096,
+      "num_attention_heads": 32,
+      "num_kv_heads": 32,
+      "head_dim": 128,
+      "intermediate_size": 11008,
+      "vocab_size": 32064,
+      "dtype_bytes": 2,
+      "weight_bytes": null,
+      "vision_params": 400000000.0,
+      "patch_size": 14,
+      "spatial_merge": 1,
+      "tokens_per_image": 256,
+      "default_output_dist": {
+        "kind": "normal",
+        "mean": 7.0,
+        "std": 1.0,
+        "minimum": 1,
+        "maximum": 16
+      },
+      "default_sla_ms": 200.0,
+      "kv_block_size": 16
+    }
+  ],
+  "network": {
+    "links": [
+      {
+        "src": 0,
+        "dst": 1,
+        "bandwidth_bps": 100000000000.0,
+        "latency_ms": 0.05,
+        "name": "A-B-100G",
+        "link_efficiency": 0.9
+      },
+      {
+        "src": 0,
+        "dst": 2,
+        "bandwidth_bps": 25000000000.0,
+        "latency_ms": 0.2,
+        "name": "A-C-25G",
+        "link_efficiency": 0.9
+      },
+      {
+        "src": 1,
+        "dst": 2,
+        "bandwidth_bps": 25000000000.0,
+        "latency_ms": 0.2,
+        "name": "B-C-25G",
+        "link_efficiency": 0.9
+      }
+    ]
+  },
+  "workload": {
+    "duration_ms": 60000.0,
+    "seed": 0,
+    "mobility_start_frac": 0.5,
+    "mobility_ratio": 0.2,
+    "mobility_granularity": "request",
+    "groups": [
+      {
+        "model_name": "CodeLlama34B",
+        "priority": "high",
+        "concurrency": 24,
+        "sla_ms": 150.0,
+        "arrival_rate": null,
+        "prompt_dist": {
+          "kind": "lognormal",
+          "mean": 800,
+          "std": 600,
+          "minimum": 32,
+          "maximum": 4096
+        },
+        "output_dist": null,
+        "turns_mean": 3.0,
+        "turns_min": 1,
+        "turns_max": 12,
+        "image_size": [
+          0,
+          0
+        ],
+        "num_frames": 1,
+        "shared_prefix_tokens": 256,
+        "history_growth": 0.6
+      },
+      {
+        "model_name": "CodeLlama34B",
+        "priority": "normal",
+        "concurrency": 96,
+        "sla_ms": 500.0,
+        "arrival_rate": null,
+        "prompt_dist": {
+          "kind": "lognormal",
+          "mean": 800,
+          "std": 600,
+          "minimum": 32,
+          "maximum": 4096
+        },
+        "output_dist": null,
+        "turns_mean": 5.0,
+        "turns_min": 1,
+        "turns_max": 12,
+        "image_size": [
+          0,
+          0
+        ],
+        "num_frames": 1,
+        "shared_prefix_tokens": 256,
+        "history_growth": 0.6
+      },
+      {
+        "model_name": "Qwen2-VL-7B-Instruct",
+        "priority": "normal",
+        "concurrency": 24,
+        "sla_ms": 500.0,
+        "arrival_rate": null,
+        "prompt_dist": {
+          "kind": "lognormal",
+          "mean": 128,
+          "std": 96,
+          "minimum": 8,
+          "maximum": 1024
+        },
+        "output_dist": null,
+        "turns_mean": 3.0,
+        "turns_min": 1,
+        "turns_max": 12,
+        "image_size": [
+          1024,
+          768
+        ],
+        "num_frames": 1,
+        "shared_prefix_tokens": 64,
+        "history_growth": 0.6
+      }
+    ]
+  }
+}

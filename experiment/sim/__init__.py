@@ -10,6 +10,7 @@ Modules
 - ``node``: serving node + shared (stale) state directory.
 - ``router``: per-node action enumeration, constraint filtering and policies.
 - ``dashboard``: run all policies and emit a self-contained HTML metrics dashboard.
+- ``config``: hand-editable JSON experiment configuration (hardware/models/network/workload/cluster).
 """
 
 from .large_model import (
@@ -69,6 +70,14 @@ from .dashboard import (
     render_html,
     export_json,
 )
+from .config import (
+    ClusterConfig,
+    ExperimentConfig,
+    load_config,
+    save_config,
+    default_config,
+    DEFAULT_CONFIG_PATH,
+)
 
 __all__ = [
     "LengthDistributionSpec",
@@ -111,4 +120,10 @@ __all__ = [
     "run_experiments",
     "render_html",
     "export_json",
+    "ClusterConfig",
+    "ExperimentConfig",
+    "load_config",
+    "save_config",
+    "default_config",
+    "DEFAULT_CONFIG_PATH",
 ]
