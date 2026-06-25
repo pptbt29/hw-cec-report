@@ -119,6 +119,20 @@ def show_router_policies() -> None:
     print("   long_term 更早把 KV 迁向未来入口 -> 更低 xnode、更少迁移字节)")
 
 
+def show_dashboard() -> None:
+    import os
+
+    from sim import export_json, render_html, run_experiments
+
+    print("\n== metrics dashboard ==")
+    data = run_experiments()
+    out_dir = os.path.join(os.path.dirname(__file__), "output")
+    html = render_html(data, os.path.join(out_dir, "dashboard.html"))
+    export_json(data, os.path.join(out_dir, "metrics.json"))
+    print(f"  generated -> {html}")
+    print("  open it in a browser, or run: python -m sim.dashboard --open")
+
+
 if __name__ == "__main__":
     show_large_models()
     show_compute()
@@ -126,3 +140,4 @@ if __name__ == "__main__":
     show_offloading_decision()
     show_workload()
     show_router_policies()
+    show_dashboard()

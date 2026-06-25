@@ -294,8 +294,13 @@ def simulate_trace(
     staleness_ms: float = 0.0,
     gamma: float = 0.9,
     sla_margin_ms: float = 20.0,
+    collect_records: bool = False,
 ) -> Dict:
-    """Replay a request trace under a policy and return aggregate metrics."""
+    """Replay a request trace under a policy and return aggregate metrics.
+
+    When ``collect_records`` is set, also returns per-request records and link
+    utilisation, suitable for building a metrics dashboard.
+    """
     from .node import build_cluster
 
     network.reset_stats()
@@ -314,8 +319,9 @@ def simulate_trace(
     sla_viol = 0
     infeasible = 0
     cross_node = 0
-    migrate_count = 0
-    recompute_count = 0
+    mode_counts = {m.value: 0 for m in StateMode}
+    records: List[Dict] = []
+    last_t = 0.0
 
     for r in reqs:
         for n in cluster.nodes.values():
@@ -325,20 +331,36 @@ def simulate_trace(
 
         router = routers[r.entry_node]
         decision = router.route(r)
-        if not decision.feasible:
+        is_infeasible = not decision.feasible
+        is_sla = decision.ttft_ms + sla_margin_ms > r.sla_ms
+        is_cross = decision.action.exec_node != r.entry_node
+        if is_infeasible:
             infeasible += 1
-        if decision.ttft_ms + sla_margin_ms > r.sla_ms:
+        if is_sla:
             sla_viol += 1
-        if decision.action.exec_node != r.entry_node:
+        if is_cross:
             cross_node += 1
-        if decision.action.mode == StateMode.MIGRATE:
-            migrate_count += 1
-        elif decision.action.mode == StateMode.RECOMPUTE:
-            recompute_count += 1
+        mode_counts[decision.action.mode.value] += 1
 
         router.commit(r, decision, r.arrival_ms)
         e2e_list.append(decision.e2e_ms)
         ttft_list.append(decision.ttft_ms)
+        last_t = r.arrival_ms
+
+        if collect_records:
+            records.append({
+                "t": round(r.arrival_ms, 2),
+                "ttft": round(decision.ttft_ms, 3),
+                "e2e": round(decision.e2e_ms, 3),
+                "mode": decision.action.mode.value,
+                "entry": r.entry_node,
+                "exec": decision.action.exec_node,
+                "cross": int(is_cross),
+                "sla_violation": int(is_sla),
+                "infeasible": int(is_infeasible),
+                "priority": r.priority,
+                "moved": int(r.mobility_switched),
+            })
 
     def pct(v, p):
         if not v:
@@ -347,19 +369,31 @@ def simulate_trace(
         return s[min(len(s) - 1, int(round(p / 100.0 * (len(s) - 1))))]
 
     n = max(len(reqs), 1)
-    return {
+    result = {
         "policy": policy.value,
+        "model": model.name,
         "num_requests": len(reqs),
         "avg_e2e_ms": sum(e2e_list) / n,
+        "p95_e2e_ms": pct(e2e_list, 95),
+        "p50_ttft_ms": pct(ttft_list, 50),
+        "p95_ttft_ms": pct(ttft_list, 95),
         "p99_ttft_ms": pct(ttft_list, 99),
         "sla_violation_ratio": sla_viol / n,
         "infeasible_ratio": infeasible / n,
         "cross_node_ratio": cross_node / n,
-        "migrate_count": migrate_count,
-        "recompute_count": recompute_count,
+        "local_count": mode_counts["local"],
+        "fresh_count": mode_counts["fresh"],
+        "migrate_count": mode_counts["migrate"],
+        "recompute_count": mode_counts["recompute"],
         "owner_switch_count": cluster.kv.stats["owner_switch_count"],
         "migrate_bytes_mb": cluster.kv.stats["migrate_bytes"] / 1e6,
     }
+    if collect_records:
+        window = max(last_t, 1.0)
+        result["records"] = records
+        result["link_utilization"] = network.link_utilization(window)
+        result["duration_ms"] = window
+    return result
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ Modules
 - ``kv_cache``: block-level KV cache store, prefix directory and migration.
 - ``node``: serving node + shared (stale) state directory.
 - ``router``: per-node action enumeration, constraint filtering and policies.
+- ``dashboard``: run all policies and emit a self-contained HTML metrics dashboard.
 """
 
 from .large_model import (
@@ -63,6 +64,11 @@ from .router import (
     Router,
     simulate_trace,
 )
+from .dashboard import (
+    run_experiments,
+    render_html,
+    export_json,
+)
 
 __all__ = [
     "LengthDistributionSpec",
@@ -102,4 +108,7 @@ __all__ = [
     "ActionCost",
     "Router",
     "simulate_trace",
+    "run_experiments",
+    "render_html",
+    "export_json",
 ]

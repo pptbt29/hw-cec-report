@@ -24,8 +24,10 @@ experiment/
 │   ├── kv_cache.py                    # block 级 KV store + 全局目录 + 迁移规划
 │   ├── data_generator.py              # 可复现工作负载轨迹生成
 │   ├── node.py                        # ServingNode + 共享状态目录（含 staleness）
-│   └── router.py                      # 路由器：动作枚举+约束过滤+四策略+回放评估
-├── demo.py                            # 端到端演示（含四策略对比）
+│   ├── router.py                      # 路由器：动作枚举+约束过滤+四策略+回放评估
+│   └── dashboard.py                   # 跑全部策略并生成自包含 HTML metrics 看板
+├── output/                            # 生成物：dashboard.html / metrics.json（git 忽略）
+├── demo.py                            # 端到端演示（含四策略对比 + 生成看板）
 └── README.md
 ```
 
@@ -68,7 +70,22 @@ python -m sim.kv_cache          # block 级 KV 迁移规划
 python -m sim.data_generator    # 工作负载摘要
 python -m sim.node              # 集群节点状态一览
 python -m sim.router            # 四策略在同一轨迹上的指标对比
+python -m sim.dashboard         # 跑全部策略并生成 output/dashboard.html
+python -m sim.dashboard --open  # 生成后在浏览器打开
 ```
+
+## Metrics 看板
+
+`python -m sim.dashboard` 会在同一条请求轨迹上回放四种策略（覆盖所有模型），
+产出两份文件到 `output/`：
+
+- `dashboard.html`：**自包含**交互式看板（数据内联、纯前端、无依赖，可直接分享）。包含
+  KPI 卡片、策略汇总对比表（逐列高亮最优）、关键指标柱状图、状态获取动作分布、
+  **P99 TTFT 时间序列**、**累计跨节点请求（状态黏附）曲线**（标注用户移动时刻）、链路利用率。
+- `metrics.json`：结构化指标 + 逐请求记录，便于二次分析。
+
+看板里最直观的是“黏附曲线”：用户移动后 Greedy 曲线明显更陡（请求被吸到远端节点），
+long-term 策略更平缓——直接对应实验报告要验证的现象。
 
 `demo.py` 展示两处核心权衡：
 1. 同一份 2048-token KV，100G 链路上 migrate 比 recompute 便宜，25G 上 recompute 更划算；

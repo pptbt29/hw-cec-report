@@ -19,3 +19,6 @@
 # Python
 __pycache__/
 *.pyc
+
+# generated simulation artifacts
+experiment/output/
