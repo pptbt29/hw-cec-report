@@ -72,6 +72,7 @@ from .dashboard import (
 )
 from .config import (
     ClusterConfig,
+    RouterConfig,
     ExperimentConfig,
     load_config,
     save_config,
@@ -121,6 +122,7 @@ __all__ = [
     "render_html",
     "export_json",
     "ClusterConfig",
+    "RouterConfig",
     "ExperimentConfig",
     "load_config",
     "save_config",

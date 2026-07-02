@@ -91,16 +91,39 @@ Greedy 只看当前请求，易产生**状态黏附**：请求被转到远端节
 长期策略加入一项估计“把 KV 落在 `exec_node` 对未来请求的影响”：
 
 ```
-remaining        = max(expected_session_turns - turn_index - 1, 0)
-future_entry     = entry_node if mobility_switched else home_node   # 预测未来入口
-penalty_per_req  = network.transfer_time_ms(exec_node, future_entry, future_state_bytes)
-V_next(a)        = remaining * penalty_per_req
+remaining = max(group.turns_mean - turn_index - 1, 0)
+P_k(entry) = 第 k 个未来请求的入口概率
+
+serve(node) =
+    Σ_k E_{entry~P_k}[request_network(entry,node) + response_network(node,entry)]
+
+relocate(exec,dst) =
+    min(one_time_migrate(exec,dst), one_time_recompute(dst)) + serve(dst)
+
+V_next(a) = min(serve(exec), min_dst relocate(exec,dst))
 ```
 
-- 若把 KV 放在“未来入口”节点（`exec == future_entry`），`penalty_per_req≈0`，未来请求本地命中；
-- 若把 KV 留在远离未来入口的旧 owner，每个后续请求都要远程访问，`V_next` 大。
+- `request` 按 home 抖动概率生成每轮入口分布；
+- `session` 在移动后保持当前入口，移动前按一次迁移概率预测；
+- `markov` 按当前入口、已驻留轮数、驻留阈值和迁移概率逐轮传播入口分布；
+- KV 搬迁或重算只计一次，不再乘以 remaining。
 
 于是长期策略会在用户移动后**更早迁移/重算到新入口节点**，避免黏附；而 Greedy 因 `γ·V_next` 缺席会继续黏在旧 owner。`γ`（默认 0.9）控制对未来的重视程度。
+
+当前 `V_next` 仍是有限视野近似而非完整集群动态规划：它使用配置组的 `turns_mean`，尚未预测未来
+集群排队演化，并以当前请求长度估计未来 payload/state；迁移、重算和网络传输仍按串行相加，尚未
+模拟“部分迁移 + 部分重算”或并行覆盖 bubble。
+
+每个候选动作的状态获取方式互斥：完整 LOCAL、MIGRATE 或 RECOMPUTE 三选一。`LONG_TERM_KV`
+的“部分”仅指目标节点已有 block 不重复迁移，并不把剩余 block 再拆成迁移与重算并行执行。
+
+对最终选中的 MIGRATE 记录 `selection_reason`：入口所有动作被 SLA、memory、两者或混合约束阻塞时
+归入对应硬约束；入口仍有可执行动作时，Greedy/即时最优归为 `immediate_cost`，long-term 为降低
+FutureCost 而接受更高当前 E2E 时归为 `future_cost`。指标同时按原因聚合次数和实际迁移字节。
+
+排队 backlog 按前序 Prefill、Recompute、Decode 三类记录。当前默认假设 Decode 由 continuous
+batching 吸收，不串行进入 admission queue，因此 `queue_decode_ms` 为 0；总排队目前主要来自
+前序 Prefill，若未来接入真实 batch scheduler 再替换这一假设。
 
 ### 6.2 低成本 KV 管理（LONG_TERM_KV）
 

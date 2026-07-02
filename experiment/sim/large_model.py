@@ -185,7 +185,7 @@ _OPENVLA_7B = ModelSpec(
     vision_params=0.4e9,
     tokens_per_image=256,
     default_output_dist=LengthDistributionSpec(
-        kind="normal", mean=7.0, std=1.0, minimum=1, maximum=16
+        kind="fixed", mean=7.0, std=0.0, minimum=7, maximum=7
     ),
     default_sla_ms=200.0,
 )

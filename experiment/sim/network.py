@@ -73,9 +73,11 @@ class NetworkTopology:
         return list(self._links.values())
 
     def path(self, src: int, dst: int) -> List[LinkSpec]:
-        """Shortest path by total latency (Dijkstra over latency_ms)."""
+        """Use a declared direct link, otherwise find a multi-hop path."""
         if src == dst:
             return []
+        if self.has_link(src, dst):
+            return [self.link(src, dst)]
         dist = {src: 0.0}
         prev: Dict[int, Tuple[int, LinkSpec]] = {}
         pq: List[Tuple[float, int]] = [(0.0, src)]
@@ -182,11 +184,11 @@ class NetworkSimulator:
 
 
 def default_topology(num_nodes: int = 3) -> NetworkTopology:
-    """A-B 100 Gbps direct; C reaches A and B via 25 Gbps cross-host RDMA."""
+    """Three A800T-A2 nodes: two 100G direct links plus one 25G RDMA link."""
     links = [
         LinkSpec(0, 1, 100e9, latency_ms=0.05, name="A-B-100G"),
+        LinkSpec(1, 2, 100e9, latency_ms=0.05, name="B-C-100G"),
         LinkSpec(0, 2, 25e9, latency_ms=0.2, name="A-C-25G"),
-        LinkSpec(1, 2, 25e9, latency_ms=0.2, name="B-C-25G"),
     ]
     return NetworkTopology(num_nodes=num_nodes, links=links)
 

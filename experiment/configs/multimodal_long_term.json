@@ -11,7 +11,7 @@
     "token_id_bytes": 4,
     "request_overhead_bytes": 4096,
     "response_overhead_bytes": 4096,
-    "visual_bytes_per_token": 0
+    "visual_bytes_per_token": 8192
   },
   "policies": [
     "nearest",
@@ -32,33 +32,6 @@
   },
   "models": [
     {
-      "name": "CodeLlama34B",
-      "model_type": "LLM",
-      "num_params": 33700000000.0,
-      "num_layers": 48,
-      "hidden_size": 8192,
-      "num_attention_heads": 64,
-      "num_kv_heads": 8,
-      "head_dim": 128,
-      "intermediate_size": 22016,
-      "vocab_size": 32016,
-      "dtype_bytes": 2,
-      "weight_bytes": null,
-      "vision_params": 0.0,
-      "patch_size": 14,
-      "spatial_merge": 1,
-      "tokens_per_image": null,
-      "default_output_dist": {
-        "kind": "lognormal",
-        "mean": 256.0,
-        "std": 200.0,
-        "minimum": 8,
-        "maximum": 2048
-      },
-      "default_sla_ms": 500.0,
-      "kv_block_size": 16
-    },
-    {
       "name": "Qwen2-VL-7B-Instruct",
       "model_type": "VLM",
       "num_params": 7600000000.0,
@@ -77,12 +50,12 @@
       "tokens_per_image": null,
       "default_output_dist": {
         "kind": "lognormal",
-        "mean": 128.0,
-        "std": 96.0,
-        "minimum": 4,
-        "maximum": 1024
+        "mean": 96.0,
+        "std": 48.0,
+        "minimum": 16,
+        "maximum": 384
       },
-      "default_sla_ms": 500.0,
+      "default_sla_ms": 1000.0,
       "kv_block_size": 16
     },
     {
@@ -109,7 +82,7 @@
         "minimum": 7,
         "maximum": 7
       },
-      "default_sla_ms": 200.0,
+      "default_sla_ms": 100.0,
       "kv_block_size": 16
     }
   ],
@@ -143,80 +116,16 @@
   },
   "workload": {
     "duration_ms": 60000.0,
-    "session_start_spread_frac": 0.8,
-    "seed": 0,
-    "mobility_start_frac": 0.5,
-    "mobility_ratio": 0.2,
-    "mobility_granularity": "request",
-    "mobility_residency_turns": 2,
+    "session_start_spread_frac": 0.08,
+    "seed": 17,
+    "mobility_start_frac": 0.2,
+    "mobility_ratio": 0.7,
+    "mobility_granularity": "session",
+    "mobility_residency_turns": 8,
     "groups": [
       {
-        "model_name": "CodeLlama34B",
-        "name": "high",
-        "entry_mode": "counts",
-        "concurrency": 72,
-        "entry_concurrency": [
-          16,
-          24,
-          32
-        ],
-        "entry_ratios": null,
-        "sla_ms": 150.0,
-        "arrival_rate": null,
-        "prompt_dist": {
-          "kind": "lognormal",
-          "mean": 800,
-          "std": 600,
-          "minimum": 32,
-          "maximum": 4096
-        },
-        "output_dist": null,
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
-        "image_size": [
-          0,
-          0
-        ],
-        "num_frames": 1,
-        "shared_prefix_tokens": 256,
-        "history_growth": 0.6
-      },
-      {
-        "model_name": "CodeLlama34B",
-        "name": "normal",
-        "entry_mode": "counts",
-        "concurrency": 288,
-        "entry_concurrency": [
-          64,
-          96,
-          128
-        ],
-        "entry_ratios": null,
-        "sla_ms": 500.0,
-        "arrival_rate": null,
-        "prompt_dist": {
-          "kind": "lognormal",
-          "mean": 800,
-          "std": 600,
-          "minimum": 32,
-          "maximum": 4096
-        },
-        "output_dist": null,
-        "turns_mean": 5.0,
-        "turns_min": 1,
-        "turns_max": 12,
-        "image_size": [
-          0,
-          0
-        ],
-        "num_frames": 1,
-        "shared_prefix_tokens": 256,
-        "history_growth": 0.6
-      },
-      {
         "model_name": "Qwen2-VL-7B-Instruct",
-        "name": "default",
+        "name": "video-dialog",
         "entry_mode": "counts",
         "concurrency": 72,
         "entry_concurrency": [
@@ -225,40 +134,46 @@
           32
         ],
         "entry_ratios": null,
-        "sla_ms": 500.0,
-        "arrival_rate": null,
+        "sla_ms": 1000.0,
+        "arrival_rate": 0.8,
         "prompt_dist": {
           "kind": "lognormal",
           "mean": 128,
-          "std": 96,
-          "minimum": 8,
-          "maximum": 1024
+          "std": 64,
+          "minimum": 32,
+          "maximum": 512
         },
-        "output_dist": null,
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "output_dist": {
+          "kind": "lognormal",
+          "mean": 96,
+          "std": 48,
+          "minimum": 16,
+          "maximum": 384
+        },
+        "turns_mean": 28.0,
+        "turns_min": 20,
+        "turns_max": 36,
         "image_size": [
-          1024,
-          768
+          1280,
+          720
         ],
-        "num_frames": 1,
-        "shared_prefix_tokens": 64,
-        "history_growth": 0.6
+        "num_frames": 2,
+        "shared_prefix_tokens": 128,
+        "history_growth": 0.15
       },
       {
         "model_name": "OpenVLA-7B",
-        "name": "default",
+        "name": "control-loop",
         "entry_mode": "counts",
-        "concurrency": 24,
+        "concurrency": 72,
         "entry_concurrency": [
-          8,
-          8,
-          8
+          24,
+          24,
+          24
         ],
         "entry_ratios": null,
-        "sla_ms": 200.0,
-        "arrival_rate": null,
+        "sla_ms": 100.0,
+        "arrival_rate": 2.0,
         "prompt_dist": {
           "kind": "fixed",
           "mean": 32,
@@ -273,16 +188,16 @@
           "minimum": 7,
           "maximum": 7
         },
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "turns_mean": 48.0,
+        "turns_min": 36,
+        "turns_max": 60,
         "image_size": [
           224,
           224
         ],
-        "num_frames": 1,
-        "shared_prefix_tokens": 0,
-        "history_growth": 0.0
+        "num_frames": 2,
+        "shared_prefix_tokens": 64,
+        "history_growth": 0.15
       }
     ]
   }

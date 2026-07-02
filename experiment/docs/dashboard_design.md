@@ -18,7 +18,8 @@
 - 动作计数：`local/fresh/migrate/recompute_count`；
 - KV 统计：`owner_switch_count`、`migrate_bytes_mb`；
 - `link_utilization`：各链路传输字节/占用/并发（来自 `NetworkSimulator.link_utilization`）；
-- `records`：逐请求 `{t, ttft, e2e, mode, entry, exec, cross, sla_violation, infeasible, priority, moved}`。
+- `records`：逐请求 `{t, ttft, e2e, t_queue_*, mode, entry, exec, cross, sla_violation, infeasible, group_name, moved}`。
+- `migrate_reason_counts / migrate_reason_bytes_mb`：按 SLA、memory、即时成本和 FutureCost 拆分迁移。
 
 ## 3. 实验编排（`dashboard.run_experiments`）
 

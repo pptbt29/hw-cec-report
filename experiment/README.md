@@ -56,8 +56,8 @@ large_model ──(结构/KV/FLOPs/block)──▶ compute_simulator ─┐
 
 - 硬件：`A800T-A2`（8×Ascend 910B 级，BF16 ≈376 TFLOPS/卡，HBM ≈1.6 TB/s、64 GB/卡）。
 - 模型：`CodeLlama34B`（LLM）、`Qwen2-VL-7B-Instruct`（VLM）、`OpenVLA-7B`（VLA）。
-- 网络：A–B 100 Gbps 直连，C 经 25 Gbps 跨主机 RDMA 接入。
-- 负载：高优 CodeLlama34B(并发24,SLA150ms)、普通 CodeLlama34B(并发96,SLA500ms)、Qwen2-VL(并发24,SLA500ms)。
+- 网络：A–B / B–C 为 100 Gbps 直连，A–C 为 25 Gbps 跨主机 RDMA。
+- 负载：按接入点配置并发（单点 1–256），默认含高优/普通 CodeLlama34B、Qwen2-VL 与固定长度 OpenVLA。
 
 ## 运行
 
@@ -90,26 +90,59 @@ python -m sim.config            # 重新生成 configs/default.json
 - `network.links`：链路带宽/时延（100G 直连、25G 跨主机）；
 - `workload`：时长、种子、移动性、各分组并发/SLA/长度分布。
 
-字段含义见 `docs/config_design.md`。用法：
+字段含义见 `docs/config_design.md`。Long-term 策略的 Router 与 KV Cache
+联合优化方案见
+[Long-term Router 与 KV Cache 管理联合优化方案](docs/long_term_optimization.md)。用法：
 
 ```bash
 python -m sim.dashboard --config configs/default.json
+```
+
+VLM/VLA 的长期放置对照场景使用同构算力和既有三节点拓扑，仅放大多模态
+payload、会话轮数与移动后的驻留时间。`8192 bytes/visual token` 表示入口
+完成视觉编码后转发 BF16 hidden embedding；它不是原始图片的每 token 大小：
+
+```bash
+python -m sim.dashboard --config configs/multimodal_long_term.json
 ```
 
 或代码内 `load_config(path)` 后修改再 `run_experiments(cfg)`。
 
 ## Metrics 看板
 
+交互式控制台推荐用法：
+
+```bash
+python -m sim.dashboard_server --open
+```
+
+它会先打开参数配置页，展示完整实验 JSON 与常用参数快捷项；点击“开始模拟”后才运行实验，
+完成后展示摘要表，并提供跳转按钮打开 `metrics.json` 与完整 `dashboard.html`。
+快捷项覆盖 cluster、mobility、router gamma/SLA margin、token id bytes、request/response 固定开销，以及
+Data Generator 的分组并发、到达率、SLA、轮数和输入/输出长度分布。
+
 `python -m sim.dashboard` 会在同一条请求轨迹上回放四种策略（覆盖所有模型），
 产出两份文件到 `output/`：
 
 - `dashboard.html`：**自包含**交互式看板（数据内联、纯前端、无依赖，可直接分享）。包含
-  KPI 卡片、策略汇总对比表（逐列高亮最优）、关键指标柱状图、状态获取动作分布、
+  KPI 卡片、策略汇总对比表（逐列高亮最优）、每阶段独立的 E2E ECDF 分布曲线、排队来源拆分、
+  关键指标柱状图、状态获取动作分布、
   **P99 TTFT 时间序列**、**累计跨节点请求（状态黏附）曲线**（标注用户移动时刻）、链路利用率。
 - `metrics.json`：结构化指标 + 逐请求记录，便于二次分析。
 
 看板里最直观的是“黏附曲线”：用户移动后 Greedy 曲线明显更陡（请求被吸到远端节点），
 long-term 策略更平缓——直接对应实验报告要验证的现象。
+
+可用 `--mobility-granularity request|session|markov` 切换移动语义。`request` 表示移动窗口后逐请求随机切换入口；
+`session` 表示一个会话移动到固定新入口，后续请求持续从该入口进入，更适合验证“用户从 A 迁到 B 后
+长期驻留”的场景；`markov` 表示在当前入口驻留指定轮数后，再按概率迁往其他入口。
+
+策略边界可用敏感性扫描查看：
+
+```bash
+python -m sim.policy_sweep
+python -m sim.policy_sweep --mobility-granularity session --gammas 0.1,0.3,0.5,0.9
+```
 
 `demo.py` 展示两处核心权衡：
 1. 同一份 2048-token KV，100G 链路上 migrate 比 recompute 便宜，25G 上 recompute 更划算；

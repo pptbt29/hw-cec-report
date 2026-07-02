@@ -21,7 +21,7 @@
 ```
 get_model("CodeLlama34B")           # large_model: 取 ModelSpec
 get_hardware("A800T-A2")            # compute_simulator: 取 HardwareSpec
-NetworkSimulator(default_topology())# network: A-B 100G, A/B-C 25G
+NetworkSimulator(default_topology())# network: A-B/B-C 100G, A-C 25G
 build_cluster(model, hw, net, num_nodes=3, staleness_ms)   # node
 ```
 
@@ -39,7 +39,7 @@ build_cluster(model, hw, net, num_nodes=3, staleness_ms)   # node
 ## 2. 工作负载生成流程（`DataGenerator.generate`）
 
 ```
-WorkloadConfig.default_experiment()    # 3 个分组: 高优 CodeLlama / 普通 CodeLlama / Qwen2-VL
+WorkloadConfig.default_experiment()    # 4 个分组: 高/普通 CodeLlama / Qwen2-VL / OpenVLA
 DataGenerator(config).generate()
 ```
 
@@ -47,22 +47,25 @@ DataGenerator(config).generate()
 
 1. 用 `random.Random(seed)` 固定随机源（保证四策略复用同一轨迹）。
 2. 对每个 `WorkloadGroup`：
-   - 取 `ModelSpec`，确定 `sla`、`out_dist`（缺省取 `model.default_output_dist`）、到达率 `rate`、session 数 `= concurrency`。
-   - 对每个 session：采样 `num_turns`、`home_node`、`prefix_id`、`session_start`，初始化 `carried_tokens = shared_prefix_tokens`。
+   - 取 `ModelSpec`，确定 `sla`、`out_dist`（缺省取 `model.default_output_dist`）、到达率 `rate`。
+   - `counts` 模式直接使用 `entry_concurrency`；`ratios` 模式按 `entry_ratios + concurrency`
+     分配每个接入点的 session 数（单点 1–256）。
+   - 对每个入口的每个 session：采样 `num_turns`、`prefix_id`、`session_start`，初始化 `carried_tokens = shared_prefix_tokens`。
    - 对每一轮 `turn`：
-     - `prompt_text` ← `prompt_dist.sample`；
+     - `prompt_text` ← `prompt_dist.sample`；VLA 使用 fixed 均值，保证输入长度固定；
      - `visual_tokens` ← `model.visual_tokens(image_size, num_frames)`（VLM/VLA）；
      - `state_tokens` ← VLA 为 8，否则 0；
      - `input_tokens` ← `model.input_tokens(...)` 合成；
-     - `output_len` ← `out_dist.sample`（**预设生成长度**）；
+     - `output_len` ← `out_dist.sample`（**预设生成长度**）；VLA 使用 fixed 均值，保证输出长度固定；
      - `prefix_tokens = carried_tokens`（会话历史累加，turn 越大前缀越长）；
      - `arrival_ms` ← 首轮 = session_start，之后按 `expovariate(rate)` 累加（Poisson）；
      - 追加一个 `Request`。
      - 更新 `carried_tokens += history_growth*(input_tokens+output_len)`。
-3. `_apply_mobility`：`duration*mobility_start_frac` 之后到达的请求，按 `mobility_ratio` 把 `entry_node` 改为非 `home_node`，标记 `mobility_switched=True`。
+3. `_apply_mobility`：按 request/session/markov 语义更新移动窗口后的 `entry_node`；
+   `mobility_switched` 表示当前入口不在 home，`mobility_transitioned` 表示本请求真的发生了入口切换。
 4. 按 `arrival_ms` 排序，赋 `request_id`，返回 `List[Request]`。
 
-产物 `Request` 关键字段：`arrival_ms, entry_node, home_node, model_name, model_type, priority, sla_ms, input_tokens, output_len, prefix_id, prefix_tokens, is_session_first, turn_index, mobility_switched`。
+产物 `Request` 关键字段：`arrival_ms, entry_node, home_node, model_name, model_type, group_name, sla_ms, input_tokens, output_len, prefix_id, prefix_tokens, is_session_first, turn_index, mobility_switched, mobility_transitioned`。
 
 ## 3. 主回放循环（`simulate_trace`）
 
@@ -145,14 +148,15 @@ return 指标 dict
 `_future_value`（长期项，防黏附）：
 
 ```
-remaining    = max(expected_session_turns - turn_index - 1, 0)
-future_entry = entry_node if mobility_switched else home_node
-若 exec == future_entry → 0
-否则 penalty = net.transfer_time_ms(exec, future_entry, future_state_bytes, contention=False)
-返回 remaining * penalty
+remaining = max(group.turns_mean - turn_index - 1, 0)
+按 request/session/markov 语义预测每个未来轮次的入口概率
+keep      = 后续请求继续转发到当前 exec 的期望通信成本
+relocate  = 一次迁移/重算成本 + 搬迁后的期望通信成本
+返回 min(keep, relocate)
 ```
 
-即：把 KV 放在“未来入口”节点则未来零远程成本；放在远离未来入口处则每个后续请求都被罚，长期策略据此**更早迁移/重算到新入口**。
+长期策略只在一次状态本地化确实能被后续通信节省回收时提前迁移，避免把整份 KV 迁移成本在每个
+remaining 轮次重复计算。
 
 ## 5. 提交与状态反馈（`Router.commit`）
 

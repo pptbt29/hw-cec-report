@@ -21,6 +21,9 @@ from .network import NetworkSimulator
 class NodeState:
     node_id: int
     estimated_queue_ms: float
+    queue_prefill_ms: float
+    queue_recompute_ms: float
+    queue_decode_ms: float
     kv_used_bytes: float
     kv_capacity_bytes: float
     mem_free_bytes: float
@@ -49,6 +52,11 @@ class ServingNode:
         self.activation_reserve = activation_reserve_bytes
 
         self.assigned_load_ms = 0.0
+        self._queue_components = {
+            "prefill": 0.0,
+            "recompute": 0.0,
+            "decode": 0.0,
+        }
         self._ttft_samples: List[float] = []
         self.served = 0
 
@@ -69,19 +77,37 @@ class ServingNode:
         return NodeState(
             node_id=self.node_id,
             estimated_queue_ms=self.estimated_queue_ms(),
+            queue_prefill_ms=self._queue_components["prefill"],
+            queue_recompute_ms=self._queue_components["recompute"],
+            queue_decode_ms=self._queue_components["decode"],
             kv_used_bytes=self.kv_store.used_bytes(),
             kv_capacity_bytes=self.kv_store.capacity_bytes,
             mem_free_bytes=self.mem_free_bytes(),
             recent_p99_ttft_ms=self.recent_p99_ttft_ms(),
         )
 
-    def add_load(self, service_ms: float) -> None:
-        self.assigned_load_ms += max(service_ms, 0.0)
+    def add_load(
+        self,
+        prefill_ms: float = 0.0,
+        recompute_ms: float = 0.0,
+        decode_ms: float = 0.0,
+    ) -> None:
+        self._queue_components["prefill"] += max(prefill_ms, 0.0)
+        self._queue_components["recompute"] += max(recompute_ms, 0.0)
+        self._queue_components["decode"] += max(decode_ms, 0.0)
+        self.assigned_load_ms = sum(self._queue_components.values())
 
     def advance_to(self, t_now: float, prev_t: float) -> None:
         """Drain the queue by elapsed wall-clock time."""
         elapsed = max(t_now - prev_t, 0.0)
-        self.assigned_load_ms = max(self.assigned_load_ms - elapsed, 0.0)
+        total = sum(self._queue_components.values())
+        if total <= 0.0:
+            self.assigned_load_ms = 0.0
+            return
+        remaining_ratio = max(total - elapsed, 0.0) / total
+        for key in self._queue_components:
+            self._queue_components[key] *= remaining_ratio
+        self.assigned_load_ms = sum(self._queue_components.values())
 
     def record_ttft(self, ttft_ms: float) -> None:
         self._ttft_samples.append(ttft_ms)

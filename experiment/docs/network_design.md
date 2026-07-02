@@ -125,7 +125,7 @@ class NetworkSimulator:
     def link_utilization(self, window_ms) -> Dict[str, float]
     def reset_stats(self) -> None
 
-def default_topology(num_nodes=3) -> NetworkTopology   # A-B 100G, C 25G
+def default_topology(num_nodes=3) -> NetworkTopology   # A-B/B-C 100G, A-C 25G
 ```
 
 ## 8. 局限

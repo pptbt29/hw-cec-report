@@ -43,6 +43,16 @@ class ClusterConfig:
 
 
 @dataclass
+class RouterConfig:
+    gamma: float = 0.9
+    sla_margin_ms: float = 20.0
+    token_id_bytes: int = 4
+    request_overhead_bytes: int = 4096
+    response_overhead_bytes: int = 4096
+    visual_bytes_per_token: int = 0
+
+
+@dataclass
 class ExperimentConfig:
     hardware: HardwareSpec
     models: List[ModelSpec]
@@ -50,6 +60,7 @@ class ExperimentConfig:
     workload: WorkloadConfig
     cluster: ClusterConfig
     policies: List[str]
+    router: RouterConfig
 
     # -- runtime helpers ----------------------------------------------------
     def apply(self) -> "ExperimentConfig":
@@ -176,8 +187,11 @@ def _link_from_dict(d: Dict) -> LinkSpec:
 def _group_to_dict(g: WorkloadGroup) -> Dict:
     return {
         "model_name": g.model_name,
-        "priority": g.priority,
+        "name": g.name,
+        "entry_mode": g.entry_mode,
         "concurrency": g.concurrency,
+        "entry_concurrency": list(g.entry_concurrency) if g.entry_concurrency else None,
+        "entry_ratios": list(g.entry_ratios) if g.entry_ratios else None,
         "sla_ms": g.sla_ms,
         "arrival_rate": g.arrival_rate,
         "prompt_dist": _dist_to_dict(g.prompt_dist),
@@ -194,10 +208,18 @@ def _group_to_dict(g: WorkloadGroup) -> Dict:
 
 def _group_from_dict(d: Dict) -> WorkloadGroup:
     img = d.get("image_size", [0, 0])
+    group_name = d.get("name", d.get("priority", "default"))
     return WorkloadGroup(
         model_name=d["model_name"],
-        priority=d.get("priority", "normal"),
+        name=group_name,
+        entry_mode=d.get(
+            "entry_mode",
+            "ratios" if d.get("entry_ratios") else "counts",
+        ),
+        priority=d.get("priority", group_name),
         concurrency=d.get("concurrency", 24),
+        entry_concurrency=d.get("entry_concurrency"),
+        entry_ratios=d.get("entry_ratios"),
         sla_ms=d.get("sla_ms"),
         arrival_rate=d.get("arrival_rate"),
         prompt_dist=_dist_from_dict(d.get("prompt_dist", {})),
@@ -224,16 +246,26 @@ def to_dict(cfg: ExperimentConfig) -> Dict:
             "kv_capacity_bytes": cfg.cluster.kv_capacity_bytes,
             "activation_reserve_bytes": cfg.cluster.activation_reserve_bytes,
         },
+        "router": {
+            "gamma": cfg.router.gamma,
+            "sla_margin_ms": cfg.router.sla_margin_ms,
+            "token_id_bytes": cfg.router.token_id_bytes,
+            "request_overhead_bytes": cfg.router.request_overhead_bytes,
+            "response_overhead_bytes": cfg.router.response_overhead_bytes,
+            "visual_bytes_per_token": cfg.router.visual_bytes_per_token,
+        },
         "policies": list(cfg.policies),
         "hardware": _hardware_to_dict(cfg.hardware),
         "models": [_model_to_dict(m) for m in cfg.models],
         "network": {"links": [_link_to_dict(lk) for lk in cfg.links]},
         "workload": {
             "duration_ms": w.duration_ms,
+            "session_start_spread_frac": w.session_start_spread_frac,
             "seed": w.seed,
             "mobility_start_frac": w.mobility_start_frac,
             "mobility_ratio": w.mobility_ratio,
             "mobility_granularity": w.mobility_granularity,
+            "mobility_residency_turns": w.mobility_residency_turns,
             "groups": [_group_to_dict(g) for g in w.groups],
         },
     }
@@ -247,6 +279,15 @@ def from_dict(d: Dict) -> ExperimentConfig:
         kv_capacity_bytes=cl.get("kv_capacity_bytes"),
         activation_reserve_bytes=cl.get("activation_reserve_bytes", 4e9),
     )
+    rt = d.get("router", {})
+    router = RouterConfig(
+        gamma=rt.get("gamma", 0.9),
+        sla_margin_ms=rt.get("sla_margin_ms", 20.0),
+        token_id_bytes=rt.get("token_id_bytes", rt.get("request_bytes_per_token", 4)),
+        request_overhead_bytes=rt.get("request_overhead_bytes", 4096),
+        response_overhead_bytes=rt.get("response_overhead_bytes", 4096),
+        visual_bytes_per_token=rt.get("visual_bytes_per_token", 0),
+    )
     hardware = _hardware_from_dict(d["hardware"])
     models = [_model_from_dict(m) for m in d["models"]]
     links = [_link_from_dict(lk) for lk in d["network"]["links"]]
@@ -255,16 +296,18 @@ def from_dict(d: Dict) -> ExperimentConfig:
         groups=[_group_from_dict(g) for g in w["groups"]],
         num_nodes=cluster.num_nodes,
         duration_ms=w.get("duration_ms", 60000.0),
+        session_start_spread_frac=w.get("session_start_spread_frac", 0.8),
         mobility_start_frac=w.get("mobility_start_frac", 0.5),
         mobility_ratio=w.get("mobility_ratio", 0.2),
         mobility_granularity=w.get("mobility_granularity", "request"),
+        mobility_residency_turns=w.get("mobility_residency_turns", 2),
         seed=w.get("seed", 0),
     )
     policies = d.get("policies",
                      ["nearest", "greedy", "long_term", "long_term_kv"])
     return ExperimentConfig(
         hardware=hardware, models=models, links=links,
-        workload=workload, cluster=cluster, policies=policies,
+        workload=workload, cluster=cluster, policies=policies, router=router,
     )
 
 
@@ -288,10 +331,11 @@ def default_config() -> ExperimentConfig:
     links = default_topology(3).all_links()
     workload = WorkloadConfig.default_experiment()
     cluster = ClusterConfig(num_nodes=3, staleness_ms=0.0)
+    router = RouterConfig()
     policies = ["nearest", "greedy", "long_term", "long_term_kv"]
     return ExperimentConfig(
         hardware=hw, models=models, links=links,
-        workload=workload, cluster=cluster, policies=policies,
+        workload=workload, cluster=cluster, policies=policies, router=router,
     )
 
 
