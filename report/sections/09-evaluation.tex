@@ -1,0 +1,66 @@
+\clearpage
+\phantomsection
+\section*{九、实验评估与对比指标}
+\addcontentsline{toc}{section}{九、实验评估与对比指标}
+
+\phantomsection
+\subsection*{9.1 实验场景}
+\addcontentsline{toc}{subsection}{9.1 实验场景}
+
+实验设计需要围绕“CEC 相对云端集中式和就近边缘 serving 到底带来什么收益”展开，而不是简单把所有场景都跑一遍。建议将实验划分为四组。第一组是资源自适应模型切分实验，用于验证 layer-wise stage boundary、stage placement、pipeline balance 以及必要的 TP/EP/DP 补充能力是否优于平均层级切分和固定并行模板；第二组是单边缘实例实验，用于验证业务感知 batching 对 TTFT、TPOT、吞吐和资源利用率的影响；第三组是多边缘协同实验，用于验证状态感知路由、prefix cache 复用和跨实例负载均衡；第四组是端-边-云联合实验，用于验证层级切分部署、边云转发和复杂请求上云兜底的整体收益。相关场景设置可以参考端-边-云协同智能、移动服务放置和 LLM serving benchmark 中对异构资源、移动性和 SLO/goodput 的评估方式 \refcite{7}, \refcite{13}, \refcite{25}。
+
+模型切分实验需要单独覆盖异构拓扑，而不是只在同构多卡环境中验证。建议至少包含单机多卡 HCCS、高带宽跨机 RDMA、弱链路边缘节点、310P--910B4 联合组网、A800T-A2 多机多卡等配置，并分别运行 CodeLlama34B 与 Qwen2-VL-7B-Instruct。每组实验都应记录 layer-level profile、stage 耗时、stage 间 activation/hidden state 传输、pipeline bubble、显存峰值和回退次数。这样才能判断收益来自合理的层级切分和拓扑放置，而不是来自单纯增加副本数或换用更强设备。
+
+无线移动场景应单独作为重点实验，而不是混在普通多节点实验中。该场景至少应区分静态用户、低速移动用户、高速移动用户、热点区域突发用户和跨接入点 handover 用户。对于每类用户，需要记录入口变化、服务实例变化、状态访问路径变化和 token streaming 中断情况。这样才能判断 mobility-aware routing 是否真的改善了服务连续性，而不是只是在平均时延上略有收益。
+
+Workload 也需要按 LLM 推理特征构造。短 prompt + 短输出用于模拟简单问答和低复杂度交互；长 prompt + 短输出用于考察 prefill 压力和 prefix cache；短 prompt + 长输出用于考察 decode 阶段的持续吞吐；长上下文多轮会话用于考察 KV Cache 管理和状态迁移；混合 SLO 请求用于考察业务感知调度是否会牺牲低优先级请求。若只使用均匀长度请求，实验会低估 CEC 场景下 batching、状态管理和路由策略的真实难度。
+
+
+\phantomsection
+\subsection*{9.2 Baseline 设置}
+\addcontentsline{toc}{subsection}{9.2 Baseline 设置}
+
+Baseline 应覆盖四类对照。第一类是模型切分对照，包括单实例部署、平均 layer split、固定 layer split、固定 PP、固定 TP、固定 PP+TP、只按负载做 layer placement、拓扑感知 layer-wise split，以及拓扑感知 layer-wise + TP 混合切分。若模型包含 MoE，还应加入固定 EP 与 expert/component-aware placement；若启用阶段解耦，则增加 PD disaggregation / KV Pool 作为扩展 baseline。它们用于回答第 4 章的主线算法是否真的优于平均层级切分和固定模板，而不是只优于“完全不切分”。
+
+第二类是服务路径对照，包括云端集中式 serving、就近边缘 serving、只按负载路由、只按 RTT 路由和边云静态分流。它们用于回答 CEC 协同路由是否优于传统路径选择。第三类是 runtime 对照，包括固定 batch size、FIFO 队列、普通 dynamic batching、continuous batching、chunked prefill 关闭和 KV-aware admission 关闭。它们用于拆分 batching 机制带来的收益。第四类是状态对照，包括无状态迁移、用户移动后重新 prefill、远程访问旧状态、迁移 session state、迁移 KV Cache 和只使用 prefix cache。它们用于判断移动场景下状态连续性策略的边界。上述 baseline 的设置可以借鉴 Orca 的 iteration-level scheduling、vLLM 的 KV memory management、DistServe 的 prefill/decode disaggregation、Preble 的 prefix-aware prompt scheduling，以及 Follow Me at the Edge 的 mobility-aware placement 实验思路；但这些工作并不与固定 batching、continuous batching 或状态迁移 baseline 形成简单的一一对应关系 \refcite{4}, \refcite{5}, \refcite{7}, \refcite{23}, \refcite{25}。
+
+对模型部署相关算法，应避免只和“完全不切分”比较。更合理的 baseline 应从弱到强逐步设置：完全不切分、平均层级切分、固定 layer split、固定 PP/TP/PP+TP、负载感知 layer placement、拓扑感知 layer-wise placement、拓扑感知 layer-wise + TP/EP 混合切分。端侧小模型独立推理、边缘中模型独立推理和云端大模型兜底可以作为服务形态对照，但不应替代模型切分 baseline。这样可以区分三类收益：一类来自模型规模或部署位置变化，一类来自层级切点和 stage 放置优化，另一类来自 TP/EP/PD/KV 等补充能力。
+
+对于综合方案，还应设置逐步叠加 baseline：仅 batching、batching + state-aware routing、batching + mobility-aware routing、batching + routing + 模板化部署。逐步叠加比一次性比较更有解释力，因为它能回答每个模块的边际贡献，也能发现模块之间是否存在互相抵消。例如 routing 提高 prefix cache 命中但增加跨边缘转发，或者 chunked prefill 改善 TPOT 但拉长部分长 prompt 的 TTFT，这些现象都需要通过分层 baseline 暴露出来。
+
+
+\phantomsection
+\subsection*{9.3 指标体系}
+\addcontentsline{toc}{subsection}{9.3 指标体系}
+
+指标体系应分为服务体验、模型切分质量、系统效率、网络状态和质量约束五层。服务体验层关注用户直接感知到的指标，包括平均 E2E 时延、P95/P99 E2E 时延、TTFT、TPOT、ITL、SLA 达标率、请求失败率和 token streaming 中断时间。对于交互式 LLM 服务，平均时延不够，P95/P99 和 ITL 更能反映尾部体验；对于工具调用或工作流型请求，deadline miss ratio 比单纯 TPOT 更重要。
+
+模型切分质量层用于评估 layer-wise-first 算法是否真正有效，包括 stage latency imbalance、pipeline bubble ratio、stage 显存峰值、跨 stage activation transfer、stage 间等待时间、切分方案不可部署率、回退次数、重配置耗时、满足 SLA 的并发用户数和相对平均层级切分的 goodput 提升。若只记录端到端时延，无法解释一个切分方案到底是因为切点合理而变快，还是因为某个强设备承担了过多计算。
+
+系统效率层关注资源是否被充分使用，包括 GPU/NPU/CPU 利用率、显存/内存利用率、prefill 吞吐、decode batch occupancy、active batch 平均请求数、KV Cache 占用率、KV eviction 次数、prefix cache 命中率和 admission rejection rate。这里需要特别区分 prefill 和 decode，因为两者瓶颈不同。一个方案如果只提高 prefill 吞吐，却让 decode 队列排队变长，整体交互体验未必改善。
+
+网络与状态层用于评估 CEC 特有成本，包括端-边传输量、边-边传输量、边-云传输量、activation transfer、KV transfer、状态迁移耗时、远程状态访问次数、handover 额外时延、通信-计算 overlap 比例和状态命中后节省的 prefill token 数。对于模型切分实验，还需要区分 layer-wise stage 间 activation/hidden state 传输和 prefill/decode 阶段间 KV 传输，因为前者决定层级切分是否划算，后者决定阶段解耦是否划算。这些指标不能只作为附录，因为 CEC 方法的很多收益都来自“少算一次 prefill”“少传一次 activation”或“少迁一次状态”，如果不记录状态和中间结果流动，就无法解释时延变化的来源。
+
+质量与约束层则用于防止系统优化以牺牲生成效果、隐私或公平性为代价。应记录任务成功率、生成质量代理指标、模型降级/回退比例、隐私敏感请求本地处理比例、不同 SLO 等级用户的违约率差异，以及移动用户与静态用户之间的体验差异。如果只保留核心验收指标，建议优先选择 TTFT、TPOT/ITL、P95 E2E、SLA 达标率、GPU/NPU 利用率、prefix cache 命中率、KV/state 迁移成本和 handover 中断时间。这组指标既能体现 LLM serving 性能，也能体现无线 CEC 的场景价值。
+
+
+\phantomsection
+\subsection*{9.4 消融实验}
+\addcontentsline{toc}{subsection}{9.4 消融实验}
+
+消融实验不应只是“去掉某个模块”，还要说明去掉之后系统退化到什么策略。对于 batching，可比较 FIFO + 固定 batch、dynamic batching、continuous batching、continuous batching + chunked prefill、continuous batching + SLO priority、continuous batching + KV-aware admission。这样可以清楚看到迭代级调度、长 prompt 切块、业务优先级和状态感知分别贡献了什么。类似的模块化消融思路在 Sarathi-Serve、DistServe、Mooncake 和 Preble 等系统论文中较常见，适合用于说明单项机制与组合机制的增益差异 \refcite{6}, \refcite{7}, \refcite{21}, \refcite{23}。
+
+对于路由和状态管理，可从就近路由开始，逐步加入实例负载、RTT、prefix cache 命中、session state 位置、KV 迁移代价和移动趋势。每加入一个因素，都观察 P95 E2E、handover 中断时间、跨边缘传输量和 SLA 达标率的变化。特别要比较“迁移状态”“远程访问状态”和“重新 prefill”三种策略，因为它们分别代表高一次性成本、低启动成本但持续远程访问、以及高计算重算成本。哪个策略更优取决于状态大小、链路带宽、剩余生成长度和用户驻留时间。
+
+对于模型部署，可从 layer-wise 主线出发做消融。第一步比较平均 layer split、固定 layer split 和拓扑感知 layer-wise placement，观察切点选择和 stage 放置本身的收益；第二步在相同 layer-wise placement 上叠加 TP，观察单个 stage 内部显存和算力压力是否被缓解；第三步在 MoE 或组件化模型上叠加 EP，观察 expert/component placement 是否降低换入和远程访问成本；第四步再加入 PD/KV 扩展模板，观察阶段解耦是否真的弥补 prefill/decode 干扰。消融时应避免过多组合导致结果难以解释，建议每次只改变一类决策变量：先固定 routing 看模型切分收益，再固定模型切分看 batching 收益，最后叠加形成综合方案。这样写出来的实验结论会更像系统论文，而不是参数扫描。
+
+
+\phantomsection
+\subsection*{9.5 预期收益分析}
+\addcontentsline{toc}{subsection}{9.5 预期收益分析}
+
+预期收益应围绕三项算法交付分别验证，而不是按研发远近粗略拆分。模型切分部署算法的收益主要体现在异构资源利用和可支持并发规格上：通过以 layer-wise stage boundary 和 stage placement 为主轴的拓扑感知切分，先避免平均层级切分在异构算力、半算力卡、跨主机 RDMA 或 310P--910B4 联合组网中的 stage 不均衡和通信浪费；再按需叠加 TP/EP/DP 等补充能力，缓解单个 stage 的显存压力、MoE expert 驻留压力和流量承载压力。该算法的收益应主要通过相对平均 layer split 的 goodput、SLA-constrained concurrency、pipeline bubble ratio 和回退次数来体现，并支撑 1.5X 并发用户规格目标。
+
+业务感知 batching 算法的收益主要体现在 SLA goodput 和平均 E2E 时延上。通过 SLO-aware admission、请求重排、动态等待窗口、batch/token budget 控制、chunked prefill 和 KV 水位保护，系统可以在随机并发、不同输入输出长度和 HTTP header 特殊时延要求下减少高优先级请求违约，降低长 prompt 对流式 decode 的干扰，并相对于静态 batching/FIFO 基线提升满足 SLA 的 rps、降低平均 E2E 时延。
+
+移动请求调度算法的收益主要体现在多实例协同和服务连续性上。它不一定显著提高单实例峰值吞吐，但可以在多流量入口、不同链路距离和用户入口切换条件下减少不必要的就近拥塞，降低移动用户服务中断和重复 prefill，提升 prefix cache 或 session state 的利用率，并把请求分散到更合适的边缘实例。对于无线业务，这类收益比单点吞吐更贴近用户感知，因为真实体验受路径稳定性、响应连续性和尾部时延共同影响。

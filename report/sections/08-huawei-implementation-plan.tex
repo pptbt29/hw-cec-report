@@ -1,0 +1,61 @@
+\clearpage
+\phantomsection
+\section*{八、面向 vLLM-Ascend 的 CEC 推理工程实现方案}
+\addcontentsline{toc}{section}{八、面向 vLLM-Ascend 的 CEC 推理工程实现方案}
+
+\phantomsection
+\subsection*{8.1 工程定位}
+\addcontentsline{toc}{subsection}{8.1 工程定位}
+
+第 4--7 章讨论的是 CEC 场景下模型切分部署、业务感知 batching、任务卸载和协同优化的算法空间。本章进一步回答这些方法如何落到工程实现中。面向异构边缘算力环境，更合理的路线不是重写一个 LLM serving runtime，而是在 vLLM-Ascend 等已有 Ascend 推理栈之上增加资源感知、模型分层部署、动态调度接口和运行状态监控能力。
+
+vLLM-Ascend 是 vLLM 面向 Ascend NPU 的硬件插件，依赖 Linux、Ascend NPU、CANN、torch-npu、torch 和 NNAL 等基础环境 \refcite{77}, \refcite{78}。其功能文档已经列出 dynamic batch、fine-grained tensor parallelism、layer sharding、context parallel 和 dynamic chunked pipeline parallel 等能力 \refcite{79}；KV Cache Pool 和 speculative decoding 也分别有独立的功能说明 \refcite{80}, \refcite{81}。这些能力说明 vLLM-Ascend 具备成为工程底座的条件，但它并不天然提供面向异构边缘资源的资源自适应模型分割部署功能：系统仍需要外层组件根据 NPU/GPU 算力、显存、网络带宽、实时负载和业务 SLO，决定模型层如何切分、资源如何映射、何时重配置以及 batching 参数如何调整。
+
+因此，本章建议采用“执行基座 + 自适应控制层”的实现路线。vLLM-Ascend 负责模型加载、算子执行、token 生成、KV 管理和实例内调度；自适应控制层负责资源画像、层级切分规划、部署模板选择、动态 batching 参数控制、实例监控和回退策略。vLLM 的 OpenAI-compatible server 可作为服务入口和接口兼容性的参考 \refcite{83}；MindIE 可作为 Ascend 生态中生产化推理、调试、调优和迁移接口的参考底座 \refcite{82}。本章的工程主线仍应围绕 vLLM-Ascend 的适配与二次开发展开。
+
+\phantomsection
+\subsection*{8.2 总体架构}
+\addcontentsline{toc}{subsection}{8.2 总体架构}
+
+图~\ref{fig:ch8-engineering-architecture} 给出了推荐的工程架构。它不是一个独立于推理框架之外的“黑盒调度器”，而是围绕 vLLM-Ascend 增加控制面、画像面和观测反馈，使模型部署算法与 batching 算法能够读取真实运行状态，并把决策下发到可执行的推理实例。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/ch8_engineering_architecture.png}
+    \caption{\textbf{基于 vLLM-Ascend 的资源自适应模型切分部署工程框架}}
+    \label{fig:ch8-engineering-architecture}
+\end{figure}
+
+从请求路径看，业务请求首先进入请求入口，携带 session ID、业务优先级、时延要求、隐私标签和输入长度估计。自适应控制层读取资源监控、模型画像和实例指标后，决定请求进入哪个实例、是否等待合批、采用哪个模型切分模板以及是否触发回退。随后，vLLM-Ascend 扩展层将这些决策转化为可执行配置，包括 layered deployment、batch 参数、调度接口、KV/state 元数据和实例健康状态。
+
+从反馈路径看，推理实例持续上报 TTFT、TPOT、E2E latency、active batch size、KV 水位、显存峰值、NPU 利用率、错误码和链路状态。Profiling \& Feedback 负责采集与清洗观测数据，Profile Store 则沉淀模型-硬件-拓扑三维画像，包括 layer latency、activation 大小、KV 增长、stage transfer cost、模板并行度和链路代价。在线的 Model Partition Planner 读取这些画像，而不是重新 profiling 或维护另一套 planner；它据此选择可执行的切分模板、校正代价模型，并给 dynamic batching controller 提供参数边界。这样一来，算法不再只依赖离线假设，而是能根据异构边缘环境中的负载波动和资源变化做受控调整。
+
+\phantomsection
+\subsection*{8.3 关键扩展模块}
+\addcontentsline{toc}{subsection}{8.3 关键扩展模块}
+
+第一类扩展是 vLLM-Ascend 机制解析与接口适配。工程实现需要先梳理 vLLM-Ascend 的模型加载流程、scheduler 流程、KV Cache 管理、算子适配路径、并行配置入口和实例级 metrics 暴露方式。只有明确这些接口边界，模型切分算法和 batching 控制器才知道哪些参数可以在线调整，哪些只能在实例重启或模板切换时生效。
+
+第二类扩展是资源感知与画像管理。系统需要持续维护节点算力、可用显存、内存、NPU/GPU 型号、CANN/torch-npu 版本、节点间带宽、RTT、当前负载和故障状态；同时对典型开源模型建立 layer-level profile，包括每层执行时间、显存峰值、activation 大小、KV 增长和 stage 间传输量。Profile Store 不应只是日志归档，而应作为在线控制层的代价模型来源，直接服务于切分规划、模板过滤、batching 参数边界和异常回退。
+
+第三类扩展是模型分层部署规划器。它以 layer/block 边界为主变量，联合考虑节点能力、显存容量、链路代价和实时负载，生成 stage boundary、stage placement、pipeline 组织方式和候选并行模板。对于单个 stage 内显存或算力压力较大的情况，可叠加 TP、context parallel、layer sharding 或 KV pool/offload；对于 MoE 或组件化模型，再考虑 EP 或 expert residency。在线阶段不宜每次请求都重新搜索全局方案，而应在经过 profiling 的候选模板中选择，并设置切换阈值、冷却时间和回退路径。
+
+第四类扩展是业务感知动态 batching 控制器。它读取请求到达率、队列长度、SLO slack、输入输出长度估计、KV 水位和实例吞吐画像，动态调整请求接纳顺序、等待窗口、batch token budget、max running requests、chunk size 和长请求隔离策略。若底层 runtime 已支持 dynamic batch、continuous batching 或 chunked prefill，外层控制器的作用不是替代实例内 token 调度，而是决定请求何时进入哪个实例、是否等待、是否限流、何时切换参数以及何时回退。
+
+\phantomsection
+\subsection*{8.4 既有基础与可继承能力}
+\addcontentsline{toc}{subsection}{8.4 既有基础与可继承能力}
+
+已有边缘协同大模型推理工作为 vLLM-Ascend 自适应部署框架提供了可继承的算法基础。相关模型分片部署方法面向分布式异构边缘设备与云服务器，将 LLM 划分为 model shards，并联合考虑设备算力、显存容量、网络带宽和数据隐私约束；其典型做法是通过离线 profiling 获取模型层级执行时间、内存占用和通信开销，再建立联合设备选择与模型切分优化问题，并分别面向低时延推理和高吞吐推理生成部署策略 \refcite{29}。
+
+从工程继承关系看，layer-level profiling、设备选择、模型分片放置、低时延/高吞吐双目标规划，以及顺序推理、流水线并行推理和 no-bubble 策略，都可以作为 vLLM-Ascend 自适应部署框架的起点。尤其是基于画像的切分搜索，可以迁移为候选模板生成器：先根据显存和链路约束过滤不可部署方案，再根据 stage latency、通信代价和 pipeline bubble 估计选择候选。
+
+但这类已有方法不能被原样搬到 vLLM-Ascend。第一，Ascend 栈的 CANN、torch-npu、NNAL、Atlas 设备和 vLLM-Ascend 插件版本存在明确兼容要求 \refcite{78}，画像模型必须包含版本和启动参数。第二，vLLM-Ascend 已有 dynamic batch、KV Cache Pool、layer sharding 等 runtime 能力 \refcite{79}，切分规划器需要把这些能力作为可执行模板，而不是只输出抽象的 layer split。第三，实际系统还需要监控、异常回退和在线参数调整接口，否则离线最优切分无法稳定应对负载和链路变化。
+
+\phantomsection
+\subsection*{8.5 小结}
+\addcontentsline{toc}{subsection}{8.5 小结}
+
+第 8 章的工程结论是：CEC LLM 推理系统的实现重点应放在 vLLM-Ascend 的适配与二次开发上，而不是从零构建推理框架。自适应部署框架需要补齐多节点异构资源感知、模型分层部署、运行状态监控和动态调度接口，使第四章的模型切分算法和第五章的 batching 算法能够落到真实执行路径中。
+
+已有边缘协同推理工作提供了 layer-level profiling、联合设备选择、模型分片放置和画像驱动切分搜索的基础，但在 Ascend 环境中还需要重写为 vLLM-Ascend 可执行的模板化部署方案。推荐主线是：以 layer-wise 模型分层部署为核心，以资源画像和运行反馈驱动模板选择，以动态 batching 控制器处理请求到达率、SLO 和资源利用率之间的权衡，并通过监控与回退机制保证系统稳定性。

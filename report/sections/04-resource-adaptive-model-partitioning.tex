@@ -1,8 +1,9 @@
+\clearpage
 \phantomsection
 \section*{四、CEC 下的资源自适应的模型切分部署方法}
 \addcontentsline{toc}{section}{四、CEC 下的资源自适应的模型切分部署方法}
 
-大语言模型推理在 CEC 场景下面临的首要问题，不只是单个模型能否放入某个设备，而是同一次推理中的模型结构、计算阶段和运行时状态能否被合理分布到端侧、接入边缘、区域边缘和云端。端侧设备靠近用户并具有隐私优势，但算力、内存、功耗和散热约束严格；边缘节点提供近用户算力，却常常呈现资源碎片化、设备异构和负载波动；云端算力充足，但网络往返、带宽消耗和数据出域风险会进入端到端服务路径。模型切分部署的价值，正是在这些资源边界之间重新组织一次推理，使大模型不再被单个节点的容量和位置限制。已有资源受限推理、协作式分布式推理和异构推理系统表明，LLM 推理的部署瓶颈通常同时来自模型权重、activation、KV Cache、互联带宽和运行时调度，而不是单一计算瓶颈 \refcite{2}, \refcite{3}, \refcite{1}。
+大语言模型推理在 CEC 场景下面临的首要问题，不只是单个模型能否放入某个设备，而是同一次推理中的模型结构、计算阶段和运行时状态能否被合理分布到端侧、接入边缘、区域边缘和云端。端侧设备靠近用户并具有隐私优势，但算力、内存、功耗和散热约束严格；边缘节点提供近用户算力，却常常呈现资源碎片化、设备异构和负载波动；云端算力充足，但网络往返、带宽消耗和数据出域风险会进入端到端服务路径。模型切分部署的价值，正是在这些资源边界之间重新组织一次推理，使大模型不再被单个节点的容量和位置限制。Petals 说明大模型可以通过协作式 block 放置突破单节点容量限制 \refcite{2}，HexGen 说明异构 GPU 和异构网络会改变生成式推理的并行策略 \refcite{3}，FlexGen 则从单 GPU 场景展示权重、activation 和 KV Cache 的分层放置对吞吐的影响 \refcite{1}。这些工作共同表明，LLM 推理的部署瓶颈通常同时来自模型权重、activation、KV Cache、互联带宽和运行时调度，而不是单一计算瓶颈。
 与一般服务路由不同，模型切分部署关心的是推理内部的执行结构是否发生变化。仅在多个完整模型或完整服务实例之间选择执行路径的方法，本质上属于服务路径选择或负载均衡；它可能影响时延和成本，但没有切分模型本体，也没有改变一次推理中计算、状态或生成职责的组织方式。因此，本章只讨论会改变模型执行拓扑、层内并行方式、推理阶段边界或 token 生成职责分工的方法。这样的边界可以避免把“请求发到哪里”和“模型如何被拆开执行”混为一谈，也便于比较不同方法真正改变的系统对象。
 本章将 request-level routing 排除在模型切分部署之外，是为了保持分类口径一致；若请求路由同时触发模型段迁移、阶段迁移或 expert 组件迁移，则其模型执行结构变化部分仍可纳入本章讨论。
 本文按 primary optimization object 将相关方法划分为五类：
@@ -13,16 +14,20 @@
 \item \textbf{Inference Phase Partitioning}：切的是 prefill、decode、verification、download 等执行阶段，利用不同阶段的资源画像差异。
 \item \textbf{Semantic / Token-level Partitioning}：切的是生成过程本身，决定 draft、verify、semantic segment、token-wise partition 等语义单元如何协作。
 \end{enumerate}
+
 这五类方法不是严格互斥的。Jupiter 同时涉及边缘协作执行和 prefill/decode 阶段组织 \refcite{27}；TensAllo 同时包含设备选择、模型部署和张量并行 \refcite{28}；Mooncake 以 prefill/decode 解耦为主，但其收益依赖分布式 KV Cache \refcite{21}；SwapMoE 则更接近专家级动态驻留与换入 \refcite{38}。本文按主要优化对象归类，交叉关系在总览表中保留。这个口径的目的不是把每篇工作强行放进唯一格子，而是让读者能看清：某个方法到底是在切模型深度、切层内计算、切专家组件、切执行阶段，还是切生成语义。
+
 表中“切分类型”表示论文中最接近本章 taxonomy 的主优化对象，不等价于论文全部贡献。例如 Mooncake 的核心贡献包含 KVCache-centric 架构，本章将其放入阶段切分，是因为其服务路径首先建立在 prefill/decode disaggregation 之上 \refcite{21}。
-\textbf{代表工作总览。} 表~\ref{tab:cec-model-partition-overview} 汇总了本章五类模型切分部署方法的代表工作、发表位置、切分类型、优化目标与加速机制；图~\ref{fig:cec-model-partition-taxonomy} 进一步以树状结构展示五类方法、主要切分对象和代表工作之间的对应关系。
+
+表~\ref{tab:cec-model-partition-overview} 汇总了本章五类模型切分部署方法的代表工作、发表位置、切分类型、优化目标与加速机制；图~\ref{fig:cec-model-partition-taxonomy} 进一步以树状结构展示五类方法、主要切分对象和代表工作之间的对应关系。
+
 \begingroup
 \scriptsize
 \setlength{\tabcolsep}{1.4pt}
 \renewcommand{\arraystretch}{1.35}
 \emergencystretch=2em
 \begin{longtable}{@{}>{\raggedright\arraybackslash\hspace{0pt}}p{0.035\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.205\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.085\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.105\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.105\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.155\textwidth} >{\raggedright\arraybackslash\hspace{0pt}}p{0.270\textwidth}@{}}
-\caption{\textbf{CEC 下资源自适应模型切分部署方法代表工作总览}}
+\caption{\textbf{CEC 下资源自适应模型切分部署方法相关工作}}
 \label{tab:cec-model-partition-overview}\\
 \toprule
 \textbf{序号} & \textbf{System / Framework} & \textbf{Venue / Year} & \textbf{切分类型} & \textbf{Objectives} & \textbf{Optimization Technology} & \textbf{加速机制 / 方法核心} \\
@@ -89,7 +94,7 @@
 \phantomsection
 \subsection*{4.1 Layer-wise / Vertical Partitioning}
 \addcontentsline{toc}{subsection}{4.1 Layer-wise / Vertical Partitioning}
-层级切分是最接近传统意义上“模型分割”的一类方法。它把 Transformer 视为由多个顺序 block 组成的计算链，在 layer 或 block 边界上拆分模型，并将不同模型段放置到端侧、边缘或云端节点执行。对于无法完整加载模型权重、activation 和运行时状态的端侧或边缘设备，层级切分提供了一种直接的扩展方式：单个节点不再承担完整模型，而是多个节点共同完成同一次 forward。Petals、EdgeShard、HexGen 和 FlexPipe 分别从去中心化 block 放置、边缘 shard placement、异构生成式推理和 serverless pipeline 重构角度验证了这一思路 \refcite{29}, \refcite{2}, \refcite{3}, \refcite{33}。
+层级切分是最接近传统意义上“模型分割”的一类方法。它把 Transformer 视为由多个顺序 block 组成的计算链，在 layer 或 block 边界上拆分模型，并将不同模型段放置到端侧、边缘或云端节点执行。对于无法完整加载模型权重、activation 和运行时状态的端侧或边缘设备，层级切分提供了一种直接的扩展方式：单个节点不再承担完整模型，而是多个节点共同完成同一次 forward。Petals 展示去中心化 block 放置 \refcite{2}，EdgeShard 面向边缘 shard placement \refcite{29}，HexGen 讨论异构生成式推理 \refcite{3}，FlexPipe 则关注 serverless 集群中的 pipeline 重构 \refcite{33}；这些工作共同验证了沿深度方向拆分模型的价值。
 
 为了把这种“沿深度方向展开”的执行方式与普通请求路由区分开，可以参考图~\ref{fig:ch4-layerwise-partitioning}。
 \begin{figure}[!htbp]
@@ -102,7 +107,7 @@
 
 这一类方法的核心不是“把模型平均切开”，而是寻找合适的 split point 和 placement。切分点靠前，可以减轻端侧计算和内存压力，但会更早产生跨节点 hidden state 或 activation 传输；切分点靠后，可以降低网络依赖，却要求端侧执行更多 layer。对于长上下文请求，activation 规模和 KV 状态增长会进一步放大通信成本；对于短请求，通信启动时延可能抵消计算节省。因此，层级切分通常需要同时估计每层计算量、activation 大小、显存占用、链路带宽、RTT、节点负载和功耗约束。
 
-CEC 环境使层级切分比云端 pipeline parallelism 更难。数据中心内的互联带宽相对稳定，而端-边、边-边、边-云链路可能受到无线抖动、跨域转发和拥塞影响。一个在静态 profiling 中最优的切点，到了移动用户、突发请求或边缘节点过载时可能迅速失效。因此，资源自适应的层级切分往往需要三类能力：离线阶段建立 layer-level profile，在线阶段根据节点和链路状态选择切点，运行时阶段在负载变化时进行有限频率的重配置。GPipe、Megatron-LM 和 Alpa 说明了 pipeline/tensor/自动并行在稳定集群中的基本价值，但 CEC 需要进一步把异构链路和在线状态纳入决策 \refcite{14}, \refcite{15}, \refcite{16}。
+CEC 环境使层级切分比云端 pipeline parallelism 更难。数据中心内的互联带宽相对稳定，而端-边、边-边、边-云链路可能受到无线抖动、跨域转发和拥塞影响。一个在静态 profiling 中最优的切点，到了移动用户、突发请求或边缘节点过载时可能迅速失效。因此，资源自适应的层级切分往往需要三类能力：离线阶段建立 layer-level profile，在线阶段根据节点和链路状态选择切点，运行时阶段在负载变化时进行有限频率的重配置。GPipe 体现了 pipeline parallelism 在稳定集群中的基本价值 \refcite{14}，Megatron-LM 展示了大模型 tensor parallelism 的基础路线 \refcite{15}，Alpa 则进一步自动化 inter-operator 与 intra-operator parallelism \refcite{16}。CEC 需要在这些并行思想之上继续纳入异构链路和在线状态。
 
 这类方法还要处理流水线稳定性。切分后，每个模型段的执行时间如果差异过大，较慢节点会成为 pipeline bottleneck；中间节点失败或链路恶化时，后续 layer 是否迁移、是否重新选择切点、是否回退到云端完整执行，都会影响服务连续性。对于 CEC LLM 推理，层级切分不能只作为部署算法讨论，还必须和 admission control、状态管理和异常回退衔接。
 
@@ -112,7 +117,7 @@ CEC 环境使层级切分比云端 pipeline parallelism 更难。数据中心内
 \phantomsection
 \subsection*{4.2 Tensor / Operator-level Partitioning}
 \addcontentsline{toc}{subsection}{4.2 Tensor / Operator-level Partitioning}
-当层级切分仍不足以缓解单层计算和显存压力时，系统需要进入更细粒度的张量/算子级切分。LLM 的每一层内部包含 attention、QKV projection、MLP、归一化和通信同步等多个计算单元，其中 attention head、矩阵乘和中间 activation 都可能成为单设备瓶颈。张量/算子级切分不再以完整 block 为边界，而是在同一层内部拆分 tensor、head、矩阵维度或 operator 执行路径。Megatron-LM 和 Alpa 代表了数据中心大模型中 tensor / intra-operator parallelism 的基础路线；DeTransformer、Galaxy+ 和 TensAllo 则进一步将低通信结构、混合模型并行和异构边缘设备选择纳入 LLM/Transformer 推理部署 \refcite{28}, \refcite{30}, \refcite{31}, \refcite{15}, \refcite{16}。
+当层级切分仍不足以缓解单层计算和显存压力时，系统需要进入更细粒度的张量/算子级切分。LLM 的每一层内部包含 attention、QKV projection、MLP、归一化和通信同步等多个计算单元，其中 attention head、矩阵乘和中间 activation 都可能成为单设备瓶颈。张量/算子级切分不再以完整 block 为边界，而是在同一层内部拆分 tensor、head、矩阵维度或 operator 执行路径。Megatron-LM 和 Alpa 代表了数据中心大模型中 tensor / intra-operator parallelism 的基础路线 \refcite{15}, \refcite{16}；DeTransformer 通过结构协同设计降低分布式推理通信 \refcite{31}，Galaxy+ 采用混合模型并行组织边缘 Transformer 推理 \refcite{30}，TensAllo 则把异构边缘设备选择和 tensor allocation 纳入部署决策 \refcite{28}。
 
 层内拆分的系统关系可以用图~\ref{fig:ch4-tensor-operator-partitioning} 概括，它突出的是同一 Transformer 层内部的并行和同步，而不是层与层之间的顺序切点。
 \begin{figure}[!htbp]
@@ -135,7 +140,7 @@ CEC 环境使层级切分比云端 pipeline parallelism 更难。数据中心内
 \phantomsection
 \subsection*{4.3 Expert / Component-level Partitioning}
 \addcontentsline{toc}{subsection}{4.3 Expert / Component-level Partitioning}
-专家/组件级切分主要面向 MoE 等具有显式内部组件选择机制的模型。与普通 dense Transformer 不同，MoE 模型通常在 FFN 部分包含大量 expert，而每个 token 只激活其中少数 expert。这个结构使模型天然具备“组件级可调度性”：系统不一定让所有 expert 同时常驻同一设备，而可以根据 expert 热度、token routing 分布、显存预算、链路状态和请求类型，决定哪些 expert 常驻、哪些按需换入、哪些放在边缘或云端节点上。SwapMoE、MoE-Infinity、Pre-gated MoE、EdgeMoE 和 WDMoE 分别从 expert swapping、sparsity-aware cache、提前 expert routing、移动端稀疏模型部署和无线分布式 expert 放置角度说明了组件级切分的系统意义 \refcite{38}, \refcite{40}, \refcite{41}, \refcite{42}, \refcite{43}。
+专家/组件级切分主要面向 MoE 等具有显式内部组件选择机制的模型。与普通 dense Transformer 不同，MoE 模型通常在 FFN 部分包含大量 expert，而每个 token 只激活其中少数 expert。这个结构使模型天然具备“组件级可调度性”：系统不一定让所有 expert 同时常驻同一设备，而可以根据 expert 热度、token routing 分布、显存预算、链路状态和请求类型，决定哪些 expert 常驻、哪些按需换入、哪些放在边缘或云端节点上。SwapMoE 从 expert swapping 角度降低显存压力 \refcite{38}，MoE-Infinity 利用 sparsity-aware expert cache 支撑个人设备上的 MoE 推理 \refcite{40}，Pre-gated MoE 通过提前 expert routing 协同系统调度 \refcite{41}，EdgeMoE 面向移动端稀疏模型部署 \refcite{42}，WDMoE 则讨论无线分布式 expert 放置和带宽分配 \refcite{43}。这些工作共同说明，组件级切分已经成为 MoE 推理系统的重要组织方式。
 
 MoE 场景下，组件驻留和 token routing 的关系更适合从图~\ref{fig:ch4-expert-component-partitioning} 这样的分层缓存视角理解。
 \begin{figure}[!htbp]
@@ -158,7 +163,7 @@ MoE 场景下，组件驻留和 token routing 的关系更适合从图~\ref{fig:
 \phantomsection
 \subsection*{4.4 Inference Phase Partitioning}
 \addcontentsline{toc}{subsection}{4.4 Inference Phase Partitioning}
-LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prompt，矩阵规模大、并行度高，通常更偏 compute-bound；decode 逐 token 生成，频繁访问 KV Cache，通常更偏 memory-bound 或 latency-bound；speculative decoding 中的 verification 又会形成目标模型批量校验；在无线边缘场景中，模型下载、加载和推理还可能同时出现在关键路径上。推理阶段切分正是利用这些阶段资源画像的差异，把不同阶段放到更合适的节点或资源池上执行。DistServe、Splitwise 和 Mooncake 是 prefill/decode disaggregation 的代表，Jupiter、E2LLM 和 SLIDE 则分别从边缘协作、Edge-IoT 结构化生成和无线边缘下载-推理重叠角度拓展了阶段切分的边界 \refcite{27}, \refcite{32}, \refcite{7}, \refcite{18}, \refcite{21}, \refcite{34}。
+LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prompt，矩阵规模大、并行度高，通常更偏 compute-bound；decode 逐 token 生成，频繁访问 KV Cache，通常更偏 memory-bound 或 latency-bound；speculative decoding 中的 verification 又会形成目标模型批量校验；在无线边缘场景中，模型下载、加载和推理还可能同时出现在关键路径上。推理阶段切分正是利用这些阶段资源画像的差异，把不同阶段放到更合适的节点或资源池上执行。DistServe \refcite{7}、Splitwise \refcite{18} 和 Mooncake \refcite{21} 是 prefill/decode disaggregation 的代表；Jupiter 从边缘协作角度组织 prefill/decode 执行 \refcite{27}，E2LLM 从 Edge-IoT 结构化生成角度扩展阶段分工 \refcite{32}，SLIDE 则讨论无线边缘中的下载-推理重叠 \refcite{34}。
 
 阶段级切分更适合放在推理流水线视角下理解，图~\ref{fig:ch4-inference-phase-partitioning} 给出了 prefill、decode、verification 与 KV/state handoff 的典型组织方式。
 \begin{figure}[!htbp]
@@ -181,7 +186,7 @@ LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prom
 \phantomsection
 \subsection*{4.5 Semantic / Token-level Partitioning}
 \addcontentsline{toc}{subsection}{4.5 Semantic / Token-level Partitioning}
-语义/token 级协同切分与前四类不同。它不一定把同一个模型的 layer、tensor 或 expert 组件拆开，而是把一次生成过程中的职责拆开：草稿由小模型产生，验证由大模型完成；长回答可以按语义段并行生成；隐私敏感 token 或 embedding 可以被单独 partition 和 perturbation。这里“切分”的对象是生成语义和 token 处理职责，而不是模型内部参数组件。SpecInfer、EdgeLLM、SPIN 和 E2LLM 分别展示了 token tree verification、端侧 speculative decoding、异构草稿模型选择和语义段级并行生成的代表路线 \refcite{32}, \refcite{35}, \refcite{36}, \refcite{37}。
+语义/token 级协同切分与前四类不同。它不一定把同一个模型的 layer、tensor 或 expert 组件拆开，而是把一次生成过程中的职责拆开：草稿由小模型产生，验证由大模型完成；长回答可以按语义段并行生成；隐私敏感 token 或 embedding 可以被单独 partition 和 perturbation。这里“切分”的对象是生成语义和 token 处理职责，而不是模型内部参数组件。SpecInfer 展示 token tree verification \refcite{37}，EdgeLLM 讨论端侧 speculative decoding \refcite{35}，SPIN 关注异构草稿模型选择 \refcite{36}，E2LLM 则展示语义段级并行生成 \refcite{32}。
 
 生成职责级方法的结构可参考图~\ref{fig:ch4-semantic-token-partitioning}。它强调的不是参数如何分片，而是 draft、verify、refine 和 privacy filtering 等职责如何分配。
 \begin{figure}[!htbp]
@@ -205,19 +210,19 @@ LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prom
 \subsection*{4.6 算法方案对比与面向华为验证环境的建议}
 \addcontentsline{toc}{subsection}{4.6 算法方案对比与面向华为验证环境的建议}
 
-项目周期为 12 个月，其中 T+3 至 T+8 月需要完成资源自适应模型切分算法和业务感知 batching 算法的设计、实现、测试与分析 \refcite{76}。因此，第四章的算法建议不能把模型切分简单放在“后续研究”中，也不应被写成从零实现一个任意切 layer、切 tensor、迁移 KV 的新 runtime。更合理的定位是：在 Ascend/CANN/MindIE 或 vLLM Ascend 等现有推理栈上实现一个\textbf{资源自适应切分部署规划器}，既能输出可部署的 DP/TP/PP/EP 及其组合方案，又能通过 profiling、约束检查和回退策略保证方案可以在验证环境中真正运行 \refcite{77}, \refcite{79}, \refcite{82}。
+面向异构边缘验证环境，资源自适应模型切分算法需要形成可运行的部署规划、测试结果和可解释分析 \refcite{76}。因此，第四章的算法建议不能把模型切分简单放在“后续研究”中，也不宜被写成从零实现一个任意切 layer、切 tensor、迁移 KV 的新 runtime。更合理的定位是：在 Ascend/CANN/MindIE 或 vLLM-Ascend 等现有推理栈上实现一个\textbf{以 Layer-wise / Vertical Partitioning 为主轴的资源自适应切分部署规划器}，先决定 Transformer layer、block 或 model shard 如何跨节点形成 pipeline stage，再根据单个 stage 的显存和算力压力叠加 TP；对于 MoE 模型再引入 EP；DP 则主要用于实例副本扩展和流量承载，而不是模型本体切分的核心 \refcite{77}, \refcite{79}, \refcite{82}。
 
-从输入信息看，该规划器需要读取三类画像。第一类是硬件拓扑画像，包括算力节点可用算力、可用显存、vNPU 配置、节点间带宽和时延；项目资料给出的验证环境覆盖 ARM CPU、230T/64GB Ascend NPU、70T/24GB Ascend NPU、A800T-A2 多机多卡、HCCS、25Gbps RDMA、100Gbps 直连以及 310P 与 910B4 联合组网等异构条件 \refcite{76}。第二类是模型画像，包括 CodeLlama34B、Qwen2-VL-7B-Instruct 等模型的参数量、每层权重、activation、单 token KV Cache、prefill/decode 计算量和显存需求。第三类是业务画像，包括并发用户数、SLA/P90/P99 TTFT 目标、输入输出长度分布和请求优先级。只有把这三类信息放入同一个约束模型，模型切分才不只是论文 taxonomy，而是可交付算法。
+从输入信息看，该规划器需要读取三类画像。第一类是硬件拓扑画像，包括算力节点可用算力、可用显存、vNPU 配置、节点间带宽和时延；验证环境覆盖 ARM CPU、230T/64GB Ascend NPU、70T/24GB Ascend NPU、A800T-A2 多机多卡、HCCS、25Gbps RDMA、100Gbps 直连以及 310P 与 910B4 联合组网等异构条件 \refcite{76}。第二类是模型画像，包括 CodeLlama34B、Qwen2-VL-7B-Instruct 等模型的参数量、每层权重、activation、单 token KV Cache、prefill/decode 计算量和显存需求。第三类是业务画像，包括并发用户数、SLA/P90/P99 TTFT 目标、输入输出长度分布和请求优先级。只有把这三类信息放入同一个约束模型，模型切分才不只是论文 taxonomy，而是可交付算法。
 
-推荐的算法主体可以分为三个模块。第一个模块是候选并行模板生成。系统先基于推理框架可支持的能力生成有限候选，例如单实例、数据并行 DP、张量并行 TP、流水并行 PP、专家并行 EP、TP+PP、DP+TP、layer sharding、context parallel、prefill/decode disaggregation 和 KV Cache Pool 等；不支持或无法稳定部署的模板直接过滤。这样做的意义不是降低算法要求，而是把搜索空间限制在验证环境可执行的方案上。
+推荐的算法主体可以分为三个模块。第一个模块是层级切分候选生成。系统应先从 layer/block 边界出发，枚举可部署的 pipeline stage 数量、每个 stage 覆盖的连续层范围以及 stage 到 Ascend 节点的 placement；在此基础上，再生成 TP、EP、DP、context parallel、prefill/decode disaggregation 和 KV Cache Pool 等补充模板。不支持或无法稳定部署的模板直接过滤。这样做的意义不是降低算法要求，而是把搜索空间限制在验证环境可执行的方案上，同时保证模型切分算法的核心仍然落在 layer-wise placement 上。
 
-第二个模块是拓扑感知切分与放置搜索。算法以显存不溢出、链路带宽可承载、框架可部署为硬约束，以满足 SLA 的请求处理数、可支持并发用户规格、TTFT/TPOT、通信开销和资源利用率为目标，在候选模板中选择模型段、tensor shard、pipeline stage 或 expert/component 的放置方式。实现上可以采用动态规划、整数规划近似或启发式搜索：先按显存和模型层/张量大小剪枝，再按网络代价和阶段耗时估计端到端性能，最后用离线 profiling 结果校正代价模型。项目指标要求相对于多节点平均切分基线，单位时间内满足 SLA 的请求处理数提升 50\%，并使可支持并发用户规格达到 1.5X \refcite{76}；因此目标函数应直接围绕 goodput 和 SLA-constrained concurrency 设计，而不是只最小化单请求 latency。
+第二个模块是拓扑感知的层级切分与混合并行放置搜索。算法以显存不溢出、链路带宽可承载、框架可部署为硬约束，以满足 SLA 的请求处理数、可支持并发用户规格、TTFT/TPOT、通信开销和资源利用率为目标，优先搜索 layer/block stage boundary 与 stage placement，再判断哪些 stage 需要通过 TP 分摊单层权重和矩阵计算，哪些 MoE component 需要通过 EP 管理专家驻留与访问。实现上可以采用动态规划、整数规划近似或启发式搜索：先按 layer-level profile、activation size 和 KV 增长剪枝，再按网络代价和阶段耗时估计端到端性能，最后用离线 profiling 结果校正代价模型。验证指标要求相对于多节点平均切分基线，单位时间内满足 SLA 的请求处理数提升 50\%，并使可支持并发用户规格达到 1.5X \refcite{76}；因此目标函数应直接围绕 goodput 和 SLA-constrained concurrency 设计，而不是只最小化单请求 latency。
 
 第三个模块是运行时选择与受控重配置。在线阶段不宜在每个请求到达时重新搜索全局切分，而应在经过 profiling 的候选方案之间选择：当可用显存、链路 RTT、带宽、并发量或输入长度分布变化时，策略层选择更合适的模板，并设置冷却时间、切换阈值和回退路径。对于长 prompt、VLM 输入或多轮上下文造成的 prefill 压力，可以把 inference phase partitioning、KV Cache Pool 或 PD disaggregation 作为候选模板；但是否启用必须由 KV transfer、prefix cache 命中、decode queue backlog 和链路抖动共同决定。Expert/component-level 与 semantic/token-level 方法可以作为扩展模板：前者面向 MoE/EP 或 adapter 场景，后者面向 speculative draft/verify 或端边协同生成，但它们进入验证路径的前提是底层框架已暴露相应接口。
 
-验证设计上，建议将模型切分部署实验拆成四组。第一组是平均切分基线：按照项目资料中的多节点平均切分方式或框架默认并行配置运行 CodeLlama34B 与 Qwen2-VL-7B-Instruct，记录 P90/P99 TTFT、E2E latency、TPOT、显存峰值、OOM、NPU 利用率和满足 SLA 的并发用户数。第二组是候选模板画像：对单实例、DP/TP/PP/EP 及组合、layer sharding、context parallel、PD 分离、KV pool/offload 等模板进行离线 profiling，形成模型-模板-硬件三维性能表。第三组是切分算法对比：比较平均切分、固定 TP/PP、负载感知放置、拓扑感知放置和 SLA-aware 切分部署规划，观察满足 SLA 的 rps、最高并发用户数和回退次数。第四组是扰动测试：人为改变可用显存、链路 RTT、带宽、并发水平和输入长度分布，验证算法是否能避免不可部署方案，并在性能下降时给出可解释的回退选择。
+验证设计上，建议将模型切分部署实验拆成四组。第一组是平均层级切分基线：按照多节点平均切分方式或框架默认并行配置运行 CodeLlama34B 与 Qwen2-VL-7B-Instruct，记录 P90/P99 TTFT、E2E latency、TPOT、显存峰值、OOM、NPU 利用率和满足 SLA 的并发用户数。第二组是候选模板画像：对单实例、固定 PP、固定 TP、PP+TP、EP、layer sharding、context parallel、PD 分离、KV pool/offload 等模板进行离线 profiling，形成模型-模板-硬件三维性能表。第三组是切分算法对比：比较平均 layer split、固定 layer split、固定 TP/PP、负载感知 layer placement、拓扑感知 layer-wise split、拓扑感知 PP+TP 混合切分和 SLA-aware 切分部署规划，观察满足 SLA 的 rps、最高并发用户数和回退次数。第四组是扰动测试：人为改变可用显存、链路 RTT、带宽、并发水平和输入长度分布，验证算法是否能避免不可部署方案，并在性能下降时给出可解释的回退选择。
 
-因此，第四章面向验证环境最适合作为主线的不是单纯的“部署模板选择”，而是\textbf{拓扑感知的 DP/TP/PP/EP 组合切分部署算法}。模板库和 profiling 是算法的工程基础，在线选择和受控重配置是算法的运行形态；二者共同服务于模型切分交付目标。这样的定位既保留论文综述中的 layer-wise、tensor/operator-level、expert/component-level、phase-level 等方法视野，也能和项目周期中 T+3 至 T+8 月的算法实现、测试验证和性能指标对齐。
+因此，第四章面向验证环境最适合作为主线的不是单纯的“部署模板选择”，也不是泛泛的 DP/TP/PP/EP 参数枚举，而是\textbf{以层级切分为主轴、TP/EP/DP 为补充的拓扑感知混合切分部署算法}。模板库和 profiling 是算法的工程基础，layer-wise stage boundary 与 placement 是主要决策对象，在线选择和受控重配置是算法的运行形态；三者共同服务于模型切分交付目标。这样的定位既保留论文综述中的 tensor/operator-level、expert/component-level、phase-level 等方法视野，也能把第四章的主问题稳定落在“模型如何沿深度方向跨端-边-云展开，并在必要时叠加更细粒度并行”上。
 \phantomsection
 \subsection*{4.7 小结}
 \addcontentsline{toc}{subsection}{4.7 小结}
@@ -228,6 +233,4 @@ LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prom
 
 从工程落地看，资源自适应切分不宜完全依赖一次性离线规划。离线 profiling 可以建立 layer cost、tensor cost、activation size、KV 增长和设备吞吐基线；在线阶段仍需要根据负载、链路和请求长度修正候选方案。更稳妥的路线是“离线生成有限候选模板 + 在线代价选择 + 有约束重配置”：先把不可部署或通信代价过高的方案过滤掉，再在满足 SLA 的候选中选择资源占用、通信成本和质量风险更低的方案，并通过冷却时间、迁移上限和回退路径避免策略震荡。
 
-结合本报告面向的验证环境，第四章的主落点应放在拓扑感知的 DP/TP/PP/EP 组合切分部署算法上。Layer-wise、tensor/operator-level、phase partitioning 和 expert/component-level 等方法需要先映射为 vLLM Ascend / MindIE 或 CANN 生态可支持、可压测、可回退的候选方案，例如单实例、TP、PP、EP、layer sharding、context parallel、PD 分离、KV pool/offload 和 speculative decoding。Expert/component-level 与 semantic/token-level 方法适合作为扩展模板：前者用于 MoE 或组件化模型，后者适合端侧小模型可用且质量回退机制成熟的场景。这样既能覆盖研究前沿，也能将综述结论自然转化为项目周期内可测试、可对比、可部署的算法方案。
-
-
+结合本报告面向的验证环境，第四章的主落点应放在以 Layer-wise / Vertical Partitioning 为基础的拓扑感知混合切分部署算法上。Layer-wise stage boundary、stage placement 和 pipeline balance 是主变量；tensor/operator-level、phase partitioning 和 expert/component-level 等方法需要作为补充能力映射为 vLLM-Ascend / MindIE 或 CANN 生态可支持、可压测、可回退的候选方案，例如 TP、PP、PP+TP、EP、layer sharding、context parallel、PD 分离、KV pool/offload 和 speculative decoding。Expert/component-level 与 semantic/token-level 方法适合作为扩展模板：前者用于 MoE 或组件化模型，后者适合端侧小模型可用且质量回退机制成熟的场景。这样既能覆盖研究前沿，也能将综述结论自然转化为可测试、可对比、可部署的算法方案。
