@@ -1,19 +1,27 @@
 .DS_Store
 .vscode/
+tmp/
 
 *.aux
 *.bcf
 *.bbl
 *.blg
+*.glg
+*.glo
+*.gls
+*.ist
 *.fdb_latexmk
 *.fls
 *.lof
 *.log
 *.lot
+*.nav
 *.out
 *.run.xml
+*.snm
 *.synctex.gz
 *.toc
+*.vrb
 *.xdv
 
 # Python
