@@ -3,7 +3,7 @@
 \section*{五、CEC 下的业务感知 Batching 参数优化方法}
 \addcontentsline{toc}{section}{五、CEC 下的业务感知 Batching 参数优化方法}
 
-LLM serving 中的 batching 不再只是传统 DNN 推理里的固定 batch size 选择。一次 LLM 请求通常先经历 prefill，再进入逐 token decode；请求到达时间、prompt 长度、输出长度、SLO、KV Cache 占用和上下文复用机会都会随时间变化。因此，batching 的核心问题可以定义为：在给定请求队列、实例负载、KV 状态和端-边-云链路条件下，动态决定哪些请求进入 batch、batch 在什么粒度更新、prefill 与 decode 是否混合、长 prompt 是否切块、不同阶段是否解耦，从而在 TTFT、ITL、TPOT、E2E latency、throughput、goodput 和资源利用率之间取得平衡。Orca 将生成式 Transformer serving 的调度粒度推进到 iteration level \cite{ref4}；vLLM 通过 PagedAttention 为 continuous batching 提供了 KV 内存管理基础 \cite{ref5}；Sarathi-Serve 代表 chunked prefill 路线 \cite{ref6}，DistServe 则代表 prefill/decode disaggregation 路线 \cite{ref7}。
+LLM serving 中的 batching 不再只是传统 DNN 推理里的固定 batch size 选择。一次 LLM 请求通常先经历 prefill，再进入逐 token decode；请求到达时间、prompt 长度、输出长度、SLO、KV Cache 占用和上下文复用机会都会随时间变化。因此，batching 的核心问题可以定义为：在给定请求队列、实例负载、KV 状态和端-边-云链路条件下，动态决定哪些请求进入 batch、batch 在什么粒度更新、prefill 与 decode 是否混合、长 prompt 是否切块、不同阶段是否解耦，从而在 TTFT、ITL、TPOT、E2E latency、throughput、goodput 和资源利用率之间取得平衡。Orca 将生成式 Transformer serving 的调度粒度推进到 iteration level \refcite{4}；vLLM 通过 PagedAttention 为 continuous batching 提供了 KV 内存管理基础 \refcite{5}；Sarathi-Serve 代表 chunked prefill 路线 \refcite{6}，DistServe 则代表 prefill/decode disaggregation 路线 \refcite{7}。
 在 CEC 场景中，这个问题进一步复杂化。接入边缘的请求池通常小于云端数据中心，单纯等待大 batch 会破坏 TTFT；边缘 GPU/NPU 显存有限，KV Cache 会限制可并发 decode 请求数；端-边、边-云链路状态会影响 prefill offloading、decode placement 和状态传输收益；不同业务还可能具有差异化 SLO，例如机器人控制、车联网辅助决策、工业现场问答和普通对话服务的最大等待时间并不相同。因此，本章不再把 SLO-aware、KV-aware、multi-tenant 或 speculative verification 作为并列一级分类，而是按 batching 机制和 batch 更新粒度组织相关工作。
 SLO-aware、KV-aware、multi-tenant、speculative verification 和 multi-model multiplexing 不是被忽略，而是在本章中作为横向约束或补充机制嵌入各类 batching 机制。例如 SOLA/JITServe 属于 SLO-aware admission，vLLM 属于 KV-aware continuous batching 基础设施，S-LoRA/Punica 说明多租户 adapter serving 会直接改变 batch 的组成方式和执行算子，AdaServe 和 MuxServe 则分别说明 speculative verification 与多模型时空复用也会引入额外的批处理决策。
 本文将 CEC 下的业务感知 batching 参数优化划分为四类：
@@ -14,7 +14,7 @@ SLO-aware、KV-aware、multi-tenant、speculative verification 和 multi-model m
 \item \textbf{Disaggregated Prefill-Decode Batching}：将 prefill 和 decode 分配给不同实例、资源池或硬件层级，分别形成阶段 batch，并通过 KV/state transfer 衔接。
 \end{enumerate}
 
-这四类不是严格互斥的，而是从 batching 形成与更新粒度描述不同批处理组织方式。传统 Static Batching 仍可作为 baseline，但不再作为本章一级方法，因为它主要代表固定批次假设，并不能体现 CEC 下的业务感知和在线自适应。Queue-level dynamic/admission batching 可以叠加 SLO-aware priority；Continuous batching 可以叠加抢占、KV-aware admission 和 active set 调整，Orca 和 FastServe 分别体现了 iteration-level scheduling 与 preemptive scheduling 的代表路线 \cite{ref4}, \cite{ref49}；Chunked Prefill / Blended Batching 仍然可能运行在 continuous batching runtime 上，Sarathi-Serve 是这一方向的典型系统 \cite{ref6}；Disaggregated Prefill-Decode Batching 则进一步把两个阶段的 batch 从同一实例内部拆到不同资源池，DistServe 是阶段解耦路线的代表 \cite{ref7}。这个分类的目的不是把每篇论文强行放入唯一格子，而是让读者看清：一个方法主要是在请求接纳/动态组批、迭代级 active batch、prefill chunk 混合，还是阶段解耦上做优化。
+这四类不是严格互斥的，而是从 batching 形成与更新粒度描述不同批处理组织方式。传统 Static Batching 仍可作为 baseline，但不再作为本章一级方法，因为它主要代表固定批次假设，并不能体现 CEC 下的业务感知和在线自适应。Queue-level dynamic/admission batching 可以叠加 SLO-aware priority；Continuous batching 可以叠加抢占、KV-aware admission 和 active set 调整，Orca 和 FastServe 分别体现了 iteration-level scheduling 与 preemptive scheduling 的代表路线 \refcite{4}, \refcite{49}；Chunked Prefill / Blended Batching 仍然可能运行在 continuous batching runtime 上，Sarathi-Serve 是这一方向的典型系统 \refcite{6}；Disaggregated Prefill-Decode Batching 则进一步把两个阶段的 batch 从同一实例内部拆到不同资源池，DistServe 是阶段解耦路线的代表 \refcite{7}。这个分类的目的不是把每篇论文强行放入唯一格子，而是让读者看清：一个方法主要是在请求接纳/动态组批、迭代级 active batch、prefill chunk 混合，还是阶段解耦上做优化。
 
 表~\ref{tab:cec-batching-overview} 汇总了与 batching 执行机制直接相关的代表工作，同时保留少量会改变批处理决策的横向机制；图~\ref{fig:cec-batching-taxonomy} 给出了本章四类 batching 方法在批次形成粒度上的分类主线。SLO-aware、multi-tenant、KV-aware、speculative verification、multi-model serving 和 inference/finetuning co-serving 等内容在本章中作为相关机制或约束出现，不再作为一级分类。这里纳入 LoRA serving、多模型 serving 和 inference/finetuning co-serving 工作，是因为它们的核心系统问题并不只是“是否共置多个模型”，而是如何让不同 adapter、不同模型或不同任务类型共享 batch、共享 GPU 时间片，并在 SLO、显存和阶段干扰约束下决定执行顺序。
 
@@ -29,55 +29,55 @@ SLO-aware、KV-aware、multi-tenant、speculative verification 和 multi-model m
 \toprule
 \textbf{序号} & \textbf{代表工作} & \textbf{发表在哪} & \textbf{主归属} & \textbf{相关机制} & \textbf{方法关键词} \\
 \midrule
-1 & JITServe \cite{ref45} & NSDI 2026 & Queue-level Dynamic / Admission Batching & SLO-aware request admission & 根据请求 SLO deadline、剩余时间预算和当前服务带宽动态决定接纳、排序和组批 \\
+1 & JITServe \refcite{45} & NSDI 2026 & Queue-level Dynamic / Admission Batching & SLO-aware request admission & 根据请求 SLO deadline、剩余时间预算和当前服务带宽动态决定接纳、排序和组批 \\
 \tabrowrule
-2 & SOLA \cite{ref46} & MLSys 2025 & Queue-level Dynamic / Admission Batching & SLO-aware scheduling；phase-aware scheduling & 根据成本模型预测 TTFT/TPOT 相对 SLO 的紧迫程度，对等待请求排序并决定谁优先进入 batch \\
+2 & SOLA \refcite{46} & MLSys 2025 & Queue-level Dynamic / Admission Batching & SLO-aware scheduling；phase-aware scheduling & 根据成本模型预测 TTFT/TPOT 相对 SLO 的紧迫程度，对等待请求排序并决定谁优先进入 batch \\
 \tabrowrule
-3 & QLM \cite{ref47} & AIOps@ASPLOS 2024 & Queue-level Dynamic / Admission Batching & Queue management & 以满足端到端延迟 SLO 为目标，通过队列控制减少 head-of-line blocking 并提高 SLO attainment \\
+3 & QLM \refcite{47} & AIOps@ASPLOS 2024 & Queue-level Dynamic / Admission Batching & Queue management & 以满足端到端延迟 SLO 为目标，通过队列控制减少 head-of-line blocking 并提高 SLO attainment \\
 \tabrowrule
-4 & TimelyLLM \cite{ref48} & MobiSys 2026 & Queue-level Dynamic / Admission Batching & time utility；iteration-level control & 面向时间敏感应用，将 deadline 和 time utility 纳入 batch 接纳与请求优先级 \\
+4 & TimelyLLM \refcite{48} & MobiSys 2026 & Queue-level Dynamic / Admission Batching & time utility；iteration-level control & 面向时间敏感应用，将 deadline 和 time utility 纳入 batch 接纳与请求优先级 \\
 \tabrowrule
-5 & Preble \cite{ref23} & ICLR 2025 & Queue-level Dynamic / Admission Batching & KV-aware admission；distributed prompt scheduling & 在分布式 serving 中把 prefix/KV cache 命中和负载均衡共同纳入请求分配，使共享 prompt 请求更容易进入可复用状态的实例 \\
+5 & Preble \refcite{23} & ICLR 2025 & Queue-level Dynamic / Admission Batching & KV-aware admission；distributed prompt scheduling & 在分布式 serving 中把 prefix/KV cache 命中和负载均衡共同纳入请求分配，使共享 prompt 请求更容易进入可复用状态的实例 \\
 \tabrowrule
-6 & Fairness in Serving Large Language Models \cite{ref26} & OSDI 2024 & Queue-level Dynamic / Admission Batching；Continuous / Iteration-level Batching & multi-tenant fairness；VTC & 在 continuous batching 机制上引入 Virtual Token Counter，用已服务 token 成本调整调度顺序，减少租户之间的服务不公平 \\
+6 & Fairness in Serving Large Language Models \refcite{26} & OSDI 2024 & Queue-level Dynamic / Admission Batching；Continuous / Iteration-level Batching & multi-tenant fairness；VTC & 在 continuous batching 机制上引入 Virtual Token Counter，用已服务 token 成本调整调度顺序，减少租户之间的服务不公平 \\
 \tabrowrule
-7 & Orca \cite{ref4} & OSDI 2022 & Continuous / Iteration-level Batching & selective batching & 提出 iteration-level scheduling，新请求在 decode iteration 边界加入，完成请求及时退出 active batch \\
+7 & Orca \refcite{4} & OSDI 2022 & Continuous / Iteration-level Batching & selective batching & 提出 iteration-level scheduling，新请求在 decode iteration 边界加入，完成请求及时退出 active batch \\
 \tabrowrule
-8 & FastServe \cite{ref49} & NSDI 2026 & Continuous / Iteration-level Batching & preemptive scheduling & 在 continuous batching 基础上引入迭代级抢占，缓解长请求占用和尾延迟问题 \\
+8 & FastServe \refcite{49} & NSDI 2026 & Continuous / Iteration-level Batching & preemptive scheduling & 在 continuous batching 基础上引入迭代级抢占，缓解长请求占用和尾延迟问题 \\
 \tabrowrule
-9 & TokenFlow \cite{ref50} & EuroSys 2026 & Continuous / Iteration-level Batching & streaming token scheduling & 以 token stream / scheduling interval 为控制粒度，动态做 admission、preemption 和 resumption \\
+9 & TokenFlow \refcite{50} & EuroSys 2026 & Continuous / Iteration-level Batching & streaming token scheduling & 以 token stream / scheduling interval 为控制粒度，动态做 admission、preemption 和 resumption \\
 \tabrowrule
-10 & vLLM \cite{ref5} & SOSP 2023 & Continuous / Iteration-level Batching & KV block memory management & PagedAttention 用逻辑/物理 KV block 映射降低显存碎片，为更大的 active batch 提供内存基础 \\
+10 & vLLM \refcite{5} & SOSP 2023 & Continuous / Iteration-level Batching & KV block memory management & PagedAttention 用逻辑/物理 KV block 映射降低显存碎片，为更大的 active batch 提供内存基础 \\
 \tabrowrule
-11 & SGLang \cite{ref8} & NeurIPS 2024 & Continuous / Iteration-level Batching & RadixAttention；prefix reuse & 通过 RadixAttention 自动匹配和复用共享前缀 KV，使复杂多轮、RAG 和 agent workload 的 active batch 更少重复 prefill \\
+11 & SGLang \refcite{8} & NeurIPS 2024 & Continuous / Iteration-level Batching & RadixAttention；prefix reuse & 通过 RadixAttention 自动匹配和复用共享前缀 KV，使复杂多轮、RAG 和 agent workload 的 active batch 更少重复 prefill \\
 \tabrowrule
-12 & Llumnix \cite{ref19} & OSDI 2024 & Continuous / Iteration-level Batching & runtime rescheduling；live migration & 在多个 vLLM 实例之间迁移运行中请求及其内存状态，缓解 active batch 负载不均、优先级变化和尾延迟问题 \\
+12 & Llumnix \refcite{19} & OSDI 2024 & Continuous / Iteration-level Batching & runtime rescheduling；live migration & 在多个 vLLM 实例之间迁移运行中请求及其内存状态，缓解 active batch 负载不均、优先级变化和尾延迟问题 \\
 \tabrowrule
-13 & Punica \cite{ref84} & MLSys 2024 & Continuous / Iteration-level Batching & multi-tenant LoRA batching & 用 SGMV 等算子支持不同 LoRA adapter 请求共享同一基础模型 batch，降低多租户 LoRA serving 的显存和计算浪费 \\
+13 & Punica \refcite{84} & MLSys 2024 & Continuous / Iteration-level Batching & multi-tenant LoRA batching & 用 SGMV 等算子支持不同 LoRA adapter 请求共享同一基础模型 batch，降低多租户 LoRA serving 的显存和计算浪费 \\
 \tabrowrule
-14 & S-LoRA \cite{ref85} & MLSys 2024 & Continuous / Iteration-level Batching & heterogeneous adapter batching；unified paging & 通过统一分页管理 adapter 权重和 KV cache，并用定制 LoRA 算子支持大量 adapter 请求在同一 serving 实例中批处理 \\
+14 & S-LoRA \refcite{85} & MLSys 2024 & Continuous / Iteration-level Batching & heterogeneous adapter batching；unified paging & 通过统一分页管理 adapter 权重和 KV cache，并用定制 LoRA 算子支持大量 adapter 请求在同一 serving 实例中批处理 \\
 \tabrowrule
-15 & NanoFlow \cite{ref51} & OSDI 2025 & Continuous / Iteration-level Batching；Chunked Prefill / Blended Batching & nano-batch scheduling & 将执行拆成 nano-batches 并搜索数量、大小和顺序，同时对长 prefill 做 token 粒度分块 \\
+15 & NanoFlow \refcite{51} & OSDI 2025 & Continuous / Iteration-level Batching；Chunked Prefill / Blended Batching & nano-batch scheduling & 将执行拆成 nano-batches 并搜索数量、大小和顺序，同时对长 prefill 做 token 粒度分块 \\
 \tabrowrule
-16 & Sarathi-Serve \cite{ref6} & OSDI 2024 & Chunked Prefill / Blended Batching & chunked prefill；decode interleaving & 将长 prefill 切成 chunk，并与 decode 混合交错执行，平滑两阶段负载 \\
+16 & Sarathi-Serve \refcite{6} & OSDI 2024 & Chunked Prefill / Blended Batching & chunked prefill；decode interleaving & 将长 prefill 切成 chunk，并与 decode 混合交错执行，平滑两阶段负载 \\
 \tabrowrule
-17 & Libra \cite{ref52} & NSDI 2026 & Chunked Prefill / Blended Batching & phase quota control & 在混合批次中调控 prefill 与 decode token 配额比例，降低两阶段算子干扰 \\
+17 & Libra \refcite{52} & NSDI 2026 & Chunked Prefill / Blended Batching & phase quota control & 在混合批次中调控 prefill 与 decode token 配额比例，降低两阶段算子干扰 \\
 \tabrowrule
-18 & A Hybrid Online and Offline Requests Inference Serving System for LLM in Private Computer Environment \cite{ref53} & IEEE TC 2026 & Chunked Prefill / Blended Batching & online/offline mixed batching & 在同一 continuous batch 内组织在线 prefill/decode 与离线任务，在线优先、离线填充空闲资源 \\
+18 & A Hybrid Online and Offline Requests Inference Serving System for LLM in Private Computer Environment \refcite{53} & IEEE TC 2026 & Chunked Prefill / Blended Batching & online/offline mixed batching & 在同一 continuous batch 内组织在线 prefill/decode 与离线任务，在线优先、离线填充空闲资源 \\
 \tabrowrule
-19 & LLMStation \cite{ref87} & USENIX ATC 2025 & Chunked Prefill / Blended Batching & iteration-level multitasking；inference/tuning co-serving & 将 fine-tuning 任务改造成可挂起流水线，并在 iteration 粒度批处理 inference 与 tuning 请求，以提高 GPU 利用率同时满足 serving SLO \\
+19 & LLMStation \refcite{87} & USENIX ATC 2025 & Chunked Prefill / Blended Batching & iteration-level multitasking；inference/tuning co-serving & 将 fine-tuning 任务改造成可挂起流水线，并在 iteration 粒度批处理 inference 与 tuning 请求，以提高 GPU 利用率同时满足 serving SLO \\
 \tabrowrule
-20 & FlexLLM \cite{ref88} & NSDI 2026 & Chunked Prefill / Blended Batching & token-level co-serving；SLO-aware scheduling & 将 inference 和 PEFT finetuning 融合到 token 级执行，并优先保护 latency-sensitive inference 的 SLO，再利用空闲 token 预算推进 finetuning \\
+20 & FlexLLM \refcite{88} & NSDI 2026 & Chunked Prefill / Blended Batching & token-level co-serving；SLO-aware scheduling & 将 inference 和 PEFT finetuning 融合到 token 级执行，并优先保护 latency-sensitive inference 的 SLO，再利用空闲 token 预算推进 finetuning \\
 \tabrowrule
-21 & AdaServe \cite{ref54} & EuroSys 2026 & 横向机制：Speculative Verification Batching & multi-SLO speculative decoding & 按请求 SLO 定制 speculation tree，并通过 speculate-select-verify pipeline 形成验证批处理；它主要补充 multi-SLO 场景下的验证调度，而不是 prefill chunking \\
+21 & AdaServe \refcite{54} & EuroSys 2026 & 横向机制：Speculative Verification Batching & multi-SLO speculative decoding & 按请求 SLO 定制 speculation tree，并通过 speculate-select-verify pipeline 形成验证批处理；它主要补充 multi-SLO 场景下的验证调度，而不是 prefill chunking \\
 \tabrowrule
-22 & DistServe \cite{ref7} & OSDI 2024 & Disaggregated Prefill-Decode Batching & phase-specific workers & 将 compute-heavy prefill 与 memory/latency-sensitive decode 解耦到不同 worker pool \\
+22 & DistServe \refcite{7} & OSDI 2024 & Disaggregated Prefill-Decode Batching & phase-specific workers & 将 compute-heavy prefill 与 memory/latency-sensitive decode 解耦到不同 worker pool \\
 \tabrowrule
-23 & Splitwise \cite{ref18} & ISCA 2024 & Disaggregated Prefill-Decode Batching & prompt pool；token pool & 将 prompt computation 和 token generation 放到不同机器池，并分别匹配硬件资源 \\
+23 & Splitwise \refcite{18} & ISCA 2024 & Disaggregated Prefill-Decode Batching & prompt pool；token pool & 将 prompt computation 和 token generation 放到不同机器池，并分别匹配硬件资源 \\
 \tabrowrule
-24 & Mooncake \cite{ref21} & USENIX FAST 2025 & Disaggregated Prefill-Decode Batching & distributed KV cache；global scheduling & 在 prefill/decode 解耦基础上构建分布式 KVCache，并按 KV 本地性和 SLO 调度实例 \\
+24 & Mooncake \refcite{21} & USENIX FAST 2025 & Disaggregated Prefill-Decode Batching & distributed KV cache；global scheduling & 在 prefill/decode 解耦基础上构建分布式 KVCache，并按 KV 本地性和 SLO 调度实例 \\
 \tabrowrule
-25 & MuxServe \cite{ref86} & ICML 2024 & 横向机制：Multi-model Multiplexed Batching & adaptive batch scheduling；spatial-temporal multiplexing & 面向多 LLM serving 联合做空间共置和时间复用，并利用 prefill/decode 阶段特征设计 adaptive batch scheduling，以提升多模型场景下的 SLO 吞吐 \\
+25 & MuxServe \refcite{86} & ICML 2024 & 横向机制：Multi-model Multiplexed Batching & adaptive batch scheduling；spatial-temporal multiplexing & 面向多 LLM serving 联合做空间共置和时间复用，并利用 prefill/decode 阶段特征设计 adaptive batch scheduling，以提升多模型场景下的 SLO 吞吐 \\
 \bottomrule
 \end{longtable}
 \endgroup
@@ -93,7 +93,7 @@ SLO-aware、KV-aware、multi-tenant、speculative verification 和 multi-model m
 \phantomsection
 \subsection*{5.1 Queue-level Dynamic / Admission Batching}
 \addcontentsline{toc}{subsection}{5.1 Queue-level Dynamic / Admission Batching}
-Queue-level Dynamic / Admission Batching 要解决的是“固定等待固定 batch size 过于僵硬”的问题。真实 LLM 服务中，请求到达是随机的，prompt 长度、输出长度和 SLO 也不一致。如果系统仍按固定 batch size 或固定时间窗口组批，低负载时会等待过久，高负载时又可能把紧急请求排在队尾。因此，这类方法在请求进入执行前动态决定 batching window、batch membership、admission threshold 和请求优先级。JITServe 从 SLO-aware serving 角度建模请求服务带宽 \cite{ref45}，SOLA 以 state-aware scheduling 提高 SLO attainment \cite{ref46}，QLM 关注队列管理和 head-of-line blocking \cite{ref47}，TimelyLLM 则面向时间敏感机器人应用组织请求调度 \cite{ref48}。Preble 说明 prefix/KV locality 会改变请求分配 \cite{ref23}；Fairness in Serving Large Language Models 则说明多租户公平性也会改变请求排序和 token 服务顺序 \cite{ref26}。
+Queue-level Dynamic / Admission Batching 要解决的是“固定等待固定 batch size 过于僵硬”的问题。真实 LLM 服务中，请求到达是随机的，prompt 长度、输出长度和 SLO 也不一致。如果系统仍按固定 batch size 或固定时间窗口组批，低负载时会等待过久，高负载时又可能把紧急请求排在队尾。因此，这类方法在请求进入执行前动态决定 batching window、batch membership、admission threshold 和请求优先级。JITServe 从 SLO-aware serving 角度建模请求服务带宽 \refcite{45}，SOLA 以 state-aware scheduling 提高 SLO attainment \refcite{46}，QLM 关注队列管理和 head-of-line blocking \refcite{47}，TimelyLLM 则面向时间敏感机器人应用组织请求调度 \refcite{48}。Preble 说明 prefix/KV locality 会改变请求分配 \refcite{23}；Fairness in Serving Large Language Models 则说明多租户公平性也会改变请求排序和 token 服务顺序 \refcite{26}。
 
 这种队列级决策可以抽象成图~\ref{fig:ch5-dynamic-admission-batching} 中的闭环：请求先等待，控制器再根据剩余时间预算决定立即执行还是继续合批。
 \begin{figure}[!htbp]
@@ -106,7 +106,7 @@ Incoming Requests 携带 SLO 和 priority 进入 Waiting Queue，Admission Contr
 
 这类方法的核心思想是把组批从静态规则改为在线决策。调度器可以根据队列长度、请求等待时间、SLO slack、prompt 长度、预计输出长度、业务优先级和当前实例负载决定是否立即发起 batch，还是继续等待更多请求。对于 slack 充足的请求，可以适当等待以提高吞吐；对于即将违反 TTFT 或 deadline 的请求，应尽快进入执行队列。与 static batching 相比，dynamic batching 的 batch 仍然主要在执行前形成，但形成过程已经具备业务感知能力。
 
-Queue-level Dynamic / Admission Batching 的关键变量包括 batching window、max wait time、admission threshold、request priority、deadline slack、estimated service time 和 batch size limit。很多 SLO-aware request batching 工作可以放在这一类中理解：它们并不一定改变 decode iteration 的 active batch 机制，而是先在请求队列和接纳阶段决定谁应该进入下一批执行 \cite{ref45}, \cite{ref46}。
+Queue-level Dynamic / Admission Batching 的关键变量包括 batching window、max wait time、admission threshold、request priority、deadline slack、estimated service time 和 batch size limit。很多 SLO-aware request batching 工作可以放在这一类中理解：它们并不一定改变 decode iteration 的 active batch 机制，而是先在请求队列和接纳阶段决定谁应该进入下一批执行 \refcite{45}, \refcite{46}。
 
 在 CEC 中，dynamic batching 需要把网络时延纳入剩余时间预算。接入边缘的优势是 RTT 低，但请求池小；区域边缘或云端请求池更大，但链路更长。因此，同一个请求是否应该在接入边缘立即小批次执行，还是转发到区域边缘等待更大 batch，取决于剩余 SLO、入口到实例链路、当前排队时间和模型能力。Dynamic batching 是 CEC 中最自然的业务感知入口，因为它在请求尚未进入长期 decode 循环前就可以完成接纳、排序和路径选择。
 
@@ -114,7 +114,7 @@ Queue-level Dynamic / Admission Batching 的风险在于调度器需要可靠估
 \phantomsection
 \subsection*{5.2 Continuous Batching / Iteration-level Batching}
 \addcontentsline{toc}{subsection}{5.2 Continuous Batching / Iteration-level Batching}
-Continuous Batching 进一步打破了 batch 生命周期。它要解决的是 LLM decode 阶段中请求完成时间不同导致的空槽浪费问题。传统 static 或 dynamic batching 即使在执行前能组成合适 batch，一旦进入自回归 decode，短请求会先完成，长请求还在继续生成。如果 batch 在整个生成过程中固定不变，已完成请求留下的 slot 无法被新请求利用，新到请求也必须等待当前 batch 全部结束。Orca 首先系统化提出 iteration-level scheduling 和 selective batching，成为后续 continuous batching 系统的基础 \cite{ref4}。
+Continuous Batching 进一步打破了 batch 生命周期。它要解决的是 LLM decode 阶段中请求完成时间不同导致的空槽浪费问题。传统 static 或 dynamic batching 即使在执行前能组成合适 batch，一旦进入自回归 decode，短请求会先完成，长请求还在继续生成。如果 batch 在整个生成过程中固定不变，已完成请求留下的 slot 无法被新请求利用，新到请求也必须等待当前 batch 全部结束。Orca 首先系统化提出 iteration-level scheduling 和 selective batching，成为后续 continuous batching 系统的基础 \refcite{4}。
 
 当调度边界从请求级下降到 decode iteration 后，batch 的含义就变成图~\ref{fig:ch5-continuous-batching} 中持续变化的 active set。
 \begin{figure}[!htbp]
@@ -125,11 +125,11 @@ Continuous Batching 进一步打破了 batch 生命周期。它要解决的是 L
 \end{figure}
 每个 Iteration 表示一次 decode iteration，Active Batch 中的序列共同生成 next token。到达 iteration boundary 后，已完成序列退出，新完成 prefill 的序列加入，被抢占序列可以恢复。KV Block Manager 同步执行 allocate、append 和 free 操作，因为 active batch 的变化必然伴随 KV block 的增长和释放。因此，continuous batching 的 batch 不是固定请求集合，而是一个随 token 生成持续变化的运行时集合。
 
-Continuous Batching 的解决思路，是把 batch 的更新边界缩短到 decode iteration。每生成一轮 token 后，系统都可以移除已经完成的请求，加入完成 prefill 的新请求，或者恢复被抢占的请求。这样 batch 不再是一组固定请求，而是一个随 token 生成持续变化的 active set。Orca 将这一思想形式化为 iteration-level scheduling，使 LLM serving 从“按完整请求批处理”转向“按 token iteration 批处理” \cite{ref4}；FastServe 在这一基础上引入迭代级抢占 \cite{ref49}，TokenFlow 面向 streaming token 服务做 preemptive scheduling \cite{ref50}，NanoFlow 则用 nano-batch execution 进一步细化执行流 \cite{ref51}。
+Continuous Batching 的解决思路，是把 batch 的更新边界缩短到 decode iteration。每生成一轮 token 后，系统都可以移除已经完成的请求，加入完成 prefill 的新请求，或者恢复被抢占的请求。这样 batch 不再是一组固定请求，而是一个随 token 生成持续变化的 active set。Orca 将这一思想形式化为 iteration-level scheduling，使 LLM serving 从“按完整请求批处理”转向“按 token iteration 批处理” \refcite{4}；FastServe 在这一基础上引入迭代级抢占 \refcite{49}，TokenFlow 面向 streaming token 服务做 preemptive scheduling \refcite{50}，NanoFlow 则用 nano-batch execution 进一步细化执行流 \refcite{51}。
 
-这类方法的核心变量包括 active sequence set、decode batch size、token iteration order、join policy、leave policy、preemption policy、resume policy 和 KV block allocation。由于每轮 decode 都要读取并追加 KV Cache，continuous batching 必须和内存管理绑定：请求能否加入 active batch，不仅取决于是否有计算 slot，也取决于是否有足够 KV block 和状态本地性。vLLM 的 PagedAttention 正是从 KV block 管理角度支撑更大的 active batch 和更低的显存碎片 \cite{ref5}；SGLang 用 RadixAttention 复用共享前缀 \cite{ref8}；Llumnix 则把运行中请求迁移纳入多实例调度 \cite{ref19}。这些工作说明，continuous batching 的 active set 会进一步受到 prefix cache 和实例负载的共同约束。
+这类方法的核心变量包括 active sequence set、decode batch size、token iteration order、join policy、leave policy、preemption policy、resume policy 和 KV block allocation。由于每轮 decode 都要读取并追加 KV Cache，continuous batching 必须和内存管理绑定：请求能否加入 active batch，不仅取决于是否有计算 slot，也取决于是否有足够 KV block 和状态本地性。vLLM 的 PagedAttention 正是从 KV block 管理角度支撑更大的 active batch 和更低的显存碎片 \refcite{5}；SGLang 用 RadixAttention 复用共享前缀 \refcite{8}；Llumnix 则把运行中请求迁移纳入多实例调度 \refcite{19}。这些工作说明，continuous batching 的 active set 会进一步受到 prefix cache 和实例负载的共同约束。
 
-多租户 LoRA serving 也可以从 continuous batching 角度理解。Punica 和 S-LoRA 的目标不是改变自回归生成逻辑，而是让请求不同 adapter 的序列仍能共享同一个基础模型执行批次。为此，它们需要解决 adapter 权重分页、异构 adapter batching 和定制 LoRA 算子问题；这些机制改变的是 batch 内请求能否被合并执行，以及合并后是否仍能保持较低的显存和算子开销 \cite{ref84}, \cite{ref85}。
+多租户 LoRA serving 也可以从 continuous batching 角度理解。Punica 和 S-LoRA 的目标不是改变自回归生成逻辑，而是让请求不同 adapter 的序列仍能共享同一个基础模型执行批次。为此，它们需要解决 adapter 权重分页、异构 adapter batching 和定制 LoRA 算子问题；这些机制改变的是 batch 内请求能否被合并执行，以及合并后是否仍能保持较低的显存和算子开销 \refcite{84}, \refcite{85}。
 
 在 CEC 中，Continuous Batching 不能简单照搬云端大请求池策略。接入边缘并发较低，短时间内能加入 active batch 的请求有限；如果为等待更多 token stream 而延长调度周期，TTFT 会恶化。因此，边缘侧更适合短窗口、低等待的 micro-continuous batching；区域边缘则可以跨多个入口聚合请求，形成更稳定的 active batch。对于移动用户，还需要考虑请求是否会在 decode 期间切换入口，避免 active batch 中的 KV 状态和用户路径频繁迁移。
 
@@ -137,7 +137,7 @@ Continuous Batching 是现代 LLM serving 的基础能力，但不是完整的�
 \phantomsection
 \subsection*{5.3 Chunked Prefill / Blended Batching}
 \addcontentsline{toc}{subsection}{5.3 Chunked Prefill / Blended Batching}
-Chunked Prefill / Blended Batching 要解决的是长 prefill 阻塞 decode 的问题。Prefill 处理完整 prompt，矩阵规模大、并行度高，通常更偏 compute-bound；decode 逐 token 生成，频繁访问 KV Cache，更偏 memory-bound 或 latency-bound。如果长 prompt prefill 连续占用 GPU，已经在流式输出的请求会出现 ITL 抖动；如果完全优先 decode，新请求 TTFT 又会被推迟。两阶段混部时，关键问题不是是否 batching，而是 prefill 和 decode 如何在同一执行资源上交错。Sarathi-Serve 将长 prefill 切成 chunks 并与 decode 交错，是这一类方法的代表性工作 \cite{ref6}。
+Chunked Prefill / Blended Batching 要解决的是长 prefill 阻塞 decode 的问题。Prefill 处理完整 prompt，矩阵规模大、并行度高，通常更偏 compute-bound；decode 逐 token 生成，频繁访问 KV Cache，更偏 memory-bound 或 latency-bound。如果长 prompt prefill 连续占用 GPU，已经在流式输出的请求会出现 ITL 抖动；如果完全优先 decode，新请求 TTFT 又会被推迟。两阶段混部时，关键问题不是是否 batching，而是 prefill 和 decode 如何在同一执行资源上交错。Sarathi-Serve 将长 prefill 切成 chunks 并与 decode 交错，是这一类方法的代表性工作 \refcite{6}。
 
 长 prompt 不能直接整段 prefill 的原因，可以通过图~\ref{fig:ch5-chunked-prefill-batching} 看到：系统需要把 prefill chunk 和 decode token 交错安排，在 TTFT 与 ITL 之间控制阶段干扰。
 \begin{figure}[!htbp]
@@ -150,7 +150,7 @@ Long Prompt 先经过 Prefill Chunker 被拆成 P1、P2、P3 等 prefill chunks�
 
 Chunked Prefill 的思想是把长 prompt 拆成多个 prefill chunk，而不是一次性执行完整 prefill。Blended Batching 则进一步把 prefill chunk 与 decode token 混合在同一个调度周期或同一个 batch 中，使 compute-heavy 的 prefill 和 memory/latency-sensitive 的 decode 交错执行。这样可以平滑每轮计算量，减少长 prefill 对 decode 的阻塞，也能避免 decode 完全占用调度周期导致新请求 TTFT 过高。
 
-这类方法的核心变量包括 chunk size、prefill token budget、decode token budget、prefill-to-decode ratio、interleaving policy、phase quota、online/offline mixing ratio 和 stall control。Chunk 太大，会重新造成 prefill 阻塞；chunk 太小，会增加调度和 kernel overhead。Prefill/decode 比例太偏向 prefill，会伤害 ITL；太偏向 decode，会伤害 TTFT。因此，Chunked Prefill / Blended Batching 的本质是阶段内混合调度和阶段间干扰控制。Libra 可以理解为阶段配额控制的扩展 \cite{ref52}，NanoFlow 代表更细粒度执行流优化 \cite{ref51}，LLMStation 和 FlexLLM 则把混合对象扩展到 inference/finetuning co-serving 等更复杂 workload \cite{ref87}, \cite{ref88}。这些工作本质上仍然需要在同一批执行资源上安排不同类型 token 或任务片段的执行顺序。MuxServe 同样涉及 batch scheduling，但其主问题是多模型 serving 的空间共置与时间复用，更适合作为 multi-model multiplexed batching 的横向机制，而不是 chunked prefill 的直接代表 \cite{ref86}。
+这类方法的核心变量包括 chunk size、prefill token budget、decode token budget、prefill-to-decode ratio、interleaving policy、phase quota、online/offline mixing ratio 和 stall control。Chunk 太大，会重新造成 prefill 阻塞；chunk 太小，会增加调度和 kernel overhead。Prefill/decode 比例太偏向 prefill，会伤害 ITL；太偏向 decode，会伤害 TTFT。因此，Chunked Prefill / Blended Batching 的本质是阶段内混合调度和阶段间干扰控制。Libra 可以理解为阶段配额控制的扩展 \refcite{52}，NanoFlow 代表更细粒度执行流优化 \refcite{51}，LLMStation 和 FlexLLM 则把混合对象扩展到 inference/finetuning co-serving 等更复杂 workload \refcite{87}, \refcite{88}。这些工作本质上仍然需要在同一批执行资源上安排不同类型 token 或任务片段的执行顺序。MuxServe 同样涉及 batch scheduling，但其主问题是多模型 serving 的空间共置与时间复用，更适合作为 multi-model multiplexed batching 的横向机制，而不是 chunked prefill 的直接代表 \refcite{86}。
 
 在 CEC 中，这类方法特别适合接入边缘和区域边缘之间协同。接入边缘可以保持较短 decode 间隔，区域边缘可以处理更长 prefill chunk；当链路稳定且 KV 传输成本可控时，系统还可以把长 prompt prefill 拆分到更强节点，再将可复用状态交给近用户 decode 节点。若链路抖动大或边缘并发不足，过度切分 prefill 可能增加状态传输和调度开销，因此 chunk size 和 interleaving ratio 必须纳入在线代价模型。
 
@@ -158,7 +158,7 @@ Chunked Prefill / Blended Batching 比 continuous batching 更直接处理 prefi
 \phantomsection
 \subsection*{5.4 Disaggregated Prefill-Decode Batching}
 \addcontentsline{toc}{subsection}{5.4 Disaggregated Prefill-Decode Batching}
-Disaggregated Prefill-Decode Batching 是对 phase-aware 思路的进一步扩展。Chunked Prefill / Blended Batching 仍然假设 prefill 和 decode 在同一个实例或同一类资源上交错执行；而 disaggregated batching 直接把两阶段拆到不同 worker pool、不同 GPU 实例、不同机器池甚至不同 CEC 层级中。Prefill batch 和 decode batch 分别形成，分别扩缩容，并通过 KV Cache 或中间状态传输衔接。DistServe 从 goodput 优化角度论证阶段解耦 \cite{ref7}，Splitwise 强调 prompt pool 与 token pool 的硬件匹配 \cite{ref18}，Mooncake 则在 prefill/decode 解耦基础上构建 KVCache-centric serving 架构 \cite{ref21}。
+Disaggregated Prefill-Decode Batching 是对 phase-aware 思路的进一步扩展。Chunked Prefill / Blended Batching 仍然假设 prefill 和 decode 在同一个实例或同一类资源上交错执行；而 disaggregated batching 直接把两阶段拆到不同 worker pool、不同 GPU 实例、不同机器池甚至不同 CEC 层级中。Prefill batch 和 decode batch 分别形成，分别扩缩容，并通过 KV Cache 或中间状态传输衔接。DistServe 从 goodput 优化角度论证阶段解耦 \refcite{7}，Splitwise 强调 prompt pool 与 token pool 的硬件匹配 \refcite{18}，Mooncake 则在 prefill/decode 解耦基础上构建 KVCache-centric serving 架构 \refcite{21}。
 
 PD 分离后的 batching 可以按图~\ref{fig:ch5-disaggregated-pd-batching} 理解：prefill instance 内部形成 prompt batch，decode instance 内部维护 active sequence batch，两个池之间通过 KV/state handoff 连接。
 \begin{figure}[!htbp]
@@ -171,7 +171,7 @@ Global Scheduler 根据 SLO、queue length、KV locality 和 link state 将请�
 
 这类方法的出发点是 prefill 和 decode 的资源画像差异非常明显。Prefill 更偏 compute-bound，适合吞吐导向、更强算力或更大 batch 的资源池；decode 更偏 memory/latency-bound，需要稳定 ITL、低排队和快速状态访问。若两者混部在同一资源池中，长 prefill 可能阻塞 decode，decode 小步迭代又可能降低 prefill 吞吐。Disaggregation 通过物理或逻辑隔离减少两阶段干扰，并允许系统分别为 prefill 和 decode 选择 parallelism、batch size 和扩缩容策略。
 
-Disaggregated Prefill-Decode Batching 的核心变量包括 prefill worker pool、decode worker pool、phase queue、KV transfer、state locality、worker scaling、prefill/decode routing 和 global scheduling。它的收益来自阶段资源匹配和干扰隔离，但代价集中在 KV 传输、状态连续性和跨节点调度。Prefill 完成后，decode 必须访问初始 KV Cache；如果 KV 传输慢、远程访问不稳定或用户入口发生变化，disaggregation 的收益会被状态成本抵消 \cite{ref7}, \cite{ref21}。
+Disaggregated Prefill-Decode Batching 的核心变量包括 prefill worker pool、decode worker pool、phase queue、KV transfer、state locality、worker scaling、prefill/decode routing 和 global scheduling。它的收益来自阶段资源匹配和干扰隔离，但代价集中在 KV 传输、状态连续性和跨节点调度。Prefill 完成后，decode 必须访问初始 KV Cache；如果 KV 传输慢、远程访问不稳定或用户入口发生变化，disaggregation 的收益会被状态成本抵消 \refcite{7}, \refcite{21}。
 
 这里的 batching 不是指“是否启用 PD 分离架构”本身，而是指 PD 分离之后 prefill pool 如何形成 prompt batch、decode pool 如何维护 active sequence batch，以及两个 pool 之间如何通过 KV/state handoff 协调。
 
@@ -182,7 +182,7 @@ Disaggregated Prefill-Decode Batching 适合 prefill/decode 负载差异明显�
 \subsection*{5.5 算法方案对比与面向华为验证环境的建议}
 \addcontentsline{toc}{subsection}{5.5 算法方案对比与面向华为验证环境的建议}
 
-验证要求对 batching 参数优化算法的定义比普通 serving 调参更具体：系统需要感知推理实例硬件环境、模型特征、当前并发请求数、输入输出长度变化，以及每个请求可能携带的推理时延要求；算法需要动态调整请求处理顺序和推理实例批处理大小等参数，并在不中断业务的条件下对接推理框架实施。验收目标也明确指向可测收益：相对于“静态 batching 配置、不调整请求处理顺序”的基线，满足 SLA 的请求处理速度提高 50\%，所有请求平均 E2E 时延下降 50\% \cite{ref76}。因此，第五章的算法不应停留在“高优先级先发、队列长就放大 batch”这一类规则，而应围绕在线决策问题展开：给定请求队列、实例状态和业务目标，在一组 runtime 可执行动作中选择下一轮 admission、排序和 batch 参数。
+验证要求对 batching 参数优化算法的定义比普通 serving 调参更具体：系统需要感知推理实例硬件环境、模型特征、当前并发请求数、输入输出长度变化，以及每个请求可能携带的推理时延要求；算法需要动态调整请求处理顺序和推理实例批处理大小等参数，并在不中断业务的条件下对接推理框架实施。验收目标也明确指向可测收益：相对于“静态 batching 配置、不调整请求处理顺序”的基线，满足 SLA 的请求处理速度提高 50\%，所有请求平均 E2E 时延下降 50\% \refcite{76}。因此，第五章的算法不应停留在“高优先级先发、队列长就放大 batch”这一类规则，而应围绕在线决策问题展开：给定请求队列、实例状态和业务目标，在一组 runtime 可执行动作中选择下一轮 admission、排序和 batch 参数。
 
 该问题可以先写成一个有限候选动作上的在线优化。每个请求 $r_i$ 携带到达时间、prompt token 估计、输出长度估计、业务权重、deadline 或 SLO slack；每个实例 $s_j$ 上报 active sequence 数、waiting queue 长度、KV block 占用、显存水位、最近 TTFT/TPOT/ITL、prefill backlog、decode backlog 和错误状态。控制器的动作不是抽象的“调度”，而是具体参数组合：是否立即接纳请求、接纳哪些请求、请求进入哪个实例、max running requests、max batched tokens、最大等待窗口、chunk size、prefill/decode token quota，以及是否启用长请求隔离、chunked prefill 或 PD 分离模板。对每个候选动作 $a$，控制器估计一个短期代价：
 \[
@@ -192,7 +192,7 @@ J(a)=\alpha \cdot \widehat{L}_{e2e}(a)+\beta \cdot \widehat{M}_{sla}(a)+\gamma \
 
 第一阶段建议先验证参数自适应，而不改变请求排序。这样可以把问题压到 vLLM-Ascend 或 MindIE 已暴露的配置入口上，风险较低，也容易判断收益是否来自 batching 参数本身。离线 profiling 时，对 CodeLlama34B、Qwen2-VL-7B-Instruct 分别扫描 max running requests、max batched tokens、等待窗口、chunk size 和 prefill/decode quota，形成模型-硬件-参数表；在线阶段根据当前并发、prompt 长度分布、KV 水位和最近 TTFT/TPOT 反馈，在安全候选集合中选择代价最低的参数。这里不需要一开始就上复杂学习算法，使用滑动窗口均值、置信上界或小规模 bandit 都可以；关键是每次只在经过压测的候选参数之间切换，并记录切换前后的 SLA 达标请求数、平均 E2E、P99 TTFT、ITL 抖动和回退次数。
 
-第二阶段再加入请求级排序和准入控制。与简单 priority queue 不同，这里的排序分数应由“紧迫程度”和“服务代价”共同决定。一个短请求如果 slack 很小，应当尽快进入 batch；一个长 prompt 即使优先级高，也可能需要拆成 prefill chunk 或进入隔离队列，否则会阻塞已有 decode stream。可以采用如下近似：先用历史画像估计请求的 prefill 时间、decode 时间和 KV 增长，再计算其进入当前 batch 后对自身 TTFT、其他请求 ITL 和实例 KV 水位的边际影响；调度器优先选择能降低总体代价的请求集合，而不是逐个按优先级出队。对于 10\% 高优先级、10\% 低优先级和 80\% 普通请求的验证 workload \cite{ref76}，高优先级请求的 deadline miss penalty 更大，但 aging 项仍要保证普通和低优先级请求不会长期被推迟。
+第二阶段再加入请求级排序和准入控制。与简单 priority queue 不同，这里的排序分数应由“紧迫程度”和“服务代价”共同决定。一个短请求如果 slack 很小，应当尽快进入 batch；一个长 prompt 即使优先级高，也可能需要拆成 prefill chunk 或进入隔离队列，否则会阻塞已有 decode stream。可以采用如下近似：先用历史画像估计请求的 prefill 时间、decode 时间和 KV 增长，再计算其进入当前 batch 后对自身 TTFT、其他请求 ITL 和实例 KV 水位的边际影响；调度器优先选择能降低总体代价的请求集合，而不是逐个按优先级出队。对于 10\% 高优先级、10\% 低优先级和 80\% 普通请求的验证 workload \refcite{76}，高优先级请求的 deadline miss penalty 更大，但 aging 项仍要保证普通和低优先级请求不会长期被推迟。
 
 第三阶段再把前两类能力合成混合策略。混合策略的核心不是“规则更多”，而是按 workload 状态选择不同的 batching 模式。短 prompt、低并发、SLO 较紧时，选择小 active set、短等待窗口和保守 max batched tokens，优先保护 TTFT 和 ITL；高并发且 slack 充足时，扩大 token budget，提高 GPU/NPU 利用率；长 prompt 或 VLM 请求比例升高时，启用 chunked prefill 或长请求隔离，并在线调整 prefill/decode quota；当环境具备 prefill pool、decode pool 和可观测 KV handoff 时，再把 PD 分离作为候选模式，但只有在预测的阶段干扰收益大于 KV transfer 和跨池排队代价时才切换。为了避免模式来回震荡，控制器需要设置冷却时间、最小收益阈值和回退模板；这些约束不是算法主体，而是在线系统必须具备的保护边界。
 
