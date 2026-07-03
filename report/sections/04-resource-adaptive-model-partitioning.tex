@@ -210,11 +210,11 @@ LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prom
 \subsection*{4.6 算法方案对比与面向华为验证环境的建议}
 \addcontentsline{toc}{subsection}{4.6 算法方案对比与面向华为验证环境的建议}
 
-面向异构边缘验证环境，资源自适应模型切分算法需要形成可运行的部署规划、测试结果和可解释分析 \cite{ref76}。因此，第四章的落点首先不是提出一个抽象的分割策略，也不是从零实现一个任意切 layer、切 tensor、迁移 KV 的新 runtime，而是\textbf{先让昇腾 GPU/NPU 推理栈支持层级切分执行}：在 Ascend/CANN/MindIE 或 vLLM-Ascend 等现有底座上，打通 Transformer layer、block 或 model shard 按连续层跨卡、跨节点形成 pipeline stage 的加载、执行、通信和回退路径 \cite{ref77,ref82}。只有这个执行能力成立，后续的资源自适应规划器才不是停留在论文 taxonomy 上，而是能够输出验证环境可以部署、压测和复现的方案。
+面向异构边缘验证环境，资源自适应模型切分算法需要形成可运行的部署规划、测试结果和可解释分析 \cite{ref76}。因此，第四章的落点首先不是提出一个抽象的分割策略，也不是从零实现一个任意切 layer、切 tensor、迁移 KV 的新 runtime，而是\textbf{先让 Ascend GPU/NPU 推理栈支持层级切分执行}：在 Ascend/CANN/MindIE 或 vLLM-Ascend 等现有底座上，打通 Transformer layer、block 或 model shard 按连续层跨卡、跨节点形成 pipeline stage 的加载、执行、通信和回退路径 \cite{ref77,ref82}。只有这个执行能力成立，后续的资源自适应规划器才不是停留在论文 taxonomy 上，而是能够输出验证环境可以部署、压测和复现的方案。
 
-这个前置能力至少包含四个工程边界。第一，昇腾侧需要支持按层或按 block 的模型权重分段加载，并能把不同 stage 映射到 230T/64GB、70T/24GB、310P、910B4 或多机多卡节点上。第二，stage 之间需要有稳定的 activation/hidden state 传输接口，能够区分单机 HCCS、高带宽 RDMA、100Gbps 直连和弱链路边缘节点等拓扑差异。第三，runtime 需要暴露 layer sharding、pipeline stage、context parallel、KV Cache Pool、dynamic batch 等可组合能力，使切分方案能被转化为具体启动参数或部署模板。第四，系统需要保留异常回退路径：当某个 stage 显存不足、链路退化或模板启动失败时，可以退回到单实例、固定 PP/TP 或平均层级切分基线。
+这个前置能力至少包含四个工程边界。第一，Ascend 侧需要支持按层或按 block 的模型权重分段加载，并能把不同 stage 映射到 230T/64GB、70T/24GB、310P、910B4 或多机多卡节点上。第二，stage 之间需要有稳定的 activation/hidden state 传输接口，能够区分单机 HCCS、高带宽 RDMA、100Gbps 直连和弱链路边缘节点等拓扑差异。第三，runtime 需要暴露 layer sharding、pipeline stage、context parallel、KV Cache Pool、dynamic batch 等可组合能力，使切分方案能被转化为具体启动参数或部署模板。第四，系统需要保留异常回退路径：当某个 stage 显存不足、链路退化或模板启动失败时，可以退回到单实例、固定 PP/TP 或平均层级切分基线。
 
-在层级切分执行能力打通之后，再建设资源自适应部署规划器。该规划器需要读取三类画像。第一类是硬件拓扑画像，包括算力节点可用算力、可用显存、vNPU 配置、节点间带宽和时延；验证环境覆盖 ARM CPU、230T/64GB 昇腾 NPU、70T/24GB 昇腾 NPU、A800T-A2 多机多卡、HCCS、25Gbps RDMA、100Gbps 直连以及 310P 与 910B4 联合组网等异构条件 \cite{ref76}。第二类是模型画像，包括 CodeLlama34B、Qwen2-VL-7B-Instruct 等模型的参数量、每层权重、activation、单 token KV Cache、prefill/decode 计算量和显存需求。第三类是业务画像，包括并发用户数、SLA/P90/P99 TTFT 目标、输入输出长度分布和请求优先级。只有把这三类信息放入同一个约束模型，模型切分才不只是论文 taxonomy，而是可交付算法。
+在层级切分执行能力打通之后，再建设资源自适应部署规划器。该规划器需要读取三类画像。第一类是硬件拓扑画像，包括算力节点可用算力、可用显存、vNPU 配置、节点间带宽和时延；验证环境覆盖 ARM CPU、230T/64GB Ascend NPU、70T/24GB Ascend NPU、A800T-A2 多机多卡、HCCS、25Gbps RDMA、100Gbps 直连以及 310P 与 910B4 联合组网等异构条件 \cite{ref76}。第二类是模型画像，包括 CodeLlama34B、Qwen2-VL-7B-Instruct 等模型的参数量、每层权重、activation、单 token KV Cache、prefill/decode 计算量和显存需求。第三类是业务画像，包括并发用户数、SLA/P90/P99 TTFT 目标、输入输出长度分布和请求优先级。只有把这三类信息放入同一个约束模型，模型切分才不只是论文 taxonomy，而是可交付算法。
 
 推荐的算法主体可以分为三个模块。第一个模块是可执行模板生成。系统应先从 layer/block 边界出发，枚举可部署的 pipeline stage 数量、每个 stage 覆盖的连续层范围以及 stage 到 Ascend 节点的 placement；在此基础上，再生成 TP、EP、DP、context parallel、prefill/decode disaggregation 和 KV Cache Pool 等补充模板。不支持或无法稳定部署的模板直接过滤。这样做的意义不是降低算法要求，而是把搜索空间限制在验证环境可执行的方案上，同时保证模型切分算法的核心仍然落在 layer-wise placement 上。
 
