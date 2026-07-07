@@ -405,7 +405,7 @@ P_{U_ku'}(\Delta\tau_k)
 \]
 移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；当前动作改变 KV 分布，所以优化对象是整个 session，而非单次最低时延。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
 
-\textbf{动作掩码 Double DQN。} 上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；一般场景一个session的request数量不确定，存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。DQN 对所有固定动作输出 Q 值，在执行 \(\arg\min\) 前将 \(a\notin\mathcal A_k^F\) 的 Q 值置为 \(+\infty\)；训练和在线决策使用同一 mask，从而避免选择显存、版本或节点条件不满足的动作。
+\textbf{动作掩码 Double DQN。} 上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；一般场景一个session的request数量不确定，存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。DQN 对所有固定动作输出 Q 值，在执行 \(\arg\min\) 前将 \(a\notin\mathcal A_k^F\) 的 Q 值置为 \(+\infty\)；
 
 Double DQN 对每个可能的下一入口 \(u'\) 先用在线网络选择动作，再用目标网络评价：
 \[
