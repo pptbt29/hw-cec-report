@@ -215,29 +215,59 @@ LLM inference 与普通计算任务的另一个关键区别在于运行时状态
 本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于包含 \(K\) 个请求的 LLM session，系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
 
 \textbf{主要符号。}
-\begin{center}
+\begingroup
 \small
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+\setlength{\LTpre}{4pt}
+\setlength{\LTpost}{6pt}
+\begin{longtable}{p{0.29\textwidth}p{0.65\textwidth}}
 \toprule
 符号 & 含义 \\
 \midrule
+\endfirsthead
+\toprule
+符号 & 含义 \\
+\midrule
+\endhead
 \(k,K,\mathcal N\) & 当前请求编号、session 请求总数和候选节点集合 \\
-\(U_k,J_k\) & 当前请求入口节点和所选计算节点 \\
-\(Y_k,\rho_k(y)\) & 实际输出 token 数及其预测分布 \\
+\(i,j,n,s\) & 入口节点、目标/计算节点、一般节点和 KV 同步源节点索引 \\
+\(U_k,J_k,\Delta\tau_k\) & 当前入口、所选计算节点和相邻请求间隔 \\
 \(P_{ij}(\Delta\tau_k),b_k\) & 入口转移概率和多步移动预测分布 \\
-\(\mathcal C_k\) & 各节点上 KV blocks 的位置与版本状态 \\
-\(\mathcal B_{k,n},\mathcal M_{k,j}\) & 节点 \(n\) 已有 blocks 和节点 \(j\) 缺失 blocks \\
+\(x_k,Y_k,\rho_k(y),\widehat Y_k^{(p)}\) & 请求特征、实际输出长度、长度预测分布和第 \(p\) 分位预测 \\
+\(\mathcal B_k,\mathcal B_{k,n}\) & 当前完整 KV block 集合和节点 \(n\) 已有 block 集合 \\
+\(v_{k,n},\mathcal C_k\) & 节点 \(n\) 的最高连续 KV 版本和版本化多副本状态 \\
+\(\mathcal M_{k,j},q_b,\Delta\mathcal B_k\) & 节点 \(j\) 缺失 blocks、block \(b\) 的大小和本轮新增 blocks \\
+\(\psi_k^{\mathrm{cache}}\) & KV 副本保留与驱逐策略 \\
 \(a_k=(J_k,Z_k)\) & 计算节点与 KV 获取方式组成的联合动作 \\
-\(\mathcal A_k^F\) & 满足 SLA、显存、版本和节点可用性约束的动作集合 \\
+\(Z_k\) & KV 获取方式：\(\mathrm{reuse}\)、\(\mathrm{sync}\) 或 \(\mathrm{recompute}\) \\
+\(\mathcal A_k^F(s_k)\) & 满足 SLA、显存、版本和节点可用性约束的动作集合 \\
+\(D_k^{\mathrm{input}},D_k^{\mathrm{request}}\) & 输入数据量和跨节点请求/响应总字节数 \\
+\(D_k^{\mathrm{KV}},BW_{i,j}^{\mathrm{eff}}\) & KV 同步字节数和节点间实测有效带宽 \\
 \(L_k^{\mathrm{new}},L_k^{\mathrm{ctx}}\) & 未被 KV 覆盖的新输入长度和完整上下文长度 \\
+\(\tau_j^{\mathrm{prefill}}(L)\) & 节点 \(j\) 处理 \(L\) 个 prefill tokens 的实测时间 \\
 \(T_k^{\mathrm{comm}},T_k^{\mathrm{state}},T_k^{\mathrm{prefill}}\) & 请求通信、KV 状态准备和 prefill 时间 \\
-\(D_k^{\mathrm{request}},D_k^{\mathrm{KV}},C_k^{\mathrm{eviction}}\) & 请求字节数、KV 同步字节数和 KV 驱逐损失 \\
-\(T_k^{\mathrm{E2E}},c_k\) & 当前请求端到端时延和即时成本 \\
-\(\mathcal Q^*,\mathcal Q_\theta,\mathcal Q_{\bar\theta}\) & 最优状态--动作价值、Double DQN 在线网络和目标网络 \\
-\(\gamma\) & 未来成本折扣因子 \\
+\(T_k^{\mathrm{queue}},T_k^{\mathrm{decode}},T_k^{\mathrm{return}}\) & 排队、decode 和结果返回时间 \\
+\(T_k^{\mathrm{E2E}}\) & 从请求发出到全部输出返回的端到端时延 \\
+\(C_k^{\mathrm{eviction}},w_1,\ldots,w_4,c_k\) & KV 驱逐损失、成本权重和当前期望成本 \\
+\(\Delta_k(a),SLA_k\) & 动作时延安全裕量和请求 SLA 上限 \\
+\(\widehat M_k,M^{\mathrm{reserve}},M_{J_k}^{\mathrm{free}}\) & 预测显存需求、安全预留显存和计算节点剩余显存 \\
+\(s_k,\mathbf L_k,\mathbf M_k,\mathbf W_k\) & 系统状态及其中的负载、显存和链路状态向量 \\
+\(\pi,\gamma,\mathcal Q^*\) & 路由策略、折扣因子和最优状态--动作价值 \\
+\(\mathcal Q_\theta,\mathcal Q_{\bar\theta}\) & Double DQN 在线网络和目标网络 \\
+\(a_{k+1}^{\mathrm{sel}},V_{k+1},z_k\) & 下一动作选择、目标网络估值和 Bellman 训练目标 \\
+\(\mathcal M^{\mathrm{mig}},\mathcal M^{\mathrm{rec}}\) & 混合 KV 恢复中迁移和重算的缺失 block 子集 \\
+\(T^{\mathrm{mig}},T^{\mathrm{rec}},T^{\mathrm{hybrid}},T^{\mathrm{overhead}}\) & 迁移、重算、混合恢复和流水调度附加时间 \\
 \bottomrule
-\end{tabularx}
-\end{center}
+\end{longtable}
+\endgroup
+
+图~\ref{fig:ch6-mobility-offloading-workflow} 给出了本方案从状态采集、预测、可行性过滤、长期路由到 KV 管理和在线反馈的完整流程。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/ch6_mobility_offloading_workflow.pdf}
+\caption{\textbf{面向用户移动的长期 LLM 请求卸载与 KV 管理流程。}上层路由器联合选择计算节点与 KV 获取方式，底层 KV manager 负责版本化多副本、缓存管理以及部分迁移与部分重算的混合恢复。}
+\label{fig:ch6-mobility-offloading-workflow}
+\end{figure}
 
 \textbf{移动、长度与 KV 状态。} 令 \(U_k\in\mathcal N\) 为第 \(k\) 个请求的入口节点，移动模型给出
 \[
@@ -245,7 +275,7 @@ P_{ij}(\Delta\tau_k)
 =
 \Pr(U_{k+1}=j\mid U_k=i,\Delta\tau_k).
 \]
-固定请求间隔时可采用 Markov chain，间隔变化较大时可采用 continuous-time 或 semi-Markov 模型；LSTM 或 Transformer 则输出多步入口分布 \(b_k\)。这一设计借鉴 MGCO 对历史决策和未来移动状态的利用 \refcite{61}。输出 token 数 \(Y_k\) 在决策时未知，由预测器给出 \(\rho_k(y)=\Pr(Y_k=y\mid x_k)\) ；类似的长度预测已用于不可预测请求调度 \refcite{56}。若下一请求在当前回复结束后产生，则 \(\Delta\tau_k(y)=T_k^{\mathrm{E2E}}(y)+T_k^{\mathrm{think}}\)，生成长度也会影响下一入口概率。
+固定请求间隔时可采用 Markov chain，间隔变化较大时可采用 continuous-time 或 semi-Markov 模型；LSTM 或 Transformer 则输出多步入口分布 \(b_k\)。这一设计借鉴 MGCO 对历史决策和未来移动状态的利用 \refcite{61}。输出 token 数 \(Y_k\) 在决策时未知，由预测器给出 \(\rho_k(y)=\Pr(Y_k=y\mid x_k)\)；类似的长度预测已用于不可预测请求调度 \refcite{56}。长度预测仅用于当前请求的 E2E latency 和显存需求估计。
 
 KV 允许存在多个版本化副本：
 \[
@@ -264,7 +294,7 @@ Z_k\in\{\mathrm{reuse},\mathrm{sync},\mathrm{recompute}\},
 \[
 \mathcal C_{k+1}
 =
-G(\mathcal C_k,a_k,\Delta\mathcal B_k(Y_k),\psi_k^{\mathrm{cache}}).
+G(\mathcal C_k,a_k,\Delta\mathcal B_k,\psi_k^{\mathrm{cache}}).
 \]
 
 \textbf{成本与约束。} 请求通信、KV 状态准备和 prefill 时间分别为
@@ -352,49 +382,44 @@ s_k=
 \begin{array}{ll}
 \displaystyle\min_{\pi}\quad&
 \displaystyle
-\mathrm E_{\pi,U,Y}
+\mathrm E_{\pi,U}
 \left[\sum_{k=1}^{K}\gamma^{k-1}c_k(s_k,a_k)\right]\\
 \mathrm{s.t.}\quad&
 a_k=\pi(s_k),\quad a_k\in\mathcal A_k^F(s_k),\\
-&Y_k\sim\rho_k,\quad
-U_{k+1}\sim P(\cdot\mid U_k,\Delta\tau_k(Y_k)),\\
+&U_{k+1}\sim P(\cdot\mid U_k,\Delta\tau_k),\\
 &\mathcal C_{k+1}
-=G(\mathcal C_k,a_k,\Delta\mathcal B_k(Y_k),\psi_k^{\mathrm{cache}}).
+=G(\mathcal C_k,a_k,\Delta\mathcal B_k,\psi_k^{\mathrm{cache}}).
 \end{array}
 \]
-其中 \(c_k(s_k,a_k)\) 已对当前输出长度取条件期望，而 \(Y_k\) 仍通过 KV 增长、请求间隔和下一状态影响未来成本。对应的理论最优状态--动作价值满足
+其中 \(c_k(s_k,a_k)\) 已对当前输出长度取条件期望。对应的理论最优状态--动作价值满足
 \[
 \begin{array}{rl}
 \mathcal Q^*(s_k,a_k)
 ={}&c_k(s_k,a_k)\\
 &\displaystyle
-+\gamma\sum_y\rho_k(y)
-\sum_{u'\in\mathcal N}
-P_{U_ku'}(\Delta\tau_k(y))
-\min_{a'\in\mathcal A_{k+1}^F(s_{k+1}(y,u'))}
-\mathcal Q^*(s_{k+1}(y,u'),a').
++\gamma\sum_{u'\in\mathcal N}
+P_{U_ku'}(\Delta\tau_k)
+\min_{a'\in\mathcal A_{k+1}^F(s_{k+1}(u'))}
+\mathcal Q^*(s_{k+1}(u'),a').
 \end{array}
 \]
-终端条件为 \(\mathcal Q^*(s_{K+1},\cdot)=0\)。式中当前期望成本 \(c_k\) 位于外层，未来价值才对输出长度 \(y\) 和下一入口 \(u'\) 分别取期望，因而括号不存在跨行配对问题。移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；当前动作改变 KV 分布，所以优化对象是整个 session，而非单次最低时延。这延续了 QoS-LLM-Router 的长期 QoS 优化 \refcite{55} 和 MGCO 的非短视移动卸载思想 \refcite{61}，并将 CA-AIGC-Migration 的移动 context 管理 \refcite{69} 细化到版本化 KV blocks。
+移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；当前动作改变 KV 分布，所以优化对象是整个 session，而非单次最低时延。这延续了 QoS-LLM-Router 的长期 QoS 优化 \refcite{55} 和 MGCO 的非短视移动卸载思想 \refcite{61}，并将 CA-AIGC-Migration 的移动 context 管理 \refcite{69} 细化到版本化 KV blocks。
 
-\textbf{动作掩码 Double DQN。} 上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；一般场景存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。DQN 对所有固定动作输出 Q 值，在执行 \(\arg\min\) 前将 \(a\notin\mathcal A_k^F\) 的 Q 值置为 \(+\infty\)；训练和在线决策使用同一 mask，从而避免选择显存、版本或节点条件不满足的动作。
+\textbf{动作掩码 Double DQN。} 上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；一般场景一个session的request数量不确定，存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。DQN 对所有固定动作输出 Q 值，在执行 \(\arg\min\) 前将 \(a\notin\mathcal A_k^F\) 的 Q 值置为 \(+\infty\)；训练和在线决策使用同一 mask，从而避免选择显存、版本或节点条件不满足的动作。
 
-令分支 \(\omega=(y,u')\) 表示“输出长度为 \(y\)，下一请求从 \(u'\) 进入”，其概率为
-\[
-p_k(\omega)=\rho_k(y)P_{U_ku'}(\Delta\tau_k(y)).
-\]
-Double DQN 先用在线网络选择动作，再用目标网络评价：
+Double DQN 对每个可能的下一入口 \(u'\) 先用在线网络选择动作，再用目标网络评价：
 \[
 \begin{array}{rl}
-a_{k+1}^{\mathrm{sel}}(\omega)
+a_{k+1}^{\mathrm{sel}}(u')
 ={}&\displaystyle\arg\min_{a'\in\mathcal A_{k+1}^F}
-\mathcal Q_\theta(s_{k+1}(\omega),a'),\\
-V_{k+1}(\omega)
+\mathcal Q_\theta(s_{k+1}(u'),a'),\\
+V_{k+1}(u')
 ={}&\mathcal Q_{\bar\theta}
-(s_{k+1}(\omega),a_{k+1}^{\mathrm{sel}}(\omega)),\\
+(s_{k+1}(u'),a_{k+1}^{\mathrm{sel}}(u')),\\
 z_k
 ={}&c_k(s_k,a_k)
-+\gamma\displaystyle\sum_{\omega}p_k(\omega)V_{k+1}(\omega).
++\gamma\displaystyle\sum_{u'\in\mathcal N}
+P_{U_ku'}(\Delta\tau_k)V_{k+1}(u').
 \end{array}
 \]
 即训练目标等于“当前成本 + 折扣后的期望未来成本”，在线动作则为 \(a_k^*=\arg\min_{a\in\mathcal A_k^F}\mathcal Q_\theta(s_k,a)\)。若模型异常则回退至可行动作中的 Greedy 方案；若集合为空，则排队、降级或拒绝。
@@ -420,9 +445,7 @@ T_k^{\mathrm{hybrid}}
 
 \textbf{在线闭环与实验。} 请求完成后，系统用实际输出长度、E2E latency、KV 增量、传输量和显存变化更新长度/移动预测器、成本模型与 replay buffer。
 
-甲方交付实验采用固定主场景：部署 3 台 A800T-A2，其中两条链路为 100 Gbps 卡间直连，另一条为 25 Gbps 跨主机 RDMA；三个节点运行相同模型并开启 prefix cache，三个客户端使用不同测试数据集。测试前 50\% 时段，请求发送至就近实例；后 50\% 时段，将 20\% 请求随机改发至另外两个实例，以模拟用户移动。SLA 和初始并发采用甲方给定参考值，验收目标是在该基线之上将满足 SLA 的并发数提高 50\%，并将平均 E2E latency 降低 20\%。
-
-为控制实验复杂度，主对比仅设置就近路由、当前成本 Greedy 和本文 RL 三种策略；补充实验只增加“全程无移动”对照，以及 10\%/20\%/30\% 改发比例的敏感性分析。核心指标为 SLA 下最大并发数、平均/P95 E2E latency 和 SLA violation；KV 传输量、prefix/block 命中率、同步/重算次数与显存峰值仅用于解释结果。
+主对比设置就近路由、当前成本 Greedy 和本文 RL 三种策略；补充实验只增加“全程无移动”对照，以及 10\%/20\%/30\% 改发比例的敏感性分析。核心指标为 SLA 下最大并发数、平均/P95 E2E latency 和 SLA violation；KV 传输量、prefix/block 命中率、同步/重算次数与显存峰值仅用于解释结果。
 
 \phantomsection
 \subsection*{6.5 小结}
