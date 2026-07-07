@@ -261,7 +261,14 @@ LLM decode 是自回归过程，每一步依赖前一步输出，天然存在串
     \end{tabularx}
 \end{table}
 
-基于这些工作，本报告进一步整合形成 LLM 推理优化方向的 \textbf{Layer–Scope Taxonomy}：以主要优化对象所在的系统抽象层为主轴，将方法分为 Model-Level、Kernel-Level、Runtime-Level 和 Serving Policy \& Routing-Level；同时以执行范围为副轴，区分 Local 与 Distributed。后续 2.3.1--2.3.4 将依次介绍四个层级，并在每个层级中讨论其本地与分布式实现。
+基于这些工作，本报告进一步整合形成 LLM 推理优化方向的 \textbf{Layer–Scope Taxonomy}：以主要优化对象所在的系统抽象层为主轴，将方法分为 Model-Level、Kernel-Level、Runtime-Level 和 Serving Policy \& Routing-Level；同时以执行范围为副轴，区分 Local 与 Distributed。图~\ref{fig:layer-scope-taxonomy} 将这一二维分类展开：纵向表示主要优化对象从模型结构、底层算子、在线运行时到服务级决策逐层上升，横向表示执行范围从单实例或本地控制域扩展到跨 device、worker、replica、service 或 node 的分布式协同。后续 2.3.1--2.3.4 将依次介绍四个层级，并在每个层级中讨论其本地与分布式实现。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/ch2_layer_scope_taxonomy.pdf}
+    \caption{\textbf{LLM Inference Optimization 的 Layer--Scope Taxonomy。}纵轴按照主要优化对象区分 Model、Kernel、Runtime 与 Serving Policy \& Routing 四个层级，向上表示决策对象从模型与执行基础逐渐扩展到高层服务控制；横轴按照执行范围区分 Local 与 Distributed，向右表示从单实例或本地控制域扩展到跨 device、worker、replica、service 或 node 的协同。Runtime 层进一步包含 KV/Memory、Batching/Scheduling、Decoding 和 Execution 四类在线机制。}
+    \label{fig:layer-scope-taxonomy}
+\end{figure}
 
 其中，Local 表示优化限制在单个 serving instance 或本地控制域内，可以包含 CPU-GPU/NPU 和本地存储等异构资源协同；Distributed 表示优化需要跨多个 GPU、device、worker、replica、service 或 node 协同，并涉及 computation、request、KV state、activation 或 routing decision 的跨实体分布。需要说明的是，这一分类并不要求所有方法完全互斥，真实 LLM serving 系统通常具有 cross-layer co-design 特征。因此，在归类一项具体工作时，本报告主要考察三个问题：它解决什么 inference problem，主要优化对象位于哪一层，以及该优化发生在 Local 还是 Distributed scope。
 
