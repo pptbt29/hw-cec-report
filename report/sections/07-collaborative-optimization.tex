@@ -27,47 +27,47 @@
 \toprule
 \textbf{序号} & \textbf{代表工作} & \textbf{发表在哪} & \textbf{主归属} & \textbf{相关机制} & \textbf{方法关键词} \\
 \midrule
-1 & SLM-LLM-Collab \refcite{60} & TMC 2026 & Model / Service Placement -- Request Offloading & SLM caching；D2D / edge inference offloading & 长期缓存 SLM 或插件模型，短期在 local、D2D 和 edge LLM 之间选择卸载路径，体现模型缓存与请求卸载的双时间尺度协同 \\
+1 & SLM-LLM-Collab \cite{xu2025joint} & TMC 2026 & Model / Service Placement -- Request Offloading & SLM caching；D2D / edge inference offloading & 长期缓存 SLM 或插件模型，短期在 local、D2D 和 edge LLM 之间选择卸载路径，体现模型缓存与请求卸载的双时间尺度协同 \\
 \tabrowrule
-2 & T2DRL \refcite{68} & TON 2026 & Model / Service Placement -- Request Offloading；Mobility-aware Control & long-context model caching；request management & 在 mobile edge 中联合管理 cached models、service requests 和资源匹配，使 long-context LLM agent 服务同时感知模型缓存、上下文长度和边缘资源 \\
+2 & T2DRL \cite{xu2026serving} & TON 2026 & Model / Service Placement -- Request Offloading；Mobility-aware Control & long-context model caching；request management & 在 mobile edge 中联合管理 cached models、service requests 和资源匹配，使 long-context LLM agent 服务同时感知模型缓存、上下文长度和边缘资源 \\
 \tabrowrule
-3 & H-MEC-Placement \refcite{71} & TMC 2025 & Model / Service Placement -- Request Offloading & service placement；task scheduling；resource allocation & 面向 general MEC 说明服务部署、任务调度和资源分配在规划周期内存在强耦合，可作为 LLM 服务布局协同的基础参考 \\
+3 & H-MEC-Placement \cite{du2025online} & TMC 2025 & Model / Service Placement -- Request Offloading & service placement；task scheduling；resource allocation & 面向 general MEC 说明服务部署、任务调度和资源分配在规划周期内存在强耦合，可作为 LLM 服务布局协同的基础参考 \\
 \tabrowrule
-4 & LVM-Offload \refcite{72} & INFOCOM 2026 & Model / Service Placement -- Request Offloading & foundation model selection；step offloading；resource allocation & 在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配，说明模型能力选择会改变后续卸载路径 \\
+4 & LVM-Offload \cite{zhuang2025joint} & INFOCOM 2026 & Model / Service Placement -- Request Offloading & foundation model selection；step offloading；resource allocation & 在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配，说明模型能力选择会改变后续卸载路径 \\
 \tabrowrule
-5 & DistServe \refcite{7} & OSDI 2024 & Model Partitioning -- Batching / Scheduling & prefill/decode disaggregation；phase-specific workers & 将 prefill 和 decode 分离到不同 worker pool，并分别优化并行策略、batching 和资源分配，收益取决于 KV handoff 与阶段队列协调 \\
+5 & DistServe \cite{zhong2024distserve} & OSDI 2024 & Model Partitioning -- Batching / Scheduling & prefill/decode disaggregation；phase-specific workers & 将 prefill 和 decode 分离到不同 worker pool，并分别优化并行策略、batching 和资源分配，收益取决于 KV handoff 与阶段队列协调 \\
 \tabrowrule
-6 & Splitwise \refcite{18} & ISCA 2024 & Model Partitioning -- Batching / Scheduling & prompt pool；token pool；KV transfer & 把 prompt computation 和 token generation 放到不同机器池，利用阶段资源画像差异，同时需要处理阶段间 KV transfer 和调度边界 \\
+6 & Splitwise \cite{patel2024splitwise} & ISCA 2024 & Model Partitioning -- Batching / Scheduling & prompt pool；token pool；KV transfer & 把 prompt computation 和 token generation 放到不同机器池，利用阶段资源画像差异，同时需要处理阶段间 KV transfer 和调度边界 \\
 \tabrowrule
-7 & Orca \refcite{4} & OSDI 2022 & Model Partitioning -- Batching / Scheduling & iteration-level scheduling；selective batching & 在 decode iteration 边界更新 active batch，说明 serving 调度粒度会直接影响模型实例利用率和请求等待时间 \\
+7 & Orca \cite{yu2022orca} & OSDI 2022 & Model Partitioning -- Batching / Scheduling & iteration-level scheduling；selective batching & 在 decode iteration 边界更新 active batch，说明 serving 调度粒度会直接影响模型实例利用率和请求等待时间 \\
 \tabrowrule
-8 & vLLM \refcite{5} & SOSP 2023 & Model Partitioning -- Batching / Scheduling；Runtime State Management & PagedAttention；KV block management & 通过 KV block 管理支撑 continuous batching，使 batching 容量不只取决于计算资源，也取决于 KV 显存碎片和状态管理能力 \\
+8 & vLLM \cite{kwon2023efficient} & SOSP 2023 & Model Partitioning -- Batching / Scheduling；Runtime State Management & PagedAttention；KV block management & 通过 KV block 管理支撑 continuous batching，使 batching 容量不只取决于计算资源，也取决于 KV 显存碎片和状态管理能力 \\
 \tabrowrule
-9 & Llumnix \refcite{19} & OSDI 2024 & Model Partitioning -- Batching / Scheduling；Runtime State Management & live request migration；instance rescheduling & 在多个 LLM serving 实例之间迁移运行中请求及其状态，体现实例调度、batch 负载均衡和状态迁移之间的耦合 \\
+9 & Llumnix \cite{sun2024llumnix} & OSDI 2024 & Model Partitioning -- Batching / Scheduling；Runtime State Management & live request migration；instance rescheduling & 在多个 LLM serving 实例之间迁移运行中请求及其状态，体现实例调度、batch 负载均衡和状态迁移之间的耦合 \\
 \tabrowrule
-10 & Mooncake \refcite{21} & USENIX FAST 2025 & Request / Workflow Routing -- Runtime State Management & distributed KV cache；global scheduling；PD disaggregation & 将 KV cache 作为全局状态层管理，调度器按 KV 本地性、节点负载和 SLO 选择 prefill/decode 路径 \\
+10 & Mooncake \cite{qin2025mooncake} & USENIX FAST 2025 & Request / Workflow Routing -- Runtime State Management & distributed KV cache；global scheduling；PD disaggregation & 将 KV cache 作为全局状态层管理，调度器按 KV 本地性、节点负载和 SLO 选择 prefill/decode 路径 \\
 \tabrowrule
-11 & Preble \refcite{23} & ICLR 2025 & Request / Workflow Routing -- Runtime State Management & distributed prompt scheduling；prefix/KV locality & 把 prefix/KV cache 命中和负载均衡共同纳入请求分配，使 routing action 与后续 prefill 复用和 batch 组成相关 \\
+11 & Preble \cite{srivatsa2025preble} & ICLR 2025 & Request / Workflow Routing -- Runtime State Management & distributed prompt scheduling；prefix/KV locality & 把 prefix/KV cache 命中和负载均衡共同纳入请求分配，使 routing action 与后续 prefill 复用和 batch 组成相关 \\
 \tabrowrule
-12 & CachedAttention \refcite{24} & USENIX ATC 2024 & Request / Workflow Routing -- Runtime State Management & attention / prefix cache reuse & 说明 attention/prefix cache 的复用机会会改变请求服务路径和重复计算成本，是状态感知调度的重要依据 \\
+12 & CachedAttention \cite{gao2024cost} & USENIX ATC 2024 & Request / Workflow Routing -- Runtime State Management & attention / prefix cache reuse & 说明 attention/prefix cache 的复用机会会改变请求服务路径和重复计算成本，是状态感知调度的重要依据 \\
 \tabrowrule
-13 & FuseSpill \refcite{66} & TPDS 2026 & Request / Workflow Routing -- Runtime State Management & KV spillover；auxiliary GPU scheduling & 显存受限时根据代价模型选择 KV cache spillover，并把溢出序列调度到辅助 GPU，改变原有 decode 执行位置 \\
+13 & FuseSpill \cite{jiang2025efficient} & TPDS 2026 & Request / Workflow Routing -- Runtime State Management & KV spillover；auxiliary GPU scheduling & 显存受限时根据代价模型选择 KV cache spillover，并把溢出序列调度到辅助 GPU，改变原有 decode 执行位置 \\
 \tabrowrule
-14 & QoS-LLM-Router \refcite{55} & TMC 2025 & Request / Workflow Routing -- Runtime State Management & QoS-aware routing；queue / memory state & 将 edge LLM expert routing 建模为长期 QoS 优化，路由决策同时感知质量、响应长度、队列状态和 GPU memory \\
+14 & QoS-LLM-Router \cite{yang2025quality} & TMC 2025 & Request / Workflow Routing -- Runtime State Management & QoS-aware routing；queue / memory state & 将 edge LLM expert routing 建模为长期 QoS 优化，路由决策同时感知质量、响应长度、队列状态和 GPU memory \\
 \tabrowrule
-15 & CES-CB \refcite{56} & TSC 2025 & Request / Workflow Routing -- Runtime State Management & request cost prediction；edge batch selection & 利用 prompt embedding 和历史执行数据预测请求成本，在 edge/cloud 间选择请求集合，说明 routing 会影响队列阻塞和 batch 组成 \\
+15 & CES-CB \cite{li2025cloud} & TSC 2025 & Request / Workflow Routing -- Runtime State Management & request cost prediction；edge batch selection & 利用 prompt embedding 和历史执行数据预测请求成本，在 edge/cloud 间选择请求集合，说明 routing 会影响队列阻塞和 batch 组成 \\
 \tabrowrule
-16 & MasRouter \refcite{62} & ACL 2025 & Request / Workflow Routing -- Runtime State Management & multi-agent routing；model / role selection & 根据 query 决定 multi-agent 协作模式、agent 数量、角色和底层 LLM；在 CEC 中需要进一步映射为 workflow offloading \\
+16 & MasRouter \cite{yue2025masrouter} & ACL 2025 & Request / Workflow Routing -- Runtime State Management & multi-agent routing；model / role selection & 根据 query 决定 multi-agent 协作模式、agent 数量、角色和底层 LLM；在 CEC 中需要进一步映射为 workflow offloading \\
 \tabrowrule
-17 & Conductor \refcite{63} & ICLR 2026 & Request / Workflow Routing -- Runtime State Management & natural-language workflow control & 训练控制器生成多模型 workflow、subtask 和上下文访问范围，提示 agent workflow 需要同时考虑模型选择和状态可见性 \\
+17 & Conductor \cite{nielsen2025learning} & ICLR 2026 & Request / Workflow Routing -- Runtime State Management & natural-language workflow control & 训练控制器生成多模型 workflow、subtask 和上下文访问范围，提示 agent workflow 需要同时考虑模型选择和状态可见性 \\
 \tabrowrule
-18 & AFLOW \refcite{64} & ICLR 2025 & Request / Workflow Routing -- Runtime State Management & automatic agentic workflow search & 将 agentic workflow 表示为代码形式的 LLM 调用图，并用执行反馈搜索更优 workflow；在 CEC 中还需加入物理节点和状态路径 \\
+18 & AFLOW \cite{zhang2025aflow} & ICLR 2025 & Request / Workflow Routing -- Runtime State Management & automatic agentic workflow search & 将 agentic workflow 表示为代码形式的 LLM 调用图，并用执行反馈搜索更优 workflow；在 CEC 中还需加入物理节点和状态路径 \\
 \tabrowrule
-19 & MGCO \refcite{61} & TSC 2026 & Mobility-aware Hierarchical Control & mobility-aware generative computation offloading & 用 Transformer MHA encoder 建模历史决策和未来移动状态，说明请求卸载不能只根据当前时隙状态短视决策 \\
+19 & MGCO \cite{ghosh2025mgco} & TSC 2026 & Mobility-aware Hierarchical Control & mobility-aware generative computation offloading & 用 Transformer MHA encoder 建模历史决策和未来移动状态，说明请求卸载不能只根据当前时隙状态短视决策 \\
 \tabrowrule
-20 & DT-MADTO \refcite{65} & TMC 2025 & Mobility-aware Hierarchical Control & digital twin；DAG offloading；mobility prediction & 通过 digital twin 预测移动和资源状态，联合决策 DAG 子任务卸载、带宽分配和中间数据等待时间 \\
+20 & DT-MADTO \cite{chen2024mobility} & TMC 2025 & Mobility-aware Hierarchical Control & digital twin；DAG offloading；mobility prediction & 通过 digital twin 预测移动和资源状态，联合决策 DAG 子任务卸载、带宽分配和中间数据等待时间 \\
 \tabrowrule
-21 & CA-AIGC-Migration \refcite{69} & TSC 2026 & Mobility-aware Hierarchical Control；Runtime State Management & context migration；mobility-aware service migration & 将完整模型迁移转化为 long context migration，在回复质量、AoI、计算延迟和传输成本之间做权衡 \\
+21 & CA-AIGC-Migration \cite{wang2026context} & TSC 2026 & Mobility-aware Hierarchical Control；Runtime State Management & context migration；mobility-aware service migration & 将完整模型迁移转化为 long context migration，在回复质量、AoI、计算延迟和传输成本之间做权衡 \\
 \bottomrule
 \end{longtable}
 \endgroup
@@ -90,7 +90,7 @@
 
 模型/服务部署与请求卸载之间的耦合，是 CEC-LLM 推理系统中最直接的协同优化关系。由于边缘节点无法缓存所有 LLM、SLM、expert、adapter 或工具服务，模型能力是否提前部署会直接决定请求能否在近端被处理，以及是否需要跨边缘或上云。反过来，请求流量、用户会话分布和模型调用频率又会影响下一周期的模型缓存和服务部署收益。
 
-已有工作已经开始显式处理部署规划与请求卸载之间的时间尺度差异。SLM-LLM-Collab \refcite{60} 将 SLM caching 与 local/D2D/edge inference offloading 进行双时间尺度建模，说明模型缓存不是独立部署问题，而是为后续请求卸载提供可行路径。T2DRL \refcite{68} 进一步将 long-context LLM serving 中的 model caching、request management 和资源匹配联系起来，强调上下文长度和移动边缘资源会共同影响模型缓存与请求处理策略。H-MEC-Placement \refcite{71} 虽然不是 LLM-specific 工作，但从 general MEC 角度说明 service placement、task scheduling 和 resource allocation 在规划周期内存在强耦合。LVM-Offload \refcite{72} 则在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配。
+已有工作已经开始显式处理部署规划与请求卸载之间的时间尺度差异。SLM-LLM-Collab \cite{xu2025joint} 将 SLM caching 与 local/D2D/edge inference offloading 进行双时间尺度建模，说明模型缓存不是独立部署问题，而是为后续请求卸载提供可行路径。T2DRL \cite{xu2026serving} 进一步将 long-context LLM serving 中的 model caching、request management 和资源匹配联系起来，强调上下文长度和移动边缘资源会共同影响模型缓存与请求处理策略。H-MEC-Placement \cite{du2025online} 虽然不是 LLM-specific 工作，但从 general MEC 角度说明 service placement、task scheduling 和 resource allocation 在规划周期内存在强耦合。LVM-Offload \cite{zhuang2025joint} 则在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配。
 
 这一类协同的核心变量包括 model/service placement、SLM/LLM cache、adapter/expert residency、service capacity、request arrival pattern、routing action、cloud fallback 和 cache update period。低频部署层如果只根据历史平均流量放置模型，可能无法应对移动热点和突发请求；高频请求卸载如果只根据当前节点负载选择路径，又可能频繁调用未缓存模型，造成冷启动、跨域传输和质量回退。因此，部署层和卸载层需要形成“长期能力布局 + 短期路径选择 + 在线反馈更新”的闭环。
 
@@ -103,7 +103,7 @@
 
 模型切分与 batching/scheduling 的耦合主要体现在推理阶段的容量匹配和时延控制上。LLM inference 中 prefill、decode、verification 等阶段具有不同资源画像：prefill 更偏计算密集，decode 更偏 memory bandwidth 和低时延 token streaming。模型切分或阶段解耦改变这些阶段所在的资源池，而 batching 和 scheduling 决定请求如何进入这些资源池以及 token 如何被迭代生成。
 
-已有 LLM serving 工作从不同角度揭示了这种耦合。Splitwise 和 DistServe 通过 prefill/decode disaggregation 说明，将两类阶段部署到不同资源池可以提高 goodput，但也会引入阶段间协调和 KV handoff 成本 \refcite{18}, \refcite{7}。Orca \refcite{4} 和 vLLM \refcite{5} 等系统说明，iteration-level scheduling 和 continuous batching 可以显著提高 GPU 利用率，但其效果受到模型部署方式、decode worker 容量和 KV cache 管理策略影响。Llumnix 进一步展示了动态请求迁移、实例调度和 serving 稳定性之间的关系 \refcite{19}。Mooncake 从 KVCache-centric serving 出发，将 KV cache 管理、prefill/decode 分离和请求调度结合起来，说明状态位置会影响 batching 和阶段执行路径 \refcite{21}。Jupiter 将 generative LLM 在 edge devices 上的 collaborative inference 与 pipeline parallelism、speculative decoding 结合起来，进一步说明在 CEC 场景中，阶段拆分和 serving scheduling 必须一起考虑 \refcite{27}。
+已有 LLM serving 工作从不同角度揭示了这种耦合。Splitwise 和 DistServe 通过 prefill/decode disaggregation 说明，将两类阶段部署到不同资源池可以提高 goodput，但也会引入阶段间协调和 KV handoff 成本 \cite{patel2024splitwise}, \cite{zhong2024distserve}。Orca \cite{yu2022orca} 和 vLLM \cite{kwon2023efficient} 等系统说明，iteration-level scheduling 和 continuous batching 可以显著提高 GPU 利用率，但其效果受到模型部署方式、decode worker 容量和 KV cache 管理策略影响。Llumnix 进一步展示了动态请求迁移、实例调度和 serving 稳定性之间的关系 \cite{sun2024llumnix}。Mooncake 从 KVCache-centric serving 出发，将 KV cache 管理、prefill/decode 分离和请求调度结合起来，说明状态位置会影响 batching 和阶段执行路径 \cite{qin2025mooncake}。Jupiter 将 generative LLM 在 edge devices 上的 collaborative inference 与 pipeline parallelism、speculative decoding 结合起来，进一步说明在 CEC 场景中，阶段拆分和 serving scheduling 必须一起考虑 \cite{ye2025jupiter}。
 
 这一类协同的关键变量包括 partition template、stage boundary、prefill/decode pool capacity、batching window、active sequence set、chunk size、KV transfer time、TTFT/TPOT target 和 worker scaling。模型切分模板不能只描述模型层或阶段放在哪里，还需要暴露阶段容量、KV handoff 成本、batching 可容纳规模和 TTFT/TBT 估计。Batching 层也不能只根据当前队列最大化吞吐，而需要感知切分拓扑、状态位置和用户 SLA。
 
@@ -116,7 +116,7 @@
 
 请求路由和 runtime state 管理之间的耦合，是 LLM inference 相比传统 task offloading 最突出的新问题之一。传统 offloading 中，任务完成后状态通常不再影响后续请求；而在 LLM 多轮对话、长上下文和 agent workflow 中，context、KV cache、prefix cache、agent memory 和 tool outputs 会持续影响后续推理。此时，请求应该路由到哪里，不仅取决于哪个节点算力空闲，还取决于相关状态是否已经在该节点或邻近节点存在。
 
-Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，prefix/KV cache 已经从单纯的内存优化对象变成影响请求调度和服务路径选择的核心资源 \refcite{21}, \refcite{23}, \refcite{24}。FuseSpill \refcite{66} 从显存受限场景出发说明，KV cache spillover 可能导致 decode 请求迁移到辅助 GPU 或其他资源位置，从而改变原有的执行路径。CA-AIGC-Migration \refcite{69} 则直接面向移动边缘场景，将用户 long context 视为可迁移状态，而不是迁移完整模型，从而在回复质量和迁移成本之间做权衡。QoS-LLM-Router \refcite{55} 和 CES-CB \refcite{56} 虽然主要关注 request-level routing，但它们也说明了 routing action 会改变队列状态、batch 组成和后续请求的等待时延。
+Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，prefix/KV cache 已经从单纯的内存优化对象变成影响请求调度和服务路径选择的核心资源 \cite{qin2025mooncake}, \cite{srivatsa2025preble}, \cite{gao2024cost}。FuseSpill \cite{jiang2025efficient} 从显存受限场景出发说明，KV cache spillover 可能导致 decode 请求迁移到辅助 GPU 或其他资源位置，从而改变原有的执行路径。CA-AIGC-Migration \cite{wang2026context} 则直接面向移动边缘场景，将用户 long context 视为可迁移状态，而不是迁移完整模型，从而在回复质量和迁移成本之间做权衡。QoS-LLM-Router \cite{yang2025quality} 和 CES-CB \cite{li2025cloud} 虽然主要关注 request-level routing，但它们也说明了 routing action 会改变队列状态、batch 组成和后续请求的等待时延。
 
 这一类协同的关键变量包括 session ID、prefix hash、KV block location、state size、state freshness、remote access latency、migration cost、recompute cost、queue state 和 request quality target。对于连续 session，路由动作和状态动作应被联合枚举：在已有 KV 的节点本地执行、将 KV 迁移到新节点执行、远程访问旧节点状态，或在新节点重新 prefill / recompute。不同动作的当前成本和长期收益不同，不能只用单次请求的最小时延判断。
 
@@ -129,7 +129,7 @@ Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，p
 
 多用户移动性会同时影响模型部署、batching、请求路由和状态管理，因此它是三类算法协同优化中最重要的外部扰动之一。用户移动会改变区域请求热点，使原有 model placement 失效；会改变接入链路和候选 edge，使 request routing 的当前最优路径失效；会在请求或 workflow 执行过程中触发 handover，使中间状态和后续阶段的执行路径需要重新选择；也会使 long context、KV cache 和 agent memory 留在旧 edge，从而产生状态迁移、远程访问或重算之间的权衡。
 
-已有移动性相关工作提供了局部研究基础。MGCO \refcite{61} 说明，generative computation offloading 不能只根据当前状态短视决策，而需要利用长程移动信息进行规划。DT-MADTO \refcite{65} 通过 digital twin 建模 DAG task、用户移动和中间数据流，说明移动性会改变 workflow/subtask offloading 的传输代价和拥塞状态。CA-AIGC-Migration \refcite{69} 进一步将移动性与 long context migration 结合，说明状态迁移可以成为替代完整服务迁移的轻量机制。T2DRL \refcite{68} 则提示，在 mobile edge 场景中，long-context serving 的模型缓存、请求管理和资源匹配需要与移动场景共同考虑。
+已有移动性相关工作提供了局部研究基础。MGCO \cite{ghosh2025mgco} 说明，generative computation offloading 不能只根据当前状态短视决策，而需要利用长程移动信息进行规划。DT-MADTO \cite{chen2024mobility} 通过 digital twin 建模 DAG task、用户移动和中间数据流，说明移动性会改变 workflow/subtask offloading 的传输代价和拥塞状态。CA-AIGC-Migration \cite{wang2026context} 进一步将移动性与 long context migration 结合，说明状态迁移可以成为替代完整服务迁移的轻量机制。T2DRL \cite{xu2026serving} 则提示，在 mobile edge 场景中，long-context serving 的模型缓存、请求管理和资源匹配需要与移动场景共同考虑。
 
 这一类协同的关键变量包括 user trajectory、handover probability、future ingress node、service hotspot、state owner、migration bandwidth、session continuation probability 和 workload forecast。低频层根据用户移动和服务热点调整模型/服务布局；中频层根据负载和状态命中率调整 batching 与实例分流；高频层根据 handover、链路抖动和 context/KV 位置进行 request/workflow/state routing。三个时间尺度不需要每次都同时重优化，但必须共享预测和反馈。
 
@@ -150,7 +150,7 @@ Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，p
 
 验证设计上，建议第七章对应的实验分成四组。第一组是独立算法组合基线：分别启用第四章切分部署、第五章动态 batching、第六章请求卸载，但不共享状态，只用各自局部观测做决策。第二组是共享状态但无长期预测：三类算法读取统一节点、队列和 KV 元数据，但只优化当前窗口。第三组是分层协同控制：低频更新部署/切分模板，中频调节 batching 参数，高频执行状态感知请求卸载，并把移动入口、KV owner 和未来 session 成本纳入决策。第四组是扰动与消融：改变用户移动比例、链路带宽、KV cache 规模、长 prompt 比例、请求优先级分布和节点显存水位，分别关闭状态共享、移动预测、KV 迁移、batch 参数联动和切分模板联动，观察 P99 TTFT、平均 E2E latency、SLA violation、跨节点通信量、KV 命中率和满足 SLA 的并发数。
 
-因此，第七章面向验证环境最适合落地的是\textbf{统一元数据驱动的分层协同优化框架}。它的算法主线不是一次性求解所有 placement、batching 和 offloading 变量，而是建立“低频部署布局 -- 中频 serving 参数 -- 高频请求/状态路由”的闭环。这样既能和第四、五、六章的单项算法保持边界清晰，也能把协同收益落实到可测指标上：在满足 P99 TTFT SLA 的前提下提升并发能力，降低平均 E2E 时延，减少跨节点状态通信，并提高移动 session 的服务连续性 \refcite{76}。
+因此，第七章面向验证环境最适合落地的是\textbf{统一元数据驱动的分层协同优化框架}。它的算法主线不是一次性求解所有 placement、batching 和 offloading 变量，而是建立“低频部署布局 -- 中频 serving 参数 -- 高频请求/状态路由”的闭环。这样既能和第四、五、六章的单项算法保持边界清晰，也能把协同收益落实到可测指标上：在满足 P99 TTFT SLA 的前提下提升并发能力，降低平均 E2E 时延，减少跨节点状态通信，并提高移动 session 的服务连续性 \cite{huawei2026internal}。
 
 
 \phantomsection

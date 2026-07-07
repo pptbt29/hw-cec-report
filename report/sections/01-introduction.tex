@@ -6,11 +6,11 @@
 \subsection*{1.1 研究背景与应用动机}
 \addcontentsline{toc}{subsection}{1.1 研究背景与应用动机}
 
-大语言模型推理正在从云端集中式服务，走向端侧、边缘和云端共同参与的协同服务形态。过去几年中，LLM inference 优化大体形成了两条成熟路线：一条是 on-device inference，通过压缩、量化、小模型和端侧 NPU/GPU 加速，使模型尽可能靠近用户运行；另一条是 cloud / datacenter LLM serving，通过高性能 kernel、continuous batching、KV Cache 管理、模型并行和多实例调度，在云侧 GPU 集群中提高吞吐、降低尾延迟并摊薄服务成本。已有 LLM serving 系统与综述工作分别从 runtime、memory management、batching/scheduling 和 distributed serving 等角度总结了这些机制 \refciterange{4}{8}, \refciterange{73}{75}。
+大语言模型推理正在从云端集中式服务，走向端侧、边缘和云端共同参与的协同服务形态。过去几年中，LLM inference 优化大体形成了两条成熟路线：一条是 on-device inference，通过压缩、量化、小模型和端侧 NPU/GPU 加速，使模型尽可能靠近用户运行；另一条是 cloud / datacenter LLM serving，通过高性能 kernel、continuous batching、KV Cache 管理、模型并行和多实例调度，在云侧 GPU 集群中提高吞吐、降低尾延迟并摊薄服务成本。已有 LLM serving 系统与综述工作分别从 runtime、memory management、batching/scheduling 和 distributed serving 等角度总结了这些机制 \cite{yu2022orca,kwon2023efficient,agrawal2024taming,zhong2024distserve,zheng2024sglang}, \cite{zhou2024survey,zhen2025taming,pan2025survey}。
 
 这两条路线分别解决了局部问题，却都难以单独覆盖真实业务中的全部约束。端侧推理具有低时延和数据本地性优势，但受算力、内存、功耗和散热限制，很难长期承载复杂大模型和高并发服务。云侧推理资源充足、框架成熟，却必须经过网络访问，端到端时延、带宽消耗、隐私风险和服务路径依赖都会进入业务关键路径。与此同时，接入边缘、区域边缘和近用户算力节点中存在大量分散、异构且动态变化的资源，它们既无法简单等同于端侧设备，也不同于数据中心中的同构 GPU 集群。
 
-CEC（Collaborative Edge Computing，协作边缘计算）正是在这种背景下成为 LLM inference 的重要系统形态。如图~\ref{fig:collaborative-edge-computing} 所示，CEC 将泛在、地理分布的端侧与边缘设备组织为可协作的资源池，并通过 Wi-Fi 接入点、路侧单元、5G 基站和网关等基础设施连接中心云与多类终端，共同完成计算任务。CEC 并不是简单地把模型从云端搬到边缘，而是把端侧、边缘和中心云视为一个多层协同资源池，使推理请求能够根据模型规模、请求复杂度、网络状态、节点负载、隐私要求和 QoS 目标动态选择模型形态、执行位置和服务路径。端-边-云协同智能研究已经指出，多层系统的关键在于资源、链路和服务位置之间的协同，而不是单点计算能力的替换 \refcite{13}。因此，CEC LLM inference 的核心问题不再只是“如何让模型跑得更快”，而是如何在异构、分布式、动态变化的端-边-云环境中，以可控成本满足业务时延、吞吐、服务连续性和数据隐私要求。
+CEC（Collaborative Edge Computing，协作边缘计算）正是在这种背景下成为 LLM inference 的重要系统形态。如图~\ref{fig:collaborative-edge-computing} 所示，CEC 将泛在、地理分布的端侧与边缘设备组织为可协作的资源池，并通过 Wi-Fi 接入点、路侧单元、5G 基站和网关等基础设施连接中心云与多类终端，共同完成计算任务。CEC 并不是简单地把模型从云端搬到边缘，而是把端侧、边缘和中心云视为一个多层协同资源池，使推理请求能够根据模型规模、请求复杂度、网络状态、节点负载、隐私要求和 QoS 目标动态选择模型形态、执行位置和服务路径。端-边-云协同智能研究已经指出，多层系统的关键在于资源、链路和服务位置之间的协同，而不是单点计算能力的替换 \cite{duan2022distributed}。因此，CEC LLM inference 的核心问题不再只是“如何让模型跑得更快”，而是如何在异构、分布式、动态变化的端-边-云环境中，以可控成本满足业务时延、吞吐、服务连续性和数据隐私要求。
 
 \begin{figure}[htbp]
     \centering
@@ -38,7 +38,7 @@ LLM 推理本身还具有显著的状态和内存压力。Prefill 阶段会为�
 \subsection*{1.3 国内外研究现状概述}
 \addcontentsline{toc}{subsection}{1.3 国内外研究现状概述}
 
-现有研究为 CEC LLM inference 提供了多方面基础。一方面，on-device inference 关注模型压缩、低比特执行、小模型设计和端侧硬件加速，使部分请求能够在用户设备本地完成；FlexGen、Petals、HexGen 等工作则进一步展示了资源受限或异构环境下的大模型推理可以通过分层存储、协作式 block 放置和异构并行来突破单节点容量限制 \refcite{1}, \refcite{2}, \refcite{3}。另一方面，cloud/datacenter LLM serving 已经围绕 continuous batching、PagedAttention、chunked prefill、prefill/decode disaggregation、KV cache management 和多实例调度形成了较成熟的系统路线，Orca、vLLM、Sarathi-Serve、DistServe、SGLang 和 Mooncake 等系统分别代表了不同层面的关键机制 \refciterange{4}{8}, \refcite{21}。
+现有研究为 CEC LLM inference 提供了多方面基础。一方面，on-device inference 关注模型压缩、低比特执行、小模型设计和端侧硬件加速，使部分请求能够在用户设备本地完成；FlexGen~\cite{sheng2023flexgen}、Petals~\cite{borzunov2023petals}、HexGen~\cite{jiang2023hexgen} 等工作则进一步展示了资源受限或异构环境下的大模型推理可以通过分层存储、协作式 block 放置和异构并行来突破单节点容量限制。另一方面，cloud/datacenter LLM serving 已经围绕 continuous batching、PagedAttention、chunked prefill、prefill/decode disaggregation、KV cache management 和多实例调度形成了较成熟的系统路线，Orca~\cite{yu2022orca}、vLLM~\cite{kwon2023efficient}、Sarathi-Serve~\cite{agrawal2024taming}、DistServe~\cite{zhong2024distserve}、SGLang~\cite{zheng2024sglang} 和 Mooncake~\cite{qin2025mooncake} 等系统分别代表了不同层面的关键机制。
 
 边缘计算领域长期研究 task offloading、资源分配、移动性管理和网络感知调度，但传统 MEC/CEC 任务通常被抽象为给定输入大小、计算量、deadline 和能耗约束的 job。LLM inference 改变了这一抽象：推理时间取决于 prompt、输出长度、decode step、batch 状态和 KV 状态，复杂请求还可能涉及多模型、多 agent 或多阶段执行。因此，CEC LLM inference 位于 LLM serving systems 与 CEC task offloading 的交叉处，既要继承 LLM serving 中的 prefill/decode、KV Cache、batching、speculative decoding 和分布式执行问题，又要处理端-边-云资源异构、动态网络、用户移动、隐私约束和服务连续性。
 

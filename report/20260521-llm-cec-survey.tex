@@ -13,8 +13,6 @@
 \usepackage{graphicx}
 \newcommand{\tabrowrule}{\hline}
 \newcommand{\frameworkcell}[1]{\raisebox{-3.0\baselineskip}[0pt][0pt]{\parbox{0.13\textwidth}{\raggedright\arraybackslash #1}}}
-\newcommand{\refcite}[1]{\hyperlink{ref:#1}{\textcolor{blue}{[#1]}}}
-\newcommand{\refciterange}[2]{\refcite{#1}-\refcite{#2}}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{enumitem}
@@ -23,6 +21,8 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{setspace}
+\usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
+\addbibresource{sections/references.bib}
 
 \hypersetup{
     colorlinks=true,
@@ -81,7 +81,7 @@
 
 \begin{abstract}
 大语言模型推理正在从云端集中式服务走向端、边、云协同参与的分布式服务形态。随着端侧设备、接入边缘、区域边缘和中心云共同进入推理路径，系统瓶颈不再只是单个模型或单个 GPU 实例的执行效率，而是模型部署、请求调度、KV/上下文状态管理、服务路径选择和业务 QoS 之间的联合权衡。CEC 场景下的 LLM inference 因而不能简单理解为云侧 serving 能力的边缘下沉，而需要在异构资源、动态网络、用户移动、隐私边界和服务连续性约束下重新组织推理系统。
-\par 本文围绕 CEC 场景下的大语言模型推理优化展开综述。首先，本文梳理 LLM inference 的基本执行机制、问题空间和以优化对象为主轴的 Layer--Scope 分类框架，并分析 CEC 相较云侧集中式 serving 带来的优化重心迁移。在此基础上，本文重点讨论三类算法问题：其一是资源自适应的模型切分部署方法，包括 layer-wise、tensor/operator-level、expert/component-level、inference phase 以及 semantic/token-level partitioning；其二是业务感知的 batching 参数优化方法，包括 queue-level dynamic/admission batching、continuous/iteration-level batching、chunked prefill/blended batching 和 disaggregated prefill-decode batching；其三是 LLM inference task offloading，包括 request/session routing、multi-model/multi-agent workflow orchestration 以及 context/KV/runtime state migration and offloading。进一步地，本文总结三类算法之间的协同关系，讨论其在华为 Ascend 推理栈、vLLM Ascend、MindIE 和 CANN 等现有基础设施上的工程落点，并给出面向验证环境的实施路线、实验指标、baseline 设计和未来研究方向。本文旨在为云-边-端协同大模型推理系统的算法选型、实验验证和工程落地提供系统化参考。
+\par 本文围绕 CEC 场景下的大语言模型推理优化展开综述。首先，本文梳理 LLM inference 的基本执行机制、问题空间和以优化对象为主轴的 Layer--Scope 分类框架，并分析 CEC 相较云侧集中式 serving 带来的优化重心迁移。在此基础上，本文重点讨论三类算法问题：其一是资源自适应的模型切分部署方法，包括 layer-wise、tensor/operator-level、expert/component-level、inference phase 以及 semantic/token-level partitioning；其二是业务感知的 batching 参数优化方法，包括 queue-level dynamic/admission batching、continuous/iteration-level batching、chunked prefill/blended batching 和 disaggregated prefill-decode batching；其三是用户移动场景下的 LLM inference 请求调度与状态管理，包括 request/session routing、context/KV/runtime state migration and offloading，并把 multi-model/multi-agent workflow orchestration 作为相关扩展问题讨论。进一步地，本文总结三类算法之间的协同关系，讨论其在华为 Ascend 推理栈、vLLM Ascend、MindIE 和 CANN 等现有基础设施上的工程落点，并给出面向验证环境的实施路线、实验指标、baseline 设计和未来研究方向。本文旨在为云-边-端协同大模型推理系统的算法选型、实验验证和工程落地提供系统化参考。
 \end{abstract}
 
 \clearpage
