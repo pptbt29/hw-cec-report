@@ -260,12 +260,12 @@ LLM inference 与普通计算任务的另一个关键区别在于运行时状态
 \end{longtable}
 \endgroup
 
-图~\ref{fig:ch6-mobility-offloading-workflow} 给出了本方案从状态采集、预测、可行性过滤、长期路由到 KV 管理和在线反馈的完整流程。
+图~\ref{fig:ch6-mobility-offloading-workflow} 给出了单个 request 到达后的在线处理流程：系统从 request 中提取用户、prompt 和 SLA 信息，分别用于移动预测、输出长度预测和动作枚举；同时从 CEC 系统和 KV context manager 读取节点负载、链路带宽、显存水位与 KV block 状态。预测结果和系统状态先汇入 state builder，再由 per-action estimator 对每个候选动作估计通信、KV 同步/重算、prefill、decode 和显存开销；候选动作经过 E2E SLA 与 Memory/KV 过滤后形成 feasible actions，最终由 Double DQN router 在可行动作中选择长期价值最优动作，并通过执行反馈更新 replay buffer。
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/ch6_mobility_offloading_workflow.pdf}
-\caption{\textbf{面向用户移动的长期 LLM 请求卸载与 KV 管理流程。}上层路由器联合选择计算节点与 KV 获取方式，底层 KV manager 负责版本化多副本、缓存管理以及部分迁移与部分重算的混合恢复。}
+\caption{\textbf{单个请求到达后的长期成本感知卸载决策流程。}Request 被拆分为用户信息、prompt 信息和 SLA 信息：用户信息进入 mobility predictor 得到未来入口分布，prompt 信息进入 output length predictor 得到 decode 长度估计，SLA 作为动作过滤约束。CEC system state 与 KV context manager 提供节点负载、链路带宽、显存和 KV block 位置/版本等状态。State builder 将上述信息组合为决策输入；action enumerator 枚举“计算节点 + KV 获取方式”候选，per-action estimator 逐动作估计通信、KV 同步/重算、prefill、decode 和显存开销。E2E SLA filter 与 Memory/KV filter 先剔除不可行动作，Double DQN router 再在 feasible actions 中比较长期成本并输出 final action。环境执行后的实际时延、输出长度、KV 增量和显存变化写入 replay buffer，用于更新预测器、估计器和路由策略。}
 \label{fig:ch6-mobility-offloading-workflow}
 \end{figure}
 
