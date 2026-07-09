@@ -219,7 +219,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 
 \begin{itemize}
     \item \textbf{LLM 推理任务的卸载挑战。} 输出长度是主要不确定来源。调度器在 request 到达时只能观测 prompt、上下文和业务 SLA，无法预知模型最终生成多少 token。输出长度决定 decode 时间、E2E latency、返回流量和峰值显存压力，也决定本轮新增 KV blocks 的规模。低估输出长度可能导致 SLA violation 或显存不足；过度保守则会降低并发和资源利用率。同时，LLM session 具有强历史依赖，后续 request 的 prefill 成本、状态准备成本和可行动作集合都与此前保留的 KV cache 有关。
-    \item \textbf{用户移动性下的状态位置挑战。} 现有 CEC 移动任务卸载研究多面向普通计算任务，主要处理接入链路变化、任务迁移和结果回传路径。LLM 推理任务在移动场景下还需要处理历史状态的位置问题：当用户在多轮 session 中从一个基站覆盖区移动到另一个覆盖区时，后续 request 的入口节点发生变化，而历史 KV cache 可能仍保留在旧计算节点。系统因此需要同时决定当前计算节点和 KV 获取方式，即就地复用、跨节点同步或在目标节点重算。
+    \item \textbf{用户移动性下的状态位置挑战。} 现有 CEC 移动任务卸载研究多面向普通计算任务，主要处理接入链路变化、任务迁移和结果回传路径；已有 LLM 推理调度工作则更多关注静态或低移动性的服务集群，尚未充分讨论多基站 CEC 中用户移动、session 连续性和 KV 状态位置之间的耦合关系。对于 LLM 推理任务，移动性不仅改变后续 request 的入口节点，还会改变历史 KV cache 与未来请求入口之间的相对位置：当用户在多轮 session 中从一个基站覆盖区移动到另一个覆盖区时，历史 KV cache 可能仍保留在旧计算节点。系统因此需要同时决定当前计算节点和 KV 获取方式，即就地复用、跨节点同步或在目标节点重算。
 \end{itemize}
 
 \subsubsection*{6.4.2 耦合关系与方案概览}
@@ -227,18 +227,19 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 
 上述两个挑战相互交织，使得调度策略难以用单次 request 的局部最优来刻画。移动性决定未来 request 从哪里进入系统，输出长度决定当前 request 生成多少新的 KV state；二者共同影响未来 KV cache 与请求入口之间的相对位置、同步字节数、显存压力和 SLA 风险。若仅优化当前 request，系统可能得到较低即时成本，却在后续多轮中产生额外状态同步或重算开销。因此，本节将 CEC LLM request offloading 建模为面向 session 的长期成本优化问题。
 
-本文采用“预测--过滤--长期决策”的在线调度框架。先用预测模型刻画移动性和输出长度不确定性，再用显式约束过滤不可行动作，最后在可行动作集合中进行长期价值比较：
+本文采用“预测感知调度--显式可行性过滤--分布式 KV 管理”协同框架。调度层利用移动预测和输出长度预测构造长期价值输入，在满足 SLA、显存和 KV 可用性约束的动作集合中选择计算节点与 KV 获取方式；KV 管理层则将调度结果落实到 block 级状态查询、同步、复用、重算和副本维护，从而同时优化当前 request 的服务质量和后续 session 的状态复用成本：
 \begin{itemize}
-    \item \textbf{面向移动性的状态预测。} Mobility predictor 根据用户历史轨迹、当前入口节点和相邻 request 间隔预测未来入口分布，使调度器能够感知后续 request 可能访问历史状态的位置。
-    \item \textbf{面向输出长度的资源预测。} Output length predictor 根据 prompt、上下文长度、任务类型和会话历史预测输出长度分布，使 decode 时间、返回流量、显存压力和新增 KV 规模在决策阶段提前进入估计。
-    \item \textbf{面向 KV 状态的联合动作。} 调度器将“计算节点 + KV 获取方式”作为联合动作，其中 KV 获取方式包括 reuse、sync 和 recompute，从而把状态复用、状态同步和状态重算显式纳入卸载决策。
-    \item \textbf{面向长期成本的安全决策。} 系统根据 E2E SLA、显存余量、节点可用性和 KV 版本一致性生成 action mask；Double DQN 只在可行动作集合中比较长期成本，从而同时考虑当前服务质量和后续 KV 复用代价。
+    \item \textbf{不确定性感知的状态预测。} Mobility predictor 根据用户历史轨迹、当前入口节点和相邻 request 间隔预测未来入口分布；Output length predictor 根据 prompt、上下文长度、任务类型和会话历史预测输出长度分布。二者分别刻画未来请求入口和 decode 长度不确定性，使状态位置、返回流量、显存压力和新增 KV 规模在决策阶段提前进入估计。
+    \item \textbf{约束感知的长期路由决策。} 调度器将“计算节点 + KV 获取方式”作为联合动作，把请求路由与 KV reuse、sync、recompute 选择放入同一固定动作空间。随后，系统根据 E2E SLA、显存余量、节点可用性和 KV 版本一致性构造可行动作集合，将明显违反服务约束或状态约束的动作提前屏蔽；Double DQN 对固定动作全集输出长期成本估计，但只在未被 mask 的候选中比较和选择动作，使策略在保证当前请求可服务的前提下，进一步选择对后续 session 状态复用更有利的执行位置和 KV 获取方式。
+    \item \textbf{面向执行效率的 KV 管理。} KV manager 在底层维护 block directory 和版本化副本，将上层动作落实为 block 级查询、同步、保留/驱逐和混合恢复；其中混合恢复可让部分 KV 同步与部分上下文重算流水重叠，以减少通信或计算单独等待造成的 bubble，并可结合移动预测进行 proactive placement。
 \end{itemize}
 
 \subsubsection*{6.4.3 系统场景与在线处理流程}
 \addcontentsline{toc}{subsubsection}{6.4.3 系统场景与在线处理流程}
 
 本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于一个 LLM session，实际 request 数量在在线服务时通常未知；下文用 \(K\) 表示分析窗口内的 session 长度。系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
+
+为了支撑分布式路由，系统后台维护一个 CEC network/state info manager，可实现为逻辑上的共享元数据目录而非集中式调度器。每个推理节点周期性上报本地队列长度、GPU 显存余量、KV cache 水位、模型/adapter 可用性和执行统计；网络监测模块上报节点间有效带宽、RTT、链路拥塞和可用性；KV manager 则同步 prefix hash、block 版本、block 大小和所在节点等目录信息。入口节点的 router 在 request 到达时读取该目录的最近快照，构造 \(\mathbf L_k,\mathbf M_k,\mathbf W_k\) 和 \(\mathcal C_k\)，并将其用于 per-action estimator、SLA/memory/KV 过滤以及 Double DQN 的状态输入。由于该目录以周期性快照工作，读到的状态可能存在 staleness，因此过滤条件中的安全裕量 \(\Delta_k(a)\) 需要吸收状态同步延迟和测量误差。
 
 \textbf{主要符号。}
 \begingroup
@@ -258,11 +259,11 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \(i,j,n,s\) & 入口节点、目标/计算节点、一般节点和 KV 同步源节点索引 \\
 \(U_k,J_k,\Delta\tau_k\) & 当前入口、所选计算节点和相邻请求间隔 \\
 \(P_{ij}(\Delta\tau_k),b_k\) & 入口转移概率和多步移动预测分布 \\
-\(x_k,Y_k,\rho_k(y),\widehat Y_k^{(p)}\) & 请求特征、实际输出长度、长度预测分布和第 \(p\) 分位预测 \\
+\(x_k,Y_k,Y_k^{\mathrm{obs}},\rho_k(y),\widehat Y_k^{(p)}\) & 请求特征、实际/观测输出长度、长度预测分布和第 \(p\) 分位预测 \\
 \(\mathcal B_k,\mathcal B_{k,n}\) & 当前完整 KV block 集合和节点 \(n\) 已有 block 集合 \\
 \(v_{k,n},\mathcal C_k\) & 节点 \(n\) 的最高连续 KV 版本和版本化多副本状态，用于 KV 可用性检查 \\
 \(\mathcal M_{k,j},q_b,\Delta\mathcal B_k\) & 节点 \(j\) 缺失 blocks、block \(b\) 的大小和本轮新增 blocks \\
-\(\psi_k^{\mathrm{cache}},G,H\) & KV 副本保留/驱逐策略、KV 状态转移函数和完整系统状态转移函数 \\
+\(\psi_k^{\mathrm{cache}},H\) & KV 副本保留/驱逐策略和完整系统状态转移函数 \\
 \(a_k=(J_k,Z_k)\) & 计算节点与 KV 获取方式组成的联合动作 \\
 \(a,a',y,u'\) & 当前候选动作、下一候选动作、输出长度取值和下一入口节点取值 \\
 \(Z_k\) & KV 获取方式：\(\mathrm{reuse}\)、\(\mathrm{sync}\) 或 \(\mathrm{recompute}\) \\
@@ -275,7 +276,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \(T_k^{\mathrm{comm}},T_k^{\mathrm{state}},T_k^{\mathrm{prefill}}\) & 请求通信、KV 状态准备和 prefill 时间 \\
 \(T_k^{\mathrm{queue}},T_k^{\mathrm{decode}},T_k^{\mathrm{return}}\) & 排队、decode 和结果返回时间 \\
 \(T_k^{\mathrm{E2E}}\) & 从请求发出到全部输出返回的端到端时延 \\
-\(C_k^{\mathrm{eviction}},w_1,\ldots,w_4,c_k\) & 跨 session KV 驱逐外部性、成本权重和当前期望成本 \\
+\(C_k^{\mathrm{eviction}},w_1,\ldots,w_4,\bar c_k,c_k\) & 跨 session KV 驱逐外部性、成本权重、条件即时成本和当前期望成本 \\
 \(\widehat T_k^{\mathrm{E2E}},\Delta_k(a),SLA_k\) & 预测端到端时延、动作时延安全裕量和请求 SLA 上限 \\
 \(\widehat M_k,M^{\mathrm{reserve}},M_{J_k}^{\mathrm{free}}\) & 预测显存需求、安全预留显存和计算节点剩余显存 \\
 \(s_k,s_{k+1}^{a,y,u'},s_{k+1}^{\mathrm{obs}}\) & 当前系统状态、模型化下一状态和观测下一状态 \\
@@ -293,7 +294,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/ch6_mobility_offloading_workflow.pdf}
-\caption{\textbf{单个请求到达后的长期成本感知卸载决策流程。}Request 被拆分为用户信息、prompt 信息和 SLA 信息：用户信息进入 mobility predictor 生成未来入口分布，prompt 信息进入 output length predictor 估计 decode 长度，CEC system state 与 KV context manager 分别提供节点负载、链路带宽、剩余显存以及 KV block 位置/版本等运行状态。State builder 将移动预测、长度预测、SLA、系统遥测和 KV 状态汇聚为 feature bundle；action enumerator 枚举“计算节点 + KV 获取方式”候选，per-action estimator 对每个候选动作估计请求传输、KV 同步/重算、prefill、decode 和显存占用。E2E SLA filter 与 Memory/KV filter 先处理时延、显存和 KV 可用性等硬约束，得到 feasible actions 作为 DQN action mask；Double DQN router 只在可行动作中比较长期成本并输出 final action。环境执行后的实际 E2E 时延、输出长度、KV 增量、传输量和显存变化写入 replay buffer，用于回传更新预测器、估计器和路由策略。}
+\caption{\textbf{单个请求到达后的长期成本感知卸载决策流程。}Request 被拆分为用户信息、prompt 信息和 SLA 信息：用户信息进入 mobility predictor 生成未来入口分布，prompt 信息进入 output length predictor 估计 decode 长度，CEC network/state info manager 与 KV context manager 分别提供节点负载、链路带宽、剩余显存以及 KV block 位置/版本等运行状态。State builder 将移动预测、长度预测、SLA、系统遥测和 KV 状态汇聚为 feature bundle；action enumerator 枚举“计算节点 + KV 获取方式”候选，per-action estimator 对每个候选动作估计请求传输、KV 同步/重算、prefill、decode 和显存占用。E2E SLA filter 与 Memory/KV filter 先处理时延、显存和 KV 可用性等硬约束，得到 feasible actions 作为 DQN action mask；Double DQN router 对固定动作全集输出长期成本估计，并通过 action mask 只在可行动作中比较和输出 final action。环境执行后的实际 E2E 时延、输出长度、KV 增量、传输量和显存变化写入 replay buffer，用于回传更新预测器、估计器和路由策略。}
 \label{fig:ch6-mobility-offloading-workflow}
 \end{figure}
 
@@ -306,7 +307,19 @@ P_{ij}(\Delta\tau_k)
 =
 \Pr(U_{k+1}=j\mid U_k=i,\Delta\tau_k).
 \]
-固定请求间隔时可采用 Markov chain，间隔变化较大时可采用 continuous-time 或 semi-Markov 模型；LSTM 或 Transformer 则输出多步入口分布 \(b_k\)。这一设计借鉴 MGCO 对历史决策和未来移动状态的利用 \cite{ghosh2025mgco}。输出 token 数 \(Y_k\) 在决策时未知，由预测器给出 \(\rho_k(y)=\Pr(Y_k=y\mid x_k)\)；类似的长度预测已用于不可预测请求调度 \cite{li2025cloud}。长度预测不仅用于当前请求的 E2E latency 和显存需求估计，也进入动作价值评估：长输出会增加 decode 时间、返回流量、KV 增量和后续显存压力，从而改变 DQN 对不同计算节点与 KV 获取方式的偏好。
+固定请求间隔时可采用 Markov chain，间隔变化较大时可采用 continuous-time 或 semi-Markov 模型；LSTM 或 Transformer 则输出多步入口分布 \(b_k\)。这一设计借鉴 MGCO 对历史决策和未来移动状态的利用 \cite{ghosh2025mgco}。
+
+输出 token 数 \(Y_k\) 在决策时未知，长度预测器根据请求特征 \(x_k\) 给出回复长度分布
+\[
+\rho_k(y)
+=
+\Pr(Y_k=y\mid x_k),
+\qquad
+\widehat Y_k^{(p)}
+=
+\inf\left\{y:\sum_{\ell\le y}\rho_k(\ell)\ge p\right\}.
+\]
+其中 \(\widehat Y_k^{(p)}\) 是第 \(p\) 分位长度预测，用于 SLA 与显存等硬约束过滤；完整分布 \(\rho_k\) 则用于长期价值估计。类似的长度预测已用于不可预测请求调度 \cite{li2025cloud}。长度预测不仅用于当前请求的 E2E latency 和显存需求估计，也进入动作价值评估：长输出会增加 decode 时间、返回流量、KV 增量和后续显存压力，从而改变 DQN 对不同计算节点与 KV 获取方式的偏好。
 
 KV 允许存在多个版本化副本：
 \[
@@ -324,13 +337,7 @@ KV 允许存在多个版本化副本：
 a_k=(J_k,Z_k),\qquad
 Z_k\in\{\mathrm{reuse},\mathrm{sync},\mathrm{recompute}\},
 \]
-其中 \(J_k\) 是计算节点，\(Z_k\) 是该节点获取 KV 的方式。若 \(U_k\ne J_k\)，请求自动转发；存在多个副本时，系统自动选择同步时间最短的源节点。例如 KV 在 A、用户当前位于 B，但预测其即将到达 C，策略可以选择 \((C,\mathrm{sync})\) 或 \((C,\mathrm{recompute})\)，使当前请求直接在 C 执行。请求完成后的状态转移为
-\[
-\mathcal C_{k+1}
-=
-G(\mathcal C_k,a_k,Y_k,\Delta\mathcal B_k(a_k,Y_k),\psi_k^{\mathrm{cache}}).
-\]
-\(\mathrm{reuse}\) 仅在目标节点 \(J_k\) 已经持有当前请求所需的连续 KV prefix 或 blocks 时可行；若目标节点缺失必要 block，则该节点只能选择 \(\mathrm{sync}\) 或 \(\mathrm{recompute}\)。因此下一轮 KV 状态不仅取决于 cache policy，也取决于本轮选择的 \(a_k\)、真实输出长度 \(Y_k\) 以及由此产生的 KV 增量 \(\Delta\mathcal B_k(a_k,Y_k)\)。
+其中 \(J_k\) 是计算节点，\(Z_k\) 是该节点获取 KV 的方式。若 \(U_k\ne J_k\)，请求自动转发；存在多个副本时，系统自动选择同步时间最短的源节点。由于动作价值同时考虑当前入口、预测未来入口和 KV 状态位置，策略可以选择并非当前入口最近的计算节点，以减少后续多轮 request 的状态同步或重算成本。\(\mathrm{reuse}\) 仅在目标节点 \(J_k\) 已经持有当前请求所需的连续 KV prefix 或 blocks 时可行；若目标节点缺失必要 block，则该节点只能选择 \(\mathrm{sync}\) 或 \(\mathrm{recompute}\)。
 
 请求通信、KV 状态准备和 prefill 时间分别为
 \[
@@ -373,17 +380,21 @@ T_k^{\mathrm{E2E}}
 &+T_k^{\mathrm{decode}}(Y_k)+T_k^{\mathrm{return}}(Y_k),
 \end{array}
 \]
-它已经包含首 token 响应阶段。由于输出长度未知，决策时的即时成本定义为
+它已经包含首 token 响应阶段。给定输出长度 \(y\) 时，动作 \(a_k\) 的条件即时成本定义为
+\[
+\bar c_k(s_k,a_k,y)
+=
+w_1T_k^{\mathrm{E2E}}(s_k,a_k,y)
++w_2D_k^{\mathrm{request}}(a_k,y)
++w_3D_k^{\mathrm{KV}}(a_k)
++w_4C_k^{\mathrm{eviction}}(a_k).
+\]
+由于输出长度未知，决策时的当前期望成本为
 \[
 c_k(s_k,a_k)
 =
 \mathrm E_{Y_k\sim\rho_k}
-\left[
-w_1T_k^{\mathrm{E2E}}(s_k,a_k,Y_k)
-+w_2D_k^{\mathrm{request}}(a_k,Y_k)
-+w_3D_k^{\mathrm{KV}}(a_k)
-+w_4C_k^{\mathrm{eviction}}(a_k)
-\right].
+\left[\bar c_k(s_k,a_k,Y_k)\right].
 \]
 其中 \(T_k^{\mathrm{E2E}}\) 衡量完整请求时延；\(D_k^{\mathrm{request}}\) 是入口与计算节点不同时传输的输入及输出字节数；\(D_k^{\mathrm{KV}}\) 是为当前动作同步的 KV 字节数；\(C_k^{\mathrm{eviction}}\) 衡量当前动作占用显存并驱逐其他 session 的 KV blocks 后，对后续请求造成的额外 recompute、CPU memory swap-in 或远端同步开销。权重 \(w_1,\ldots,w_4\) 用于完成单位归一化并反映时延、带宽和跨 session 缓存外部性的重要性。请求完成后，系统用实际 \(Y_k\) 和实测开销生成 replay 样本。
 
@@ -399,7 +410,7 @@ a:
 \quad \chi_k^{\mathrm{KV}}(a)=1
 \right\},
 \]
-其中 \(\mathcal N_k^{\mathrm{avail}}\) 表示当前可用且部署了匹配模型/adapter 版本的节点集合，\(\chi_k^{\mathrm{KV}}(a)\) 表示 KV 获取方式的版本与 block 可用性检查：\(\mathrm{reuse}\) 要求 \(J_k\) 已有所需连续 prefix/blocks，\(\mathrm{sync}\) 要求至少存在可同步的版本一致副本且链路可用，\(\mathrm{recompute}\) 要求目标节点可访问完整上下文并有足够计算与显存余量。高分位预测用于降低输出长度低估造成的 SLA violation 与显存不足，并使长输出引发的 decode 时间、KV 增量和后续缓存压力在动作过滤与价值估计中提前体现。
+其中 \(\mathcal N_k^{\mathrm{avail}}\) 表示当前可用且部署了匹配模型/adapter 版本的节点集合，\(\chi_k^{\mathrm{KV}}(a)\) 表示 KV 获取方式的版本与 block 可用性检查：\(\mathrm{reuse}\) 要求 \(J_k\) 已有所需连续 prefix/blocks，\(\mathrm{sync}\) 要求至少存在可同步的版本一致副本且链路可用，\(\mathrm{recompute}\) 要求目标节点可访问完整上下文并有足够计算与显存余量。本文对输出长度采用分层处理：可行动作过滤使用高分位预测 \(\widehat Y_k^{(p)}\)，以降低输出长度低估造成的 SLA violation 与显存不足；长期价值估计则保留长度分布 \(\rho_k\)，对不同输出长度造成的即时成本和下一状态变化取期望，避免策略过度保守。
 
 Greedy baseline 仅在可行动作中选择当前成本最低者：
 \[
@@ -427,33 +438,35 @@ s_k=
 \mathrm{s.t.}\quad&
 a_k=\pi(s_k),\quad a_k\in\mathcal A_k^F(s_k),\\
 &U_{k+1}\sim P(\cdot\mid U_k,\Delta\tau_k),\\
-&Y_k\sim\rho_k(\cdot\mid x_k),\\
-&\mathcal C_{k+1}
-=G(\mathcal C_k,a_k,Y_k,\Delta\mathcal B_k(a_k,Y_k),\psi_k^{\mathrm{cache}}).
+&Y_k\sim\rho_k(\cdot\mid x_k).
 \end{array}
 \]
-其中 \(c_k(s_k,a_k)\) 已对当前输出长度取条件期望。为避免公式过长，记
+其中 \(c_k(s_k,a_k)\) 是对当前输出长度分布取期望后的即时成本。为避免在优化问题中展开完整系统动力学，记
 \[
 s_{k+1}^{a,y,u'}
 =
 H(s_k,a_k,y,u',\Delta\mathcal B_k(a_k,y),\psi_k^{\mathrm{cache}})
 \]
-为在当前动作 \(a_k\)、实际输出长度 \(y\)、下一入口 \(u'\) 和 KV 增量共同作用后的下一状态。对应的理论最优状态--动作价值满足
+为在当前动作 \(a_k\)、实际输出长度 \(y\)、下一入口 \(u'\) 和 KV 增量共同作用后的下一状态。该转移函数内部同时更新入口节点、负载、显存、链路状态和版本化 KV 状态；其中 KV 状态由本轮动作、真实输出长度、新增 KV blocks 以及副本保留/驱逐策略共同决定。对应的理论最优状态--动作价值满足
 \[
 \begin{array}{rl}
 \mathcal Q^*(s_k,a_k)
-={}&c_k(s_k,a_k)\\
-&\displaystyle
-+\gamma\sum_y\rho_k(y)
+={}&\displaystyle
+\sum_y\rho_k(y)
+\left[
+\bar c_k(s_k,a_k,y)\right.\\
+&\displaystyle\left.
++\gamma
 \sum_{u'\in\mathcal N}
 P_{U_ku'}(\Delta\tau_k)
 \min_{a'\in\mathcal A_{k+1}^F(s_{k+1}^{a,y,u'})}
-\mathcal Q^*(s_{k+1}^{a,y,u'},a').
+\mathcal Q^*(s_{k+1}^{a,y,u'},a')
+\right].
 \end{array}
 \]
-移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；输出长度不仅影响当前 decode 和显存，还通过 \(\Delta\mathcal B_k(a_k,Y_k)\) 改变后续 KV 分布，所以优化对象是整个 session，而非单次最低时延。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
+移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；输出长度不仅影响当前 decode 和显存，还通过 \(\Delta\mathcal B_k(a_k,Y_k)\) 改变后续 KV 分布。上述 Bellman 形式把条件即时成本和下一状态价值放在同一个 \(\rho_k(y)\) 期望中，因此单位始终为 cost；而 action mask 中的 \(\widehat Y_k^{(p)}\) 只用于硬约束过滤。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
 
-上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；但是一般场景中同一 session 的 request 数量 \(K\) 不确定，且存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。DQN 对所有固定动作输出 Q 值，在执行 \(\arg\min\) 前将 \(a\notin\mathcal A_k^F(s_k)\) 的 Q 值置为 \(+\infty\)；
+上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；但是一般场景中同一 session 的 request 数量 \(K\) 不确定，且存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。由于本文动作空间由候选计算节点和三类 KV 获取方式构成，规模固定且较小，DQN 对所有固定动作输出 Q 值；在执行 \(\arg\min\) 或构造下一状态目标时，将 \(a\notin\mathcal A_k^F(s_k)\) 的 Q 值置为 \(+\infty\)，使不可行动作不参与选择。
 
 Replay buffer 中记录的是执行后的实际转移 \(s_{k+1}^{\mathrm{obs}}\)，其中已经包含本轮真实 \(Y_k\)、KV 增量、显存变化和下一入口。Double DQN 在该观测下一状态上先用在线网络选择动作，再用目标网络评价：
 \[
@@ -465,18 +478,22 @@ V_{k+1}
 ={}&\mathcal Q_{\bar\theta}
 (s_{k+1}^{\mathrm{obs}},a_{k+1}^{\mathrm{sel}}),\\
 z_k
-={}&c_k(s_k,a_k)
+={}&\bar c_k(s_k,a_k,Y_k^{\mathrm{obs}})
 +\gamma V_{k+1}.
 \end{array}
 \]
-即训练目标等于“当前成本 + 折扣后的观测下一状态价值”；若采用模型化 roll-out，也可用上式中的 \(\sum_y\rho_k(y)\sum_{u'}P_{U_ku'}\) 对下一状态取期望。在线动作则为 \(a_k^*=\arg\min_{a\in\mathcal A_k^F(s_k)}\mathcal Q_\theta(s_k,a)\)。若模型异常则回退至可行动作中的 Greedy 方案；若集合为空，则排队、降级或拒绝。
+即 replay 训练目标等于“观测输出长度下的即时成本 + 折扣后的观测下一状态价值”。若采用模型化 roll-out，则不使用单个观测下一状态，而是按照 Bellman 式对输出长度 \(y\) 和下一入口 \(u'\) 共同取期望，同时计算对应的 \(\bar c_k(s_k,a_k,y)\) 与下一状态价值。在线动作则为 \(a_k^*=\arg\min_{a\in\mathcal A_k^F(s_k)}\mathcal Q_\theta(s_k,a)\)。若模型异常则回退至可行动作中的 Greedy 方案；若集合为空，则排队、降级或拒绝。
 
 \subsubsection*{6.4.7 分布式 KV 管理}
 \addcontentsline{toc}{subsubsection}{6.4.7 分布式 KV 管理}
 
-借鉴 Mooncake 的 KVCache-centric 全局存储思想 \cite{qin2025mooncake}，系统建立分布式 block directory，记录 model/adapter 版本、prefix hash、token 区间、block 版本、大小和所在节点。执行 \(\mathrm{sync}\) 前，目标节点先查询已有 blocks，系统根据 \(\mathcal M_{k,J_k}\) 选择一个或多个源节点，并将缺失部分直接传至计算节点；这也吸收了 prefill/decode 分离系统中 KV handoff 的思路 \cite{zhong2024distserve}。同步不等于删除：源 blocks 继续保留，直至 cache policy 根据 TTL、显存压力、未来入口与复用概率、增量同步收益和重建成本决定驱逐。
+KV manager 是上层卸载策略和底层 KV runtime 之间的执行层。上层 RL 只决定“计算节点 + KV 获取方式”，而 KV manager 负责把 \(\mathrm{reuse}\)、\(\mathrm{sync}\) 和 \(\mathrm{recompute}\) 落到 block 级目录查询、源节点选择、状态传输和副本管理上。借鉴 Mooncake 的 KVCache-centric 全局存储思想 \cite{qin2025mooncake}，系统建立分布式 block directory，记录 model/adapter 版本、prefix hash、token 区间、block 版本、大小和所在节点。执行 \(\mathrm{sync}\) 前，目标节点先查询已有 blocks，只对缺失部分选择一个或多个源节点并传至计算节点；这也吸收了 prefill/decode 分离系统中 KV handoff 的思路 \cite{zhong2024distserve}。同步不等于删除，源 blocks 会继续保留，直至 cache policy 根据 TTL、显存压力、未来入口与复用概率、增量同步收益和重建成本决定驱逐。
 
-KV manager 还可以在不扩大 RL 动作空间的情况下，把一次 \(\mathrm{sync}\) 细化为“部分迁移 + 部分重算”。在依赖关系允许时，系统只从其他节点迁移带宽开销较低或重算代价较高的缺失 blocks；其余缺失 blocks 则从目标节点已有的连续 prefix/checkpoint 开始重算。迁移与重算可按 block 流水并行，使计算 bubble 尽量覆盖通信 bubble。该机制不改变上层动作定义，仍表现为 \((J_k,\mathrm{sync})\)，但 KV manager 会用实际状态准备时间和实际迁移字节数替换基础全量同步估计。由此，Mooncake 的集群级 KV 管理被扩展为面向用户移动的版本化多副本与混合恢复管理。
+在被动执行上层动作之外，KV manager 还可以利用移动预测做 proactive KV placement。具体而言，系统可根据未来入口分布、session continuation probability 和 block 复用概率，提前把高价值 KV blocks 复制到未来更可能访问的计算节点，或放置到与这些节点网络距离更近的邻近节点/共享存储中。这样后续 request 到达时可以直接 reuse，或只需要少量增量同步，从而把原本位于实时路径上的 recompute 和大规模迁移提前到后台完成。Mooncake 将 CPU/DRAM/SSD/RDMA 组织为全局 KVCache Store，并按 KV 本地性、节点负载和 SLO 调度请求 \cite{qin2025mooncake}；在 CEC 场景中，这一思路进一步与用户移动预测结合，形成面向未来入口的 KV 预放置。
+
+当显存或链路成为瓶颈时，KV manager 还负责 KV 生命周期管理。热 blocks 优先保留在 GPU memory，温/冷 blocks 可下沉到 CPU memory、远端内存或本地存储；跨节点同步前，可对低复用概率或可容忍精度损失的 KV 进行压缩或量化，以减少传输字节数和显存占用。相关 KV compression/streaming 工作如 CacheGen 说明，压缩 KV cache 可以降低长上下文服务中的状态传输与存储成本 \cite{liu2024cachegen}。对于质量约束允许的场景，KV manager 还可以结合 token importance、attention score 或 session 摘要，对低价值 token/block 做剪枝或降精度保留。
+
+最后，KV manager 可以把一次上层 \(\mathrm{sync}\) 动作细化为混合恢复：对带宽开销较低或重算代价较高的缺失 blocks 执行迁移，对其余 blocks 从目标节点已有的连续 prefix/checkpoint 开始重算。两类操作不必串行完成，系统可以按 block 组织流水，使远端 KV 同步、局部 recompute 和后续 prefill/decode 尽量重叠，从而减少单纯等待传输或等待重算造成的 bubble。上述机制均不扩大上层 RL 动作空间，但会改变实际 \(D_k^{\mathrm{KV}}\)、\(C_k^{\mathrm{eviction}}\) 和状态准备时间；这些观测结果会回写到成本模型和 replay buffer，使后续路由逐步学习到不同 KV 管理策略的真实收益。
 
 \subsubsection*{6.4.8 在线闭环与实验设置}
 \addcontentsline{toc}{subsubsection}{6.4.8 在线闭环与实验设置}
@@ -489,10 +506,10 @@ KV manager 还可以在不扩大 RL 动作空间的情况下，把一次 \(\math
 \subsection*{6.5 小结}
 \addcontentsline{toc}{subsection}{6.5 小结}
 
-总体来看，CEC 中的 LLM inference task offloading 已超出传统“数据量、CPU cycles 与 deadline”驱动的节点选择问题。系统既要路由完整请求和连续 session，也要编排多模型/多 agent workflow，并管理 context、prefix cache、KV cache 和 agent memory。用户移动进一步改变请求入口、网络路径和历史状态位置，使一次卸载动作持续影响后续多轮服务。
+总体来看，CEC 中的 LLM inference task offloading 已超出传统“数据量、CPU cycles 与 deadline”驱动的节点选择问题。系统既要路由完整请求和连续 session，也要编排多模型/多 agent workflow，并管理 context、prefix cache、KV cache 和 agent memory。用户移动进一步改变请求入口、网络路径和历史状态位置；输出长度不确定性则影响 decode 时间、返回流量、显存占用和新增 KV 规模。二者共同使一次卸载动作持续影响后续多轮服务。
 
 现有研究呈现三条主线：request/session routing 从就近执行转向质量、SLA、队列和显存联合感知；multi-model/multi-agent orchestration 从单模型选择扩展到角色、模型、工具和中间状态的跨节点编排；runtime-state management 则将 KV 和 context 视为可驻留、复制、同步、驱逐或重算的系统资源。三者共同表明，LLM 卸载需要从 computation-aware 走向 computation-state co-optimization。
 
-面向项目场景，本章构建“状态同步--长度与移动预测--显式可行性过滤--RL 长期路由--block-level KV 管理--在线反馈”的闭环。移动概率和输出长度分布共同进入未来成本估计；KV 状态由各节点的 blocks 与版本共同描述，同步后是否删除源副本由 cache policy 决定。动作掩码 Double DQN 在满足 SLA、显存和版本一致性的候选中，联合选择计算节点与 reuse、sync 或 recompute 方式，从而避免 Greedy 策略的状态黏附和无效数据移动。
+面向项目场景，本章构建“状态同步--长度与移动预测--显式可行性过滤--RL 长期路由--block-level KV 管理--在线反馈”的闭环。CEC network/state info manager 为过滤和决策提供负载、链路、显存与 KV 目录快照；移动概率和输出长度分布共同进入长期价值估计，其中输出长度高分位用于 SLA/显存等硬约束过滤，完整长度分布用于 Bellman 期望。动作掩码 Double DQN 在满足 SLA、显存、节点可用性和 KV 版本一致性的候选中，联合选择计算节点与 reuse、sync 或 recompute 方式，从而避免 Greedy 策略的状态黏附和无效数据移动。
 
-后续工作可进一步研究请求执行期间 handover、多用户资源竞争、prefill/decode 分离和 CEC-native agent workflow，并探索移动与输出长度预测同卸载 regret 的联合训练。由此，CEC 中的 LLM inference offloading 将从单次执行位置选择发展为面向请求、workflow 和版本化运行时状态的长期协同优化。
+KV 管理层则把上层动作落实到 block directory 查询、缺失 blocks 同步、副本保留/驱逐和混合恢复等机制，并可进一步结合移动预测进行 proactive placement、KV 压缩/量化和低价值 block 剪枝。后续工作可进一步研究请求执行期间 handover、多用户资源竞争、prefill/decode 分离和 CEC-native agent workflow，并探索移动与输出长度预测同卸载 regret 的联合训练。由此，CEC 中的 LLM inference offloading 将从单次执行位置选择发展为面向请求、workflow 和版本化运行时状态的长期协同优化。
