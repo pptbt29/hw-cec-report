@@ -237,7 +237,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \subsubsection*{6.4.3 系统场景与在线处理流程}
 \addcontentsline{toc}{subsubsection}{6.4.3 系统场景与在线处理流程}
 
-本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于一个 LLM session，实际 request 数量在在线服务时通常未知；下文用 \(K\) 表示分析窗口内的 session 长度。系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
+本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于一个 LLM session，实际 request 数量在在线服务时通常未知。系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
 
 为了支撑分布式路由，系统后台维护一个 CEC network/state info manager，可实现为逻辑上的共享元数据目录而非集中式调度器。每个推理节点周期性上报本地队列长度、GPU 显存余量、KV cache 水位、模型/adapter 可用性和执行统计；网络监测模块上报节点间有效带宽、RTT、链路拥塞和可用性；KV manager 则同步 prefix hash、block 版本、block 大小和所在节点等目录信息。入口节点的 router 在 request 到达时读取该目录的最近快照，构造 \(\mathbf L_k,\mathbf M_k,\mathbf W_k\) 和 \(\mathcal C_k\)，并将其用于 per-action estimator、SLA/memory/KV 过滤以及 Double DQN 的状态输入。由于该目录以周期性快照工作，读到的状态可能存在 staleness，因此过滤条件中的安全裕量 \(\Delta_k(a)\) 需要吸收状态同步延迟和测量误差。
 
