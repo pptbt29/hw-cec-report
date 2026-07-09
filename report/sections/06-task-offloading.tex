@@ -225,7 +225,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \subsubsection*{6.4.2 耦合关系与方案概览}
 \addcontentsline{toc}{subsubsection}{6.4.2 耦合关系与方案概览}
 
-上述两个挑战相互交织，使得调度策略难以用单次 request 的局部最优来刻画。移动性决定未来 request 从哪里进入系统，输出长度决定当前 request 生成多少新的 KV state；二者共同影响未来 KV cache 与请求入口之间的相对位置、同步字节数、显存压力和 SLA 风险。若仅优化当前 request，系统可能得到较低即时成本，却在后续多轮中产生额外状态同步或重算开销。因此，本节将 CEC LLM request offloading 建模为面向 session 的长期成本优化问题。
+上述两个挑战相互交织，使得调度策略制定更加困难。移动性改变未来 request 的入口位置，输出长度决定当前 request 的执行时间和新增 KV state，二者共同影响后续多轮中的状态同步、重算、显存占用和 SLA 风险。若仅优化当前 request，系统可能得到较低即时成本，却在后续多轮中产生额外状态同步或重算开销。因此，本节将 CEC LLM request offloading 建模为面向 session 的长期成本优化问题。
 
 本文采用“预测感知调度--显式可行性过滤--分布式 KV 管理”协同框架。调度层利用移动预测和输出长度预测构造长期价值输入，在满足 SLA、显存和 KV 可用性约束的动作集合中选择计算节点与 KV 获取方式；KV 管理层则将调度结果落实到 block 级状态查询、同步、复用、重算和副本维护，从而同时优化当前 request 的服务质量和后续 session 的状态复用成本：
 \begin{itemize}
@@ -234,8 +234,8 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
     \item \textbf{面向执行效率的 KV 管理。} KV manager 在底层维护 block directory 和版本化副本，将上层动作落实为 block 级查询、同步、保留/驱逐和混合恢复；其中混合恢复可让部分 KV 同步与部分上下文重算流水重叠，以减少通信或计算单独等待造成的 bubble，并可结合移动预测进行 proactive placement。
 \end{itemize}
 
-\subsubsection*{6.4.3 系统场景与在线处理流程}
-\addcontentsline{toc}{subsubsection}{6.4.3 系统场景与在线处理流程}
+\subsubsection*{6.4.3 系统场景与状态同步框架}
+\addcontentsline{toc}{subsubsection}{6.4.3 系统场景与状态同步框架}
 
 本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于一个 LLM session，实际 request 数量在在线服务时通常未知。系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
 
@@ -464,7 +464,7 @@ P_{U_ku'}(\Delta\tau_k)
 \right].
 \end{array}
 \]
-移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；输出长度不仅影响当前 decode 和显存，还通过 \(\Delta\mathcal B_k(a_k,Y_k)\) 改变后续 KV 分布。上述 Bellman 形式把条件即时成本和下一状态价值放在同一个 \(\rho_k(y)\) 期望中，因此单位始终为 cost；而 action mask 中的 \(\widehat Y_k^{(p)}\) 只用于硬约束过滤。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
+移动性既影响当前转发成本，也通过 \(P_{U_ku'}\) 影响未来价值；输出长度不仅影响当前 decode 和显存，还通过 \(\Delta\mathcal B_k(a_k,Y_k)\) 改变后续 KV 分布。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
 
 上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；但是一般场景中同一 session 的 request 数量 \(K\) 不确定，且存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。由于本文动作空间由候选计算节点和三类 KV 获取方式构成，规模固定且较小，DQN 对所有固定动作输出 Q 值；在执行 \(\arg\min\) 或构造下一状态目标时，将 \(a\notin\mathcal A_k^F(s_k)\) 的 Q 值置为 \(+\infty\)，使不可行动作不参与选择。
 
