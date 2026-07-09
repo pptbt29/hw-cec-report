@@ -167,7 +167,7 @@ PD 分离后的 batching 可以按图~\ref{fig:ch5-disaggregated-pd-batching} �
 \caption{\textbf{Disaggregated Prefill-Decode Batching 机制示意图}}
 \label{fig:ch5-disaggregated-pd-batching}
 \end{figure}
-Global Scheduler 根据 SLO、queue length、KV locality 和 link state 将请求送入 Prefill Pool；Prefill Worker 形成 prompt batches 并生成初始 KV blocks。随后 KV Cache Handoff 将 KV blocks、state transfer 和 metadata 交给 Decode Pool，Decode Worker 再维护 active sequence batches 并输出 tokens。紫色箭头表示 KV/state transfer，虚线表示 TTFT、ITL 和 backlog 等监控反馈。因此，PD 分离后的 batching 实际上变成两个 pool 的独立组批与跨池状态协调问题。
+Global Scheduler 根据 SLO、queue length、KV locality 和 link state 将请求送入 Prefill Pool；Prefill Worker 形成 prompt batches 并生成初始 KV blocks。随后 KV / State Handoff 将 KV blocks、state transfer 和 metadata 交给 Decode Pool，Decode Worker 再维护 active sequence batches 并输出 tokens。图中的反馈路径表示 queue length、KV locality、ITL 等运行时指标回流到全局调度器，用于调整后续请求进入哪个 pool 以及是否需要扩缩容。因此，PD 分离后的 batching 实际上变成两个 pool 的独立组批与跨池状态协调问题。
 
 这类方法的出发点是 prefill 和 decode 的资源画像差异非常明显。Prefill 更偏 compute-bound，适合吞吐导向、更强算力或更大 batch 的资源池；decode 更偏 memory/latency-bound，需要稳定 ITL、低排队和快速状态访问。若两者混部在同一资源池中，长 prefill 可能阻塞 decode，decode 小步迭代又可能降低 prefill 吞吐。Disaggregation 通过物理或逻辑隔离减少两阶段干扰，并允许系统分别为 prefill 和 decode 选择 parallelism、batch size 和扩缩容策略。
 
@@ -179,8 +179,8 @@ Disaggregated Prefill-Decode Batching 的核心变量包括 prefill worker pool�
 
 Disaggregated Prefill-Decode Batching 适合 prefill/decode 负载差异明显、阶段队列规模足够、状态传输成本可控的场景。若请求很短、边缘并发很低或链路抖动大，复杂阶段拆分可能不如本地 blended batching 稳定。因此，CEC 中应把 disaggregation 视为高层资源组织方式，而不是默认打开的单点优化。
 \phantomsection
-\subsection*{5.5 算法方案对比与面向华为验证环境的建议}
-\addcontentsline{toc}{subsection}{5.5 算法方案对比与面向华为验证环境的建议}
+\subsection*{5.5 面向华为验证环境的方案建议}
+\addcontentsline{toc}{subsection}{5.5 面向华为验证环境的方案建议}
 
 面向华为验证环境，batching 参数优化需要在请求持续到达、prompt 长度变化、KV 水位变化和业务 SLO 不同的情况下，在线决定下一轮接纳哪些请求、按什么顺序执行、给 prefill 和 decode 分配多少 token 预算，以及是否启用 chunked prefill、长请求隔离或 PD 分离。该决策必须兼顾吞吐、尾延迟、公平性和显存安全，避免高优先级请求超时、普通请求长期饥饿或 KV Cache 触发 OOM。
 
@@ -188,11 +188,18 @@ Disaggregated Prefill-Decode Batching 适合 prefill/decode 负载差异明显�
 \[
 a_t=(b_t,u_t,w_t,c_t,\rho_t,\alpha_t,\beta_t,\eta_t).
 \]
-其中，\(b_t\) 表示 max running requests 或目标 active batch 规模；\(u_t\) 表示 max batched tokens 或 token budget；\(w_t\) 表示最大等待窗口；\(c_t\) 表示 chunk size；\(\rho_t\) 表示 prefill/decode token quota；\(\alpha_t\) 表示 admission threshold；\(\beta_t\) 表示请求排序权重，用于综合 SLO slack、等待时间、业务优先级、预估 prefill 代价和 KV 增长；\(\eta_t\) 表示离散控制开关，包括长请求隔离、chunked prefill 以及在具备稳定 KV handoff 时可选的 PD 分离。actor 网络根据状态 \(s_t\) 产生动作向量 \(a_t\)，critic 网络估计该动作对 SLA 达标率、端到端时延、ITL 稳定性和 KV 风险的长期收益；算法核心是在 runtime 可执行动作空间中学习“接纳谁、按什么顺序执行、用多大 token/batch 预算、是否切 chunk、是否启用阶段控制”。
+其中，\(b_t\) 表示 max running requests 或目标 active batch 规模；\(u_t\) 表示 max batched tokens 或 token budget；\(w_t\) 表示最大等待窗口；\(c_t\) 表示 chunk size；\(\rho_t\) 表示 prefill/decode token quota；\(\alpha_t\) 表示 admission threshold；\(\beta_t\) 表示请求排序权重，用于综合 SLO slack、等待时间、业务优先级、预估 prefill 代价和 KV 增长；\(\eta_t\) 表示离散控制开关，包括长请求隔离、chunked prefill 以及在具备稳定 KV handoff 时可选的 PD 分离。actor 网络用策略 \(\pi_\theta(a_t\mid s_t)\) 根据当前状态 \(s_t\) 生成动作 \(a_t\)，其中 \(\theta\) 为策略参数，\(\pi_\theta(a_t\mid s_t)\) 表示在状态 \(s_t\) 下选择动作 \(a_t\) 的策略分布或打分函数；critic 网络估计该动作对 SLA 达标率、端到端时延、ITL 稳定性和 KV 风险的长期收益。算法核心是在 runtime 可执行动作空间中学习“接纳谁、按什么顺序执行、用多大 token/batch 预算、是否切 chunk、是否启用阶段控制”。
 
-这些动作变量也不是在无限连续空间中任意生成。系统先根据 runtime 能力和当前资源状态构造可执行动作空间：由剩余 KV block、显存水位和实例并发上限给出 \(b_t\) 与 \(u_t\) 的取值范围；由业务 TTFT、deadline slack 和当前排队长度给出 \(w_t\) 与 \(\alpha_t\) 的范围；由长 prompt 比例、prefill/decode 时间占比和 ITL 抖动给出 \(c_t\) 与 \(\rho_t\) 的候选值；由请求业务等级、等待时间、预估服务时间和 KV 增量生成排序权重 \(\beta_t\) 的候选组合；由 runtime 是否支持 chunked prefill、长请求隔离和 PD/KV handoff 决定 \(\eta_t\) 中哪些开关可以打开。在此基础上，actor 只负责从可执行动作空间中选择或微调动作，安全层再根据 KV 上限、P99 TTFT 预测、OOM 风险和切换幅度对 \(a_t\) 做裁剪或回退。因此，第五章的强化学习不是让模型凭空发明 batching 参数，而是在业务和资源约束限定的动作空间内学习更合适的参数、排序和阶段控制组合。
+这些动作变量也不是在无限连续空间中任意生成。系统先根据 runtime 能力和当前资源状态构造可执行动作空间：由剩余 KV block、显存水位和实例并发上限给出 \(b_t\) 与 \(u_t\) 的取值范围；由业务 TTFT、deadline slack 和当前排队长度给出 \(w_t\) 与 \(\alpha_t\) 的范围；由长 prompt 比例、prefill/decode 时间占比和 ITL 抖动给出 \(c_t\) 与 \(\rho_t\) 的候选值；由请求业务等级、等待时间、预估服务时间和 KV 增量生成排序权重 \(\beta_t\) 的候选组合；由 runtime 是否支持 chunked prefill、长请求隔离和 PD/KV handoff 决定 \(\eta_t\) 中哪些开关可以打开。在此基础上，actor 只负责从可执行动作空间中选择或微调动作，安全层再根据 KV 上限、P99 TTFT 预测、OOM 风险和切换幅度对 \(a_t\) 做裁剪或回退。因此，第五章的强化学习不是让模型凭空发明 batching 参数，而是在业务和资源约束限定的动作空间内学习更合适的参数、排序和阶段控制组合。图~\ref{fig:ch5-batching-architecture} 给出了该 actor-critic 控制器的状态观测、动作生成、安全过滤和策略输出链路。
 
-在论文建模上，可以先把每个控制窗口的决策写成带安全约束的动作选择问题：
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/ch5_rl_batching_architecture.png}
+\caption{基于 actor-critic 强化学习的在线 batching 优化架构}
+\label{fig:ch5-batching-architecture}
+\end{figure}
+
+在线 batching 优化器不是简单输出一个固定 batch size，而是根据请求队列、KV 水位、active batch、prefill/decode backlog 和 SLO slack 生成一组可执行控制量，包括 batch/token 预算、等待窗口、准入阈值、排序权重、chunk size 和 prefill/decode quota。在论文建模上，可以先把每个控制窗口的决策写成带安全约束的动作选择问题：
 \[
 \begin{array}{ll}
 \max\limits_{a_t\in \mathcal{A}_{\mathrm{safe}}(s_t)} & R_t(a_t) \\
@@ -207,7 +214,7 @@ a_t=(b_t,u_t,w_t,c_t,\rho_t,\alpha_t,\beta_t,\eta_t).
 
 状态 \(s_t\) 由三类画像构造。第一类是硬件与实例状态，包括 GPU/NPU 型号、可用显存、KV block 剩余量、active sequence 数、waiting queue 长度、prefill queue 长度、decode backlog、最近 P90/P99 TTFT、TPOT/ITL、prefix cache 命中率和链路状态。第二类是模型与 workload 画像，包括模型类型、上下文长度、单 token KV Cache 增量、prefill/decode 计算比例、prompt token 估计、输出长度估计、VLM 或长 prompt 比例。第三类是业务需求配置，包括请求业务等级、HTTP header 中的特殊时延要求、deadline、SLO slack、优先级比例、是否允许长请求隔离、是否允许 chunked prefill、是否允许 PD 分离和降级回退。
 
-可选动作的生成需要体现不同 batching 能力的适用条件。默认动作先保留框架现有 continuous batching 能力，只在安全范围内调整 max running requests、max batched tokens 和等待窗口；当长 prompt 或 VLM 请求比例升高，并且 prefill 对 decode ITL 的干扰明显时，再生成 chunked prefill、长请求隔离和 prefill/decode quota 调整动作；当存在稳定的 prefill pool、decode pool 和 KV handoff 观测时，才生成 PD 分离动作。请求排序和准入动作同时考虑 slack、请求 age、预估 prefill 代价、KV 增长和对已有 decode 流的干扰，使优先级只是排序信号之一，而不是唯一出队规则。
+可选动作的生成需要体现不同 batching 能力的适用条件。默认动作先保留框架现有 continuous batching 能力，只在安全范围内调整 max running requests、max batched tokens 和等待窗口；当长 prompt 或 VLM 请求比例升高，并且 prefill 对 decode ITL 的干扰明显时，再生成 chunked prefill、长请求隔离和 prefill/decode quota 调整动作；当存在稳定的 prefill pool、decode pool 和 KV handoff 观测时，才生成 PD 分离动作。图~\ref{fig:ch5-batching-architecture} 中 urgent batch、throughput batch 和 long-prompt chunks 表示策略输出会同时改变请求接纳、排序和 token 预算，而不是只调一个全局参数。请求排序和准入动作同时考虑 slack、请求 age、预估 prefill 代价、KV 增长和对已有 decode 流的干扰，使优先级只是排序信号之一，而不是唯一出队规则。
 
 是否采用某个动作由安全过滤和强化学习策略收益共同决定。动作执行前先检查 KV 水位、OOM 风险、P99 TTFT 预测、runtime 支持能力和参数切换幅度；不满足约束的动作被裁剪或丢弃。通过过滤后，轻量 actor-critic 根据实际反馈更新策略，奖励可写为：
 \[

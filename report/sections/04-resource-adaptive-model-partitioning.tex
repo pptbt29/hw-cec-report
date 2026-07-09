@@ -126,7 +126,7 @@ CEC 环境使层级切分比云端 pipeline parallelism 更难。数据中心内
 \caption{\textbf{Tensor / Operator-level Partitioning 机制示意图}}
 \label{fig:ch4-tensor-operator-partitioning}
 \end{figure}
-其中，单个 Transformer layer 被展开为 attention 和 MLP 两类层内算子，Partition Planner 决定 head split、matrix split、device group 和通信 primitive。多个设备分别执行 attention head 或 MLP tensor shard，随后通过 all-gather、reduce-scatter 或 all-reduce 合并结果。这里的关键不是“多设备一定更快”，而是并行度增加后同步次数也会增加；在 CEC 中，边缘链路的带宽和抖动会直接决定水平切分是否有收益。
+图中没有展开每个 GEMM 或 attention kernel 的细节，而是保留张量/算子级切分最关键的执行关系：左侧是单个 Transformer layer，中间的 Partition Planner 根据 layer profile、硬件拓扑、显存预算和 SLO 判断是否需要层内并行；右侧的 Device Group 表示同一层被分配到多个 Ascend 设备上执行。Attention 部分可以按 head 或 QKV shard 拆分，MLP 部分可以按矩阵维度拆分；各设备得到局部结果后，再通过 all-gather、reduce-scatter 或 all-reduce 完成同步合并。这里的关键不是“多设备一定更快”，而是并行度增加后同步次数和链路依赖也会增加；在 CEC 中，边缘链路的带宽和抖动会直接决定水平切分是否有收益。
 
 这类方法通常保持模型数学语义不变，改变的是层内计算如何分布到多个设备。它可以表现为 tensor parallelism、hybrid model parallelism、block parallelism、低通信 Transformer 结构或 structure-guided partitioning。与层级切分相比，它能更细地利用碎片化资源；与单机 kernel 优化相比，它必须显式处理跨设备通信、同步和拓扑选择。
 
@@ -207,51 +207,50 @@ LLM 推理不是单一形态的计算。Prefill 需要一次性处理完整 prom
 
 本类中的 speculative decoding 工作不等价于“模型切分”本体；本章保留它们，是因为它们切分了 draft、verify、token tree 或语义段等生成职责，属于生成过程级的协同执行。
 \phantomsection
-\subsection*{4.6 算法方案对比与面向华为验证环境的建议}
-\addcontentsline{toc}{subsection}{4.6 算法方案对比与面向华为验证环境的建议}
+\subsection*{4.6 面向华为验证环境的方案建议}
+\addcontentsline{toc}{subsection}{4.6 面向华为验证环境的方案建议}
 
-面向异构边缘验证环境，资源自适应模型切分部署的目标是在设备算力、显存容量、跨节点链路和业务 SLA 共同约束下，确定模型连续 layer/block 的 stage boundary、stage placement 以及必要的 TP/EP/DP 组合。推荐方案以硬件资源画像、模型结构画像和业务需求画像为输入，先构造可部署候选及其代价表，再通过动态规划搜索满足约束且综合代价较低的层级混合切分方案。
+面向异构边缘验证环境，资源自适应模型切分部署首先要回答的是一个具体问题：在当前 Ascend 设备拓扑、显存水位、链路带宽和业务 SLA 下，模型应该在哪些 layer/block 之间切开，每一段应该放到哪个设备组上执行。因而推荐方案应以层级切分为主线，先让 Ascend GPU/NPU 推理栈支持连续 layer/block 形成跨卡、跨节点 stage 的执行，再用动态规划生成 stage boundary 和 stage placement 策略。TP、PP、EP、DP replica、KV migration 或 PD 分离等能力不作为人工挑选的“大方法”，而是在 runtime 支持且资源检查通过时被用于降低某个 stage 的显存、时延或吞吐压力。该思路与 EdgeShard 将 model shard placement 转化为动态规划搜索的思想一致，但落点更贴近华为验证环境中的层级切分执行能力建设 \cite{zhang2024edgeshard}。
 
-因此，本章建议采用基于动态规划的层级混合切分部署算法。算法输入包括一个由 \(L\) 个 Transformer block 组成的模型、候选 Ascend 设备集合 \(\mathcal{G}\)、链路拓扑 \(\mathcal{E}\)、可执行模式集合 \(\mathcal{M}\) 和业务 workload 画像；算法输出是一组可直接映射到 Ascend 推理栈的部署方案。该问题的决策变量不是单一的切分点，而是完整部署方案
+具体而言，系统先采集三类画像。第一是设备资源与能力画像：根据硬件环境信息构建算力拓扑图 \(H=(V,E)\)，节点记录 Ascend 卡或 vNPU 的可用算力、可用显存、显存带宽、当前负载和 runtime capability，边记录 HCCS、RDMA、以太网或跨主机链路的带宽、时延和抖动。第二是模型画像：解析 PyTorch 或 HuggingFace 模型的 config、权重和模块结构，得到 layer 数、每层参数量、activation 峰值、单 token KV Cache 增量、prefill/decode 计算量以及是否包含 MoE expert 或可拆分组件。第三是业务画像：从配置中读取目标并发、输入输出长度分布、P90/P99 TTFT、TPOT、E2E latency、SLA 等级、请求优先级以及是否允许 KV 迁移、PD 分离或降级回退。这些画像共同决定每个连续 layer 区间在不同设备组上的执行代价、显存风险和链路代价。
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/ch4_dp_partition_architecture.png}
+\caption{基于动态规划的层级切分部署策略生成流程}
+\label{fig:ch4-dp-partition-architecture}
+\end{figure}
+
+如图~\ref{fig:ch4-dp-partition-architecture} 所示，层级切分策略由 layer profile、Ascend topology、stage cost model 和 DP planner 共同生成。为了避免把“切分方案”写成一个过于抽象的黑盒，第四章的决策变量可以明确写成
 \[
-p=\{(i_k,j_k,g_k,m_k)\}_{k=1}^{K}.
+x=\{K,\{l_k,g_k,e_k\}_{k=1}^{K}\}.
 \]
-其中，\(K\) 表示模型被划分成的 stage 数量；\((i_k,j_k]\) 表示第 \(k\) 个 stage 覆盖的连续 block 区间，即 layer/block 边界；\(g_k\) 表示该 stage 放置到的 Ascend 设备或设备组；\(m_k\) 表示该 stage 内部采用的执行模式，例如单卡执行、TP、PP+TP、EP 或其它 runtime 支持的组合方式。算法核心是在可执行候选空间中同时决定 stage 数量、层级边界、设备放置和 stage 内并行模式，使切分结果既能满足资源约束，又能转化为 Ascend 环境中的实际部署参数。
+其中，\(K\) 表示模型被切成多少个连续 stage；\(l_k\) 表示第 \(k\) 个 stage 的右边界，因此第 \(k\) 个 stage 覆盖 layer 区间 \((l_{k-1},l_k]\)，且 \(l_0=0,l_K=N\)；\(g_k\) 表示该 stage 放置到哪个 Ascend 设备组或节点组；\(e_k\) 表示该 stage 在当前 runtime 已支持范围内启用的执行能力，例如单设备执行、TP、PP+TP、EP、KV/offload 或阶段间状态传输。这样，第四章真正要决策的是“切在哪里、每段放哪里、每段用什么已支持执行能力”，而不是在几类并行方法之间做人工选择。
 
-这些决策变量的生成过程是算法的关键。规划器并不直接枚举所有完整方案 \(p\)，而是先构造候选 stage 代价表，再由动态规划在候选表中选择一条覆盖全部 block 的路径。最终被选中的候选数量给出 \(K\)，每个候选的 \((i,j]\)、\(g\) 和 \(m\) 分别成为 \((i_k,j_k]\)、\(g_k\) 和 \(m_k\)。
-
-在论文建模上，可以先把它写成从安全候选方案集合中选择低代价部署方案的问题：
+在论文建模上，可以把问题写成从安全可部署取值空间中选择低代价层级切分方案：
 \[
 \begin{array}{l}
-p^\star=\arg\min\limits_{p \in \mathcal{P}_{\mathrm{safe}}} Score(p),\\
-Score(p)=
-w_l L(p)+w_r R(p)-w_s G(p).
+x^\star=\arg\min\limits_{x \in \mathcal{X}_{\mathrm{safe}}} J(x),\\
+J(x)=
+w_t T(x)+w_c C(x)+w_m M(x)+w_b B(x)-w_g G(x).
 \end{array}
 \]
-其中 \(\mathcal{P}_{\mathrm{safe}}\) 是经过安全过滤后的候选部署方案集合。一个方案进入该集合需要同时满足四类条件：每个 stage 的权重、activation、KV 和 runtime reserve 不超过目标设备显存；相邻 stage 的 hidden state 或 activation 传输需求不超过链路带宽和时延容忍范围；预测 TTFT、TPOT 或 E2E latency 满足业务 SLA；所选执行模式 \(m_k\) 能被对应 Ascend 设备和推理框架实际启动。\(Score(p)\) 中，\(L(p)\) 表示时延和流水线不均衡代价，包括 TTFT、TPOT、E2E latency 和 pipeline bubble；\(R(p)\) 表示资源与切换风险，包括跨 stage 通信开销、OOM 风险和重配置成本；\(G(p)\) 表示满足 SLA 的请求处理数或有效吞吐收益。与 EdgeShard 的 model shard placement 思路一致，该建模利用 Transformer block 的顺序结构，把 stage boundary、device placement 和执行模式选择转化为动态规划搜索问题 \cite{zhang2024edgeshard}。
+其中，\(\mathcal{X}_{\mathrm{safe}}\) 表示经过 runtime 支持检查、资源检查和 SLA 检查后的安全取值空间。\(T(x)\) 表示 TTFT、TPOT、E2E latency 和 pipeline bubble 等时延代价；\(C(x)\) 表示 activation/hidden state、KV 或 stage 交接带来的通信代价；\(M(x)\) 表示显存水位、runtime reserve 和 OOM 风险；\(B(x)\) 表示 stage 执行时间不均衡造成的流水线阻塞；\(G(x)\) 表示满足 SLA 的有效吞吐收益。这个目标函数不需要展开到每个 kernel，而是服务于验证环境中的部署决策：在不违反显存、链路和 SLA 约束的前提下，选择总代价更低、有效吞吐更高的层级切分方案。
 
-该算法依赖三类前置画像。第一是设备资源采集与能力建模：系统基于硬件环境信息构建算力拓扑图 \(H=(V,E)\)，节点记录 Ascend 卡或 vNPU 的可用算力、可用显存、显存带宽、当前负载和 runtime 能力，边记录 HCCS、RDMA、以太网或跨主机链路的带宽、时延和抖动。第二是模型特征分析：系统解析 PyTorch 或 HuggingFace 模型的 config、权重和模块结构，得到 layer 数、参数量、每层权重、prefill/decode 计算量、activation 大小、单 token KV Cache 增量和潜在 DP/TP/PP/EP 组合。第三是业务需求读取：系统从配置中读取目标并发、输入输出长度分布、P90/P99 TTFT、TPOT、E2E latency、SLA 等级、请求优先级以及是否允许 KV 迁移、PD 分离或降级回退。这三类画像共同决定候选 stage 是否可部署以及代价表如何取值。
+这些决策变量的取值由系统自动生成。首先，规划器根据模型 layer 数和 layer profile 生成所有连续区间 \((i,j]\)，并用前缀和快速得到该区间的权重、activation 峰值、KV 增量和 prefill/decode 计算量。其次，根据 Ascend topology 生成可承载 stage 的设备组 \(g\)：单卡、同机多卡、跨节点设备组或端-边-云层级组合都要带有可用算力、可用显存、链路带宽和 RTT 信息。再次，runtime capability 决定 \(e_k\) 的取值：如果连续 layer stage 加载和跨设备 hidden state 传输可用，则允许层级 stage；如果 TP collective 可用且链路代价可接受，则允许该 stage 使用 TP；如果模型包含 MoE expert 且 runtime 支持 expert 驻留或换入，则允许 EP；如果 KV/offload 或阶段间状态传输已经被 runtime 支撑，也可以作为该 stage 的执行能力进入评估。未通过能力检查或资源检查的取值不会进入后续 DP 递推。
 
-面向华为验证环境，算法落地的第一步应是让 Ascend GPU/NPU 推理栈具备层级切分执行能力：在 Ascend/CANN/MindIE 或 vLLM-Ascend 等底座上，支持 Transformer layer、block 或 model shard 按连续层形成跨卡、跨节点 pipeline stage，并提供 stage 加载、activation/hidden state 传输、KV 状态管理和异常回退接口 \cite{vllmascend2026documentation,huawei2026mindie}。在这一能力之上，规划器再将硬件拓扑表、模型画像表和业务需求表转化为候选 stage \(q=(i,j,g,m)\)。只有当候选满足显存预算、链路约束、runtime 可执行性和 SLA 容忍范围时，才进入动态规划搜索。
-
-候选 stage 的生成可以实现为一张代价表构造过程。首先，模型分析器对每个 block 建立 layer profile，并用前缀和快速得到任意连续区间 \((i,j]\) 的权重量、activation 峰值、单 token KV 增量、prefill FLOPs 和 decode FLOPs。随后，规划器从 \(i=0\) 开始向后扩展 \(j\)，如果该区间在最乐观切分下仍明显超过设备组显存上限，或预估计算时间已经超过可接受的 stage 上界，就停止继续扩展，从而避免枚举过长区间。对每个保留下来的 \((i,j]\)，系统再从硬件拓扑图中枚举连通且链路质量满足阈值的设备组 \(g\)，并按 runtime capability 表生成可启动的模式 \(m\)。例如，TP 候选只从设备组规模的可整除并行度中产生，并显式估计 all-reduce/all-gather 通信时间；PP+TP 候选需要把设备组进一步拆成连续子组，并计算相邻 stage 的 activation 传输代价；EP 候选只在模型 profile 标记出 expert 结构时生成，并加入 expert 权重驻留和 token routing 代价；DP 候选则由完整方案的副本数生成，需要检查每个副本的显存占用和入口流量分摊。最终，每个 \(q=(i,j,g,m)\) 都会写入 \(C_{\mathrm{stage}}\)、显存占用、通信代价、runtime 支持标记和 SLA 风险；只有这些字段全部通过阈值检查的候选才进入动态规划。
-
-并行方式是否被叠加，并不是人工指定，而是在候选表生成和动态规划选择两个环节中自然决定。候选表生成阶段只负责把 runtime 能启动、资源约束能满足的 \(m\) 写入表中；动态规划阶段再比较不同 \(m\) 对 \(C_{\mathrm{stage}}\)、\(C_{\mathrm{link}}\)、\(C_{\mathrm{balance}}\) 和 \(Score(p)\) 的影响。如果 TP 节省的计算时间小于 all-reduce/all-gather 开销，对应候选会在代价比较中落败；如果 DP 带来的 SLA 吞吐收益不足以抵消副本显存占用，也不会进入最终路径。因此，算法输出的混合并行方案来自候选生成和代价搜索，而不是预设“必须叠加”某一种并行方式。
-
-若给定候选 stage 数上限或候选设备路径，核心递推可写成：
+动态规划负责在这些可执行取值中生成最终层级切分策略。规划器先计算把连续区间 \((i,j]\) 放到设备组 \(g\) 上的 stage cost \(C(i,j,g)\)。这里的 \(C(i,j,g)\) 与图~\ref{fig:ch4-dp-partition-architecture} 中的写法一致，是一个经过能力检查后的综合代价：它内部会在 \(\mathcal{E}_{\mathrm{ok}}(i,j,g)\) 中选择可用执行方式 \(e\)，并同时计入执行时间、显存水位、同步/传输代价和 pipeline balance。图中 Edge、Mid-edge 和 Cloud 承载不同数量的连续 layer，表示 DP 输出的不是平均切分，而是受设备算力、显存和链路代价共同约束的不均匀层级分配。若某个区间超过显存预算、链路预算或 SLA 风险阈值，则该取值直接被丢弃。对保留下来的可执行取值，DP 按 layer 顺序递推，记录到达每个 block 位置的最小代价和前驱切点。若记 \(D[j]\) 为完成前 \(j\) 个 block 的最小综合代价，则可简化写成
 \[
-DP[t,j,g,m]=
-\min_{i<j,g',m'}
+D[j]=
+\min_{i<j,\ g \in \mathcal{G}_{\mathrm{ok}}}
 \left\{
-DP[t-1,i,g',m']
-+C_{\mathrm{stage}}(i,j,g,m)
-+C_{\mathrm{link}}(i,g',g)
-+C_{\mathrm{balance}}(t,i,j,g,m)
+D[i]
++C(i,j,g)
 \right\},
 \]
-其中 \(DP[t,j,g,m]\) 表示用 \(t\) 个 stage 完成前 \(j\) 个 block，且最后一个 stage 落在设备组 \(g\)、执行模式为 \(m\) 时的最小代价。\(C_{\mathrm{stage}}\) 来自 layer-level profiling 或短压测校准，\(C_{\mathrm{link}}\) 由 activation/hidden state 大小、链路带宽、RTT 和抖动估计，\(C_{\mathrm{balance}}\) 用于惩罚 pipeline 瓶颈和 stage bubble。在线阶段不应频繁重切模型，而应在 P99 TTFT 超标、显存水位过高、链路退化或输入长度分布明显变化时触发重规划；新方案只有在预估收益超过阈值且安全过滤通过后才执行，否则保持当前部署或回退到固定 PP/TP、平均层级切分等基线。
+其中，\(\mathcal{G}_{\mathrm{ok}}\) 表示当前可用于承载 stage 的设备组。若需要展开 \(C(i,j,g)\)，它可以理解为 profiling 得到的 stage 执行代价、由 activation/hidden state 大小和链路状态估计的传输代价、显存检查代价以及 pipeline balance 惩罚的加权和；\(\mathcal{E}_{\mathrm{ok}}(i,j,g)\) 表示该区间在该设备组上已通过能力和资源检查的执行方式。递推完成后，系统从最后一个 block 反向回溯前驱切点，得到完整的 stage boundary 序列；再把每个 stage 对应的设备组和执行能力写入部署计划。这样，DP 不是抽象地给出一个分数最低的方案，而是实际生成“第几层到第几层放在哪个设备组、每段采用什么已支持执行方式、失败时回退到哪条路径”的部署策略。
 
-最终的分割策略可按“先层级、再混合、后扩展”的顺序组织。规划器先确定 layer-wise stage boundary、stage placement 和 pipeline balance；再针对单个 stage 的显存或算力瓶颈选择 TP，针对 MoE 或组件化模型选择 EP，针对流量承载选择 DP；最后将 PD disaggregation、KV Cache Pool、semantic/token-level collaboration 等作为高阶候选纳入验证。这样既保留 EdgeShard 式动态规划的可解释性，也能把华为验证环境中的主要工作聚焦到 Ascend 层级切分执行能力和可部署切分策略本身。
+在线阶段不应频繁重切模型。系统可以在 P99 TTFT 超标、显存水位接近阈值、链路退化、请求长度分布明显变化或 runtime capability 发生变化时触发重规划；新方案只有在预估收益超过阈值且安全检查通过后才执行，否则保持当前部署或回退到固定 PP/TP、单节点部署、平均层级切分等基线。最终的分割策略可按“先层级、再并行、后扩展”的顺序组织：先用动态规划确定 layer-wise stage boundary、stage placement 和 pipeline balance；再在具体 stage 上按 runtime 支持情况启用 TP、EP、DP replica 或 KV 迁移等能力；最后把 PD disaggregation、KV Cache Pool、semantic/token-level collaboration 等作为扩展能力纳入验证。这样既避免把方案写成空泛的人工选择，也能把第四章落到可测试、可对比、可部署的华为验证路径上。
 \phantomsection
 \subsection*{4.7 小结}
 \addcontentsline{toc}{subsection}{4.7 小结}
@@ -260,6 +259,6 @@ DP[t-1,i,g',m']
 
 这五类方法之间存在明显的互补关系。层级切分和张量/算子级切分主要解决模型容量、显存和并行度问题；专家/组件级切分更适合 MoE 等具有稀疏激活结构的模型；阶段切分用于缓解 prefill 与 decode 之间的资源画像差异；语义/token 级切分则把协同推理推进到生成过程内部。CEC 场景下的关键不在于选择某一种“万能切分”，而在于根据模型结构、节点能力、链路状态、KV 位置、业务 SLA 和隐私边界选择合适的切分粒度。
 
-从工程落地看，资源自适应切分不宜完全依赖一次性离线规划。离线 profiling 可以建立 layer cost、tensor cost、activation size、KV 增长和设备吞吐基线，并转化为动态规划使用的 stage 代价表、链路代价表和显存约束；在线阶段仍需要根据负载、链路和请求长度修正这些代价。更稳妥的路线是“离线 profiling 建表 + 事件触发动态规划重算 + 安全回退”：先用 profiling 数据生成可部署候选，再由动态规划搜索满足约束的低成本切分方案，最后通过收益阈值、冷却时间和回退路径避免频繁重配置。
+从工程落地看，资源自适应切分不宜完全依赖一次性离线规划。离线 profiling 可以建立 layer cost、tensor cost、activation size、KV 增长和设备吞吐基线，并与 runtime capability 一起形成能力门控和代价估计；在线阶段仍需要根据负载、链路和请求长度修正这些代价。更稳妥的路线是“离线 profiling + 能力门控 + 事件触发动态规划重算 + 安全回退”：先判断 Ascend 推理栈在当前硬件拓扑上支持哪些切分和并行能力，再由动态规划搜索满足约束的低成本层级切分方案，最后通过收益阈值、冷却时间和回退路径避免频繁重配置。
 
-结合本报告面向的验证环境，第四章的主线应放在以 Layer-wise / Vertical Partitioning 为基础的动态规划混合切分部署算法上。Layer-wise stage boundary、stage placement 和 pipeline balance 是主决策；tensor/operator-level、phase partitioning 和 expert/component-level 等方法作为补充候选映射到 vLLM-Ascend / MindIE 或 CANN 生态可支持、可压测、可回退的执行接口，例如 TP、PP、PP+TP、EP、layer sharding、context parallel、PD 分离、KV pool/offload 和 speculative decoding。Expert/component-level 与 semantic/token-level 方法适合作为高阶候选：前者用于 MoE 或组件化模型，后者适合端侧小模型可用且质量回退机制成熟的场景。这样既能覆盖研究前沿，也能将综述结论自然转化为可测试、可对比、可部署的算法方案。
+结合本报告面向的验证环境，第四章的主线应放在以 Layer-wise / Vertical Partitioning 为基础的能力门控动态规划算法上。Layer-wise stage boundary、stage placement 和 pipeline balance 是主决策；tensor/operator-level、phase partitioning 和 expert/component-level 等方法不再作为人工挑选的“大方法”，而是映射到 vLLM-Ascend / MindIE 或 CANN 生态可支持、可压测、可回退的执行能力，例如 TP、PP、PP+TP、EP、layer sharding、context parallel、PD 分离、KV pool/offload 和 speculative decoding。Expert/component-level 与 semantic/token-level 方法适合作为扩展能力：前者用于 MoE 或组件化模型，后者适合端侧小模型可用且质量回退机制成熟的场景。这样既能覆盖研究前沿，也能将综述结论自然转化为可测试、可对比、可部署的算法方案。
