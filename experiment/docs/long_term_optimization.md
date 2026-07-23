@@ -373,8 +373,7 @@ Router 最终比较的是完整计划，而不是只比较一个粗粒度 migrat
 | VLA | 高频视觉输入、连续控制延迟 | 高频稳定驻留、后台同步 |
 | 热共享 prefix | 多 session 复用和重算节省 | prefix-aware 副本管理 |
 
-当前 `visual_bytes_per_token=0` 时，VLM/VLA 不会体现真实媒体通信成本。实验必须配置压缩后
-图片、视频或传感器 payload，才能验证这类收益。
+默认使用 `visual_bytes_per_token=512` 近似压缩后的图片/视频 payload；设为 0 时表示视觉编码已在入口侧完成，只转发视觉 token，因此不会体现原始媒体通信成本。实验可根据编码格式和码率调整该参数。
 
 ## 7. 指标与归因
 

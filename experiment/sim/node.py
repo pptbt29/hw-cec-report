@@ -8,8 +8,9 @@ view consumed by the per-node routers.
 
 from __future__ import annotations
 
+import heapq
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .compute_simulator import ComputeSimulator, HardwareSpec
 from .kv_cache import GlobalKVDirectory, KVCacheStore
@@ -28,6 +29,59 @@ class NodeState:
     kv_capacity_bytes: float
     mem_free_bytes: float
     recent_p99_ttft_ms: float
+    sla_slack_scheduling: bool = True
+    running_queue: Optional[Tuple[float, float, float]] = None
+    waiting_queues: Tuple[Tuple[float, float, float, float], ...] = ()
+
+    def queue_before(
+        self,
+        latest_start_ms: float,
+    ) -> Tuple[float, float, float, float]:
+        """Return queued work that executes before a new slack-ranked job.
+
+        The currently running job is non-preemptible.  Waiting jobs use
+        earliest latest-start-time first; existing jobs win ties.
+        """
+        if not self.sla_slack_scheduling:
+            return (
+                self.estimated_queue_ms,
+                self.queue_prefill_ms,
+                self.queue_recompute_ms,
+                self.queue_decode_ms,
+            )
+        prefill = recompute = decode = 0.0
+        if self.running_queue is not None:
+            prefill, recompute, decode = self.running_queue
+        for deadline, p_ms, r_ms, d_ms in self.waiting_queues:
+            if deadline <= latest_start_ms:
+                prefill += p_ms
+                recompute += r_ms
+                decode += d_ms
+        return prefill + recompute + decode, prefill, recompute, decode
+
+
+@dataclass
+class _QueueJob:
+    latest_start_ms: float
+    sequence: int
+    prefill_ms: float
+    recompute_ms: float
+    decode_ms: float
+
+    def total_ms(self) -> float:
+        return self.prefill_ms + self.recompute_ms + self.decode_ms
+
+    def consume(self, elapsed_ms: float) -> float:
+        """Consume service proportionally and return unused elapsed time."""
+        total = self.total_ms()
+        if total <= 0.0:
+            return elapsed_ms
+        used = min(max(elapsed_ms, 0.0), total)
+        ratio = max(total - used, 0.0) / total
+        self.prefill_ms *= ratio
+        self.recompute_ms *= ratio
+        self.decode_ms *= ratio
+        return max(elapsed_ms - used, 0.0)
 
 
 class ServingNode:
@@ -37,7 +91,9 @@ class ServingNode:
         model: ModelSpec,
         hardware: HardwareSpec,
         kv_capacity_bytes: Optional[float] = None,
-        activation_reserve_bytes: float = 4e9,
+        activation_reserve_bytes: float = 64e9,
+        prefill_batch_size: int = 4,
+        sla_slack_scheduling: bool = True,
     ):
         self.node_id = node_id
         self.model = model
@@ -50,6 +106,8 @@ class ServingNode:
         self.mem_total = total
         self.mem_weights = weights
         self.activation_reserve = activation_reserve_bytes
+        self.prefill_batch_size = max(int(prefill_batch_size), 1)
+        self.sla_slack_scheduling = bool(sla_slack_scheduling)
 
         self.assigned_load_ms = 0.0
         self._queue_components = {
@@ -57,6 +115,9 @@ class ServingNode:
             "recompute": 0.0,
             "decode": 0.0,
         }
+        self._running_job: Optional[_QueueJob] = None
+        self._waiting_jobs: List[Tuple[float, int, _QueueJob]] = []
+        self._queue_sequence = 0
         self._ttft_samples: List[float] = []
         self.served = 0
 
@@ -74,6 +135,22 @@ class ServingNode:
         return s[k]
 
     def state(self) -> NodeState:
+        running = None
+        if self._running_job is not None:
+            running = (
+                self._running_job.prefill_ms,
+                self._running_job.recompute_ms,
+                self._running_job.decode_ms,
+            )
+        waiting = tuple(
+            (
+                job.latest_start_ms,
+                job.prefill_ms,
+                job.recompute_ms,
+                job.decode_ms,
+            )
+            for _, _, job in self._waiting_jobs
+        )
         return NodeState(
             node_id=self.node_id,
             estimated_queue_ms=self.estimated_queue_ms(),
@@ -84,6 +161,9 @@ class ServingNode:
             kv_capacity_bytes=self.kv_store.capacity_bytes,
             mem_free_bytes=self.mem_free_bytes(),
             recent_p99_ttft_ms=self.recent_p99_ttft_ms(),
+            sla_slack_scheduling=self.sla_slack_scheduling,
+            running_queue=running,
+            waiting_queues=waiting,
         )
 
     def add_load(
@@ -91,23 +171,51 @@ class ServingNode:
         prefill_ms: float = 0.0,
         recompute_ms: float = 0.0,
         decode_ms: float = 0.0,
+        latest_start_ms: float = float("inf"),
     ) -> None:
-        self._queue_components["prefill"] += max(prefill_ms, 0.0)
-        self._queue_components["recompute"] += max(recompute_ms, 0.0)
-        self._queue_components["decode"] += max(decode_ms, 0.0)
-        self.assigned_load_ms = sum(self._queue_components.values())
+        job = _QueueJob(
+            latest_start_ms=float(latest_start_ms),
+            sequence=self._queue_sequence,
+            prefill_ms=max(prefill_ms, 0.0),
+            recompute_ms=max(recompute_ms, 0.0),
+            decode_ms=max(decode_ms, 0.0),
+        )
+        self._queue_sequence += 1
+        if job.total_ms() <= 0.0:
+            return
+        if self._running_job is None:
+            self._running_job = job
+        else:
+            heapq.heappush(
+                self._waiting_jobs,
+                (job.latest_start_ms, job.sequence, job),
+            )
+        self._sync_queue_components()
+
+    def _sync_queue_components(self) -> None:
+        components = {"prefill": 0.0, "recompute": 0.0, "decode": 0.0}
+        jobs = []
+        if self._running_job is not None:
+            jobs.append(self._running_job)
+        jobs.extend(job for _, _, job in self._waiting_jobs)
+        for job in jobs:
+            components["prefill"] += job.prefill_ms
+            components["recompute"] += job.recompute_ms
+            components["decode"] += job.decode_ms
+        self._queue_components = components
+        self.assigned_load_ms = sum(components.values())
 
     def advance_to(self, t_now: float, prev_t: float) -> None:
         """Drain the queue by elapsed wall-clock time."""
         elapsed = max(t_now - prev_t, 0.0)
-        total = sum(self._queue_components.values())
-        if total <= 0.0:
-            self.assigned_load_ms = 0.0
-            return
-        remaining_ratio = max(total - elapsed, 0.0) / total
-        for key in self._queue_components:
-            self._queue_components[key] *= remaining_ratio
-        self.assigned_load_ms = sum(self._queue_components.values())
+        while elapsed > 0.0 and self._running_job is not None:
+            elapsed = self._running_job.consume(elapsed)
+            if self._running_job.total_ms() > 1e-12:
+                break
+            self._running_job = None
+            if self._waiting_jobs:
+                _, _, self._running_job = heapq.heappop(self._waiting_jobs)
+        self._sync_queue_components()
 
     def record_ttft(self, ttft_ms: float) -> None:
         self._ttft_samples.append(ttft_ms)
@@ -154,13 +262,17 @@ def build_cluster(
     num_nodes: int = 3,
     staleness_ms: float = 0.0,
     kv_capacity_bytes: Optional[float] = None,
-    activation_reserve_bytes: float = 4e9,
+    activation_reserve_bytes: float = 64e9,
+    prefill_batch_size: int = 4,
+    sla_slack_scheduling: bool = True,
 ) -> GlobalStateDirectory:
     nodes = {
         i: ServingNode(
             i, model, hardware,
             kv_capacity_bytes=kv_capacity_bytes,
             activation_reserve_bytes=activation_reserve_bytes,
+            prefill_batch_size=prefill_batch_size,
+            sla_slack_scheduling=sla_slack_scheduling,
         )
         for i in range(num_nodes)
     }

@@ -22,9 +22,10 @@ experiment/
 │   ├── compute_simulator.py           # roofline 计算/访存/显存模型
 │   ├── network.py                     # 链路带宽/时延/争用/利用率
 │   ├── kv_cache.py                    # block 级 KV store + 全局目录 + 迁移规划
+│   ├── kv_manager.py                  # 请求完成后触发的后台增量 KV 预放置
 │   ├── data_generator.py              # 可复现工作负载轨迹生成
 │   ├── node.py                        # ServingNode + 共享状态目录（含 staleness）
-│   ├── router.py                      # 路由器：动作枚举+约束过滤+四策略+回放评估
+│   ├── router.py                      # 路由器：动作枚举、约束过滤、在线策略与 Oracle 对照
 │   ├── dashboard.py                   # 跑全部策略并生成自包含 HTML metrics 看板
 │   └── config.py                      # 可手编 JSON 配置的加载/保存/默认
 ├── configs/
@@ -39,6 +40,7 @@ experiment/
 - 每个 **ServingNode** 加载一个大模型实例，构成一个推理服务（队列 + 计算模拟器 + 本地 KV store）。
 - 每个节点有一个 **Router**，做请求路由与 local/migrate/recompute 决策（分布式路由，非单一全局调度器）。
 - 一个**共享元数据目录**（`GlobalKVDirectory` 等）聚合全网负载、显存、网络、prefix/KV 状态，周期性同步、含 staleness。
+- 一个后台 **KV Manager** 根据入口转移概率和 session continuation 估计，向候选节点增量复制连续 KV prefix；未完成任务不会进入目录。
 - **DataGenerator** 离线生成请求轨迹，事件驱动器按 `arrival_ms` 把请求注入到入口节点的 router。
 
 完整说明见 `docs/architecture_design.md`。
@@ -54,10 +56,10 @@ large_model ──(结构/KV/FLOPs/block)──▶ compute_simulator ─┐
 
 ## 预置配置
 
-- 硬件：`A800T-A2`（8×Ascend 910B 级，BF16 ≈376 TFLOPS/卡，HBM ≈1.6 TB/s、64 GB/卡）。
+- 硬件：`A800T-A2`（8×Ascend 910B 级，BF16 ≈376 TFLOPS/卡，HBM ≈1.6 TB/s、64 GB/卡）；默认有效计算/带宽系数为 0.4/0.6，整机预留 64 GB 运行时空间。
 - 模型：`CodeLlama34B`（LLM）、`Qwen2-VL-7B-Instruct`（VLM）、`OpenVLA-7B`（VLA）。
 - 网络：A–B / B–C 为 100 Gbps 直连，A–C 为 25 Gbps 跨主机 RDMA。
-- 负载：按接入点配置并发（单点 1–256），默认含高优/普通 CodeLlama34B、Qwen2-VL 与固定长度 OpenVLA。
+- 负载：按接入点配置并发（单点 1–256），默认含高优/普通 CodeLlama34B、4 帧短视频 Qwen2-VL 与 10 Hz 多步 OpenVLA episode；多模态请求同时计入视觉 token 和压缩媒体 payload。
 
 ## 运行
 
@@ -65,14 +67,14 @@ large_model ──(结构/KV/FLOPs/block)──▶ compute_simulator ─┐
 
 ```bash
 cd experiment
-python demo.py                  # 端到端演示（含 migrate vs recompute、四策略对比）
+python demo.py                  # 端到端演示（含 migrate vs recompute 与策略对比）
 python -m sim.large_model       # 大模型规格一览
 python -m sim.compute_simulator # 各模型 prefill/decode 估算
 python -m sim.network           # 链路传输时间与争用
 python -m sim.kv_cache          # block 级 KV 迁移规划
 python -m sim.data_generator    # 工作负载摘要
 python -m sim.node              # 集群节点状态一览
-python -m sim.router            # 四策略在同一轨迹上的指标对比
+python -m sim.router            # 多策略在同一轨迹上的指标对比
 python -m sim.dashboard         # 跑全部策略并生成 output/dashboard.html
 python -m sim.dashboard --open  # 生成后在浏览器打开
 python -m sim.dashboard --config configs/default.json  # 用手编配置跑
@@ -86,9 +88,12 @@ python -m sim.config            # 重新生成 configs/default.json
 - `cluster`：节点数、状态同步 staleness、KV 容量、激活预留；
 - `policies`：参与对比的策略子集；
 - `hardware`：单卡算力/带宽/显存与效率系数；
+- `cluster`：节点数、运行时显存预留和 prefill batching 目标批大小；
+- `router.reject_intrinsically_infeasible`：是否在路由前拒绝理想 TTFT 下界仍超过 SLA 的请求；
 - `models`：LLM/VLM/VLA 结构与 KV/SLA（已知模型可只写覆盖字段）；
 - `network.links`：链路带宽/时延（100G 直连、25G 跨主机）；
-- `workload`：时长、种子、移动性、各分组并发/SLA/长度分布。
+- `workload`：时长、种子、移动性、各分组并发/SLA/长度分布；
+- `kv_manager`：增量复制系数、单轮比例上限、后台链路份额和 session 活跃度参考长度。
 
 字段含义见 `docs/config_design.md`。Long-term 策略的 Router 与 KV Cache
 联合优化方案见
@@ -97,6 +102,24 @@ python -m sim.config            # 重新生成 configs/default.json
 ```bash
 python -m sim.dashboard --config configs/default.json
 ```
+
+甲方基线并发与 150\% 并发的多 seed 验收实验可直接运行：
+
+```bash
+python -m sim.acceptance_experiment --workers 6 --seeds 0,1,2,3,4
+```
+
+结果输出到 `output/acceptance/`，不覆盖日常 Dashboard。
+
+Dashboard 默认将彼此独立的“模型 × 策略”组合分配给最多 4 个进程。可显式控制并行度：
+
+```bash
+python -m sim.dashboard --config configs/default.json --workers 4  # 并行
+python -m sim.dashboard --config configs/default.json --workers 1  # 串行复现
+```
+
+`dashboard_server` 默认使用 6 个并行 worker。受限容器若不允许创建进程 semaphore，模拟器会自动
+回退到串行执行；该回退只影响运行时间，不改变请求 trace 或策略结果。
 
 VLM/VLA 的长期放置对照场景使用同构算力和既有三节点拓扑，仅放大多模态
 payload、会话轮数与移动后的驻留时间。`8192 bytes/visual token` 表示入口
@@ -116,12 +139,19 @@ python -m sim.dashboard --config configs/multimodal_long_term.json
 python -m sim.dashboard_server --open
 ```
 
+上面的命令默认同时运行最多 6 个独立的“模型 × 策略”组合，也可以显式调整并行度：
+
+```bash
+python -m sim.dashboard_server --open --workers 6
+python -m sim.dashboard_server --open --workers 1  # 串行复现
+```
+
 它会先打开参数配置页，展示完整实验 JSON 与常用参数快捷项；点击“开始模拟”后才运行实验，
 完成后展示摘要表，并提供跳转按钮打开 `metrics.json` 与完整 `dashboard.html`。
 快捷项覆盖 cluster、mobility、router gamma/SLA margin、token id bytes、request/response 固定开销，以及
 Data Generator 的分组并发、到达率、SLA、轮数和输入/输出长度分布。
 
-`python -m sim.dashboard` 会在同一条请求轨迹上回放四种策略（覆盖所有模型），
+`python -m sim.dashboard` 会在同一条请求轨迹上回放配置中的全部策略（覆盖所有模型），
 产出两份文件到 `output/`：
 
 - `dashboard.html`：**自包含**交互式看板（数据内联、纯前端、无依赖，可直接分享）。包含
@@ -141,13 +171,28 @@ long-term 策略更平缓——直接对应实验报告要验证的现象。
 
 ```bash
 python -m sim.policy_sweep
-python -m sim.policy_sweep --mobility-granularity session --gammas 0.1,0.3,0.5,0.9
+python -m sim.policy_sweep --mobility-granularity markov --gammas 0.9,1.0
 ```
 
 `demo.py` 展示两处核心权衡：
 1. 同一份 2048-token KV，100G 链路上 migrate 比 recompute 便宜，25G 上 recompute 更划算；
 2. 四策略对比中，greedy 把请求吸到 KV 所在远端节点形成**状态黏附**（高 cross-node、高迁移字节），
    long-term 更早把 KV 迁向未来入口，cross-node 与迁移字节显著下降。
+
+默认策略语义为：`long_term` 只使用长期 Router 和整段被动 KV 恢复；`greedy_kv` 保持 Greedy
+即时路由逻辑，但启用 block-level 缺失块同步与后台主动 KV placement；`long_term_kv` 则在长期
+路由逻辑上启用相同 KV 机制。配置项 `router.long_term_block_level_kv` 默认关闭，可打开以单独测量
+block-level 被动同步的增益。主动 placement 只在 `greedy_kv`、`long_term_kv` 和相应 Oracle 策略中运行。
+
+`greedy_rollout` 是额外的敏感性策略：对每个当前候选动作复制轻量模拟状态，随后让同一
+session 的全部真实剩余请求使用 Greedy 路由，并以未折扣累计 E2E 评价当前动作。它默认不加入
+主实验，可在 `policies` 中手动启用，或通过 `sim.policy_sweep` 与不同 gamma 的
+`long_term` 直接对照。
+
+另外提供两条诊断性 Oracle 对照：`oracle_prefetch` 已知真实未来 handoff
+节点与时间，但仍遵守后台带宽和显存约束；`oracle_kv` 则假设每次请求到达前入口节点已
+零成本获得完整 KV prefix，用作理想 KV readiness ceiling。后者不具备可实现性，也不代表
+当前近似 Router 下的严格全局最优，只用于判断场景还存在多少状态准备收益空间。
 
 > 注：演示里 `avg_e2e` 被 decode（batch=1）主导，真正区分策略的是 p99 TTFT、cross-node、迁移字节与 owner 切换。
 

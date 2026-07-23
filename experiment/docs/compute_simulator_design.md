@@ -36,8 +36,8 @@ num_devices           节点内加速卡数量（如 8）
 peak_flops_per_device 单卡峰值算力（BF16 FLOPS）
 mem_bandwidth_per_device  单卡 HBM 带宽（B/s）
 mem_capacity_per_device   单卡 HBM 容量（B）
-compute_efficiency    计算利用率 MFU（prefill 有效算力系数，如 0.5）
-bandwidth_efficiency  带宽利用率（decode 有效带宽系数，如 0.7）
+compute_efficiency    计算利用率 MFU（prefill 有效算力系数，如 0.4）
+bandwidth_efficiency  带宽利用率（decode 有效带宽系数，如 0.6）
 interconnect_bandwidth  卡间互联带宽（B/s，张量并行时折损）
 fixed_overhead_ms     每次内核启动/调度固定开销
 ```
@@ -58,7 +58,7 @@ total_memory        = num_devices * mem_capacity_per_device
 - peak_flops_per_device ≈ 376 TFLOPS（BF16）
 - mem_bandwidth_per_device ≈ 1.6 TB/s
 - mem_capacity_per_device ≈ 64 GB
-- compute_efficiency = 0.5，bandwidth_efficiency = 0.7
+- compute_efficiency = 0.4，bandwidth_efficiency = 0.6
 
 > 这些值用于相对趋势分析与策略对比，不追求绝对精度；实验中关心的是不同卸载策略在同一硬件模型下的差异。
 
@@ -87,20 +87,23 @@ decode 以 batch 形式逐步生成。设 batch 内有 `B` 个序列、平均上
 ```
 flops  = B * model.decode_flops_per_token(L)
 t_comp = flops / effective_compute
-bytes  = weight_bytes + B * model.kv_bytes_per_token() * L  # 权重读一次，KV 按序列
+bytes  = decoder_weight_bytes + B * model.kv_bytes_per_token() * L
+# decoder_weight_bytes 不包含仅在视觉编码阶段使用的 ViT 权重
 t_mem  = bytes / effective_bandwidth
 t_step = max(t_comp, t_mem) + fixed_overhead
 ```
 
-单请求生成 `G` 个 token 的 decode 时间 ≈ `G * t_step`（上下文随步数增长，可按平均或逐步累加）。decode 几乎总是 `t_mem` 主导，正是 batching 能摊薄权重读取、提高吞吐的原因。
+prefill 已产生第一个输出 token 所需的 logits，因此单请求输出 `G` 个 token 时，额外执行 `G-1` 个 autoregressive decode step；上下文随步数增长，可逐步累加。decode 通常由 `t_mem` 主导，batching 可在多个序列之间摊薄权重读取并提高系统吞吐。
 
 ### 4.3 端到端时延
 
 ```
 TTFT      = T_queue + T_state + t_prefill
 E2E       = TTFT + decode_total
-decode_total = sum_{g=1..G} t_step(L0 + g)
+decode_total = sum_{g=1..G-1} t_step(L0 + g - 1)
 ```
+
+当前路由实验采用固定满批近似，默认 `decode_batch_size=32`，并将批次总时间除以 batch size，作为单请求的平均 decode 服务时间；该近似不维护动态组批状态。
 
 `T_state` 由调度动作决定：local（≈0，仅本地读取）、migrate（KV 传输时间）、recompute（等价于对已有前缀再做一次 prefill）。
 
@@ -141,6 +144,9 @@ mem_free      = total_memory - mem_used - mem_reserve
 为反映服务系统的连续批处理（continuous batching），模拟器支持：
 
 - `estimate_prefill_batch(requests)`：合并多请求 prompt，受 `max_batch_tokens` 限制。
+- `estimate_prefill_service(prompt_tokens, batch_size)`：估计进入队列的单请求等效
+  prefill 服务时间。请求 FLOPs 保持不变，仅将批内共享的模型权重读取和固定启动开销
+  按 batch size 摊销，避免将 compute-bound prefill 错误地直接除以批大小。
 - `estimate_decode_step(batch_size, avg_ctx_len)`：返回一步 decode 时间与吞吐。
 - 输出 `throughput_tokens_per_s`，供吞吐/并发指标统计。
 

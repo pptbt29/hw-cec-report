@@ -51,6 +51,12 @@ from .kv_cache import (
     GlobalKVDirectory,
     MigrationPlan,
 )
+from .kv_manager import (
+    KVManagerConfig,
+    KVPlacementTask,
+    PlacementResult,
+    ProactiveKVManager,
+)
 from .node import (
     NodeState,
     ServingNode,
@@ -108,6 +114,10 @@ __all__ = [
     "KVCacheStore",
     "GlobalKVDirectory",
     "MigrationPlan",
+    "KVManagerConfig",
+    "KVPlacementTask",
+    "PlacementResult",
+    "ProactiveKVManager",
     "NodeState",
     "ServingNode",
     "GlobalStateDirectory",

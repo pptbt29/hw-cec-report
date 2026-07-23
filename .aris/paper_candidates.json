@@ -1,0 +1,9 @@
+[
+  {"id":"edge_handover","arxiv_id":"2603.28018","title":"Low-Latency Edge LLM Handover via Joint KV Cache Transfer and Token Prefill"},
+  {"id":"preble","arxiv_id":"2407.00023","title":"Preble: Efficient Distributed Prompt Scheduling for LLM Serving"},
+  {"id":"joint_routing_cache","arxiv_id":"2601.18999","title":"Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"},
+  {"id":"agentservesim","arxiv_id":"2606.09613","title":"AGENTSERVESIM: A Hardware-aware Simulator for Multi-Turn LLM Agent Serving"},
+  {"id":"droidspeak","title":"DroidSpeak: KV Cache Sharing Across Fine-tuned Model Variants"},
+  {"id":"symphony","title":"SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"},
+  {"id":"moonccake","title":"Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving"}
+]

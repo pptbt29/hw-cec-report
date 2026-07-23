@@ -7,6 +7,7 @@ predict TTFT, end-to-end latency and the local/migrate/recompute action costs.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
 
@@ -85,6 +86,41 @@ class ComputeSimulator:
         ms = max(t_comp, t_mem) * 1000.0 + self.hw.fixed_overhead_ms
         return PrefillResult(ms, flops, float(bytes_read), bound)
 
+    def estimate_prefill_service(
+        self,
+        prompt_tokens: int,
+        batch_size: int = 1,
+    ) -> PrefillResult:
+        """Equivalent per-request queue work under ideal prefill batching.
+
+        Batching does not remove the request's FLOPs.  It only amortises the
+        model-weight read and fixed launch overhead across requests in the
+        same batch.  The returned time is therefore device service demand,
+        not the request's standalone prefill latency.
+        """
+        prompt_tokens = max(int(prompt_tokens), 0)
+        batch_size = max(int(batch_size), 1)
+        if prompt_tokens == 0:
+            return PrefillResult(
+                self.hw.fixed_overhead_ms / batch_size,
+                0.0,
+                0.0,
+                "compute",
+            )
+        flops = self.model.prefill_flops(prompt_tokens)
+        t_comp = flops / self.hw.effective_compute()
+        bytes_read = (
+            self.model.total_weight_bytes() / batch_size
+            + self.model.kv_bytes_for_tokens(prompt_tokens)
+        )
+        t_mem = bytes_read / self.hw.effective_bandwidth()
+        bound = "compute" if t_comp >= t_mem else "memory"
+        ms = (
+            max(t_comp, t_mem) * 1000.0
+            + self.hw.fixed_overhead_ms / batch_size
+        )
+        return PrefillResult(ms, flops, float(bytes_read), bound)
+
     def estimate_decode(
         self, gen_tokens: int, ctx_len: int, batch_size: int = 1
     ) -> DecodeResult:
@@ -98,23 +134,66 @@ class ComputeSimulator:
         if gen_tokens == 0:
             return DecodeResult(0.0, 0.0, 0.0, "memory")
 
-        total_ms = 0.0
-        last_step_ms = 0.0
-        mem_steps = 0
-        for g in range(gen_tokens):
-            L = ctx_len + g
-            flops = batch_size * self.model.decode_flops_per_token(L)
-            t_comp = flops / self.hw.effective_compute()
-            bytes_read = (
-                self.model.total_weight_bytes()
-                + batch_size * self.model.kv_bytes_per_token() * L
+        # Both compute and memory time are affine in L=ctx_len+g.  Their
+        # maximum therefore changes branch at most once, so the exact sum can
+        # be evaluated in O(1) instead of looping over every generated token.
+        compute_bw = self.hw.effective_compute()
+        memory_bw = self.hw.effective_bandwidth()
+        comp_a = batch_size * 2.0 * self.model.num_params / compute_bw
+        comp_b = (
+            batch_size * 4.0 * self.model.num_layers * self.model.hidden_size
+            / compute_bw
+        )
+        # Vision-encoder weights are consumed while encoding the visual input,
+        # not reread by every autoregressive decoder step.
+        mem_a = self.model.decoder_weight_bytes() / memory_bw
+        mem_b = batch_size * self.model.kv_bytes_per_token() / memory_bw
+
+        d0 = (comp_a - mem_a) + (comp_b - mem_b) * ctx_len
+        d_step = comp_b - mem_b
+
+        def affine_sum(a: float, b: float, start: int, end: int) -> float:
+            if end < start:
+                return 0.0
+            count = end - start + 1
+            return count * a + b * (start + end) * count / 2.0
+
+        # Sum memory time for all steps, then add only the positive part of
+        # compute-minus-memory.  Strict positivity preserves the old
+        # ``t_mem >= t_comp`` tie classification.
+        memory_sum = affine_sum(
+            mem_a + mem_b * ctx_len, mem_b, 0, gen_tokens - 1
+        )
+        positive_start = gen_tokens
+        positive_end = -1
+        if abs(d_step) < 1e-30:
+            if d0 > 0.0:
+                positive_start, positive_end = 0, gen_tokens - 1
+        elif d_step > 0.0:
+            positive_start = max(0, int(math.floor(-d0 / d_step)) + 1)
+            positive_end = gen_tokens - 1
+        else:
+            positive_start = 0
+            positive_end = min(
+                gen_tokens - 1,
+                int(math.ceil(d0 / (-d_step))) - 1,
             )
-            t_mem = bytes_read / self.hw.effective_bandwidth()
-            if t_mem >= t_comp:
-                mem_steps += 1
-            step_ms = max(t_comp, t_mem) * 1000.0 + self.hw.fixed_overhead_ms
-            total_ms += step_ms
-            last_step_ms = step_ms
+        positive_start = min(max(positive_start, 0), gen_tokens)
+        positive_end = min(max(positive_end, -1), gen_tokens - 1)
+        compute_dominant_steps = max(positive_end - positive_start + 1, 0)
+        excess_compute = affine_sum(
+            d0, d_step, positive_start, positive_end
+        )
+        total_ms = (
+            (memory_sum + excess_compute) * 1000.0
+            + gen_tokens * self.hw.fixed_overhead_ms
+        )
+
+        last_L = ctx_len + gen_tokens - 1
+        last_comp = comp_a + comp_b * last_L
+        last_mem = mem_a + mem_b * last_L
+        last_step_ms = max(last_comp, last_mem) * 1000.0 + self.hw.fixed_overhead_ms
+        mem_steps = gen_tokens - compute_dominant_steps
 
         bound = "memory" if mem_steps >= gen_tokens / 2 else "compute"
         # throughput counts all sequences in the batch
@@ -122,6 +201,24 @@ class ComputeSimulator:
             batch_size * gen_tokens / (total_ms / 1000.0) if total_ms > 0 else 0.0
         )
         return DecodeResult(last_step_ms, total_ms, throughput, bound)
+
+    def estimate_amortized_decode(
+        self, gen_tokens: int, ctx_len: int, batch_size: int = 32
+    ) -> DecodeResult:
+        """Average per-request decode service time under a fixed full batch.
+
+        This is a lightweight throughput-equivalent estimate: the time of a
+        homogeneous batch iteration is divided equally among its sequences.
+        It intentionally does not model dynamic continuous batching.
+        """
+        batch_size = max(int(batch_size), 1)
+        batched = self.estimate_decode(gen_tokens, ctx_len, batch_size)
+        return DecodeResult(
+            step_ms=batched.step_ms / batch_size,
+            total_ms=batched.total_ms / batch_size,
+            throughput_tokens_per_s=batched.throughput_tokens_per_s,
+            bound=batched.bound,
+        )
 
     def kv_cache_bytes(self, num_tokens: int) -> int:
         return self.model.kv_bytes_for_tokens(num_tokens)
@@ -166,8 +263,76 @@ class ComputeSimulator:
         return bytes_to_move / link_bps * 1000.0 + latency_ms
 
     def recompute_time_ms(self, prefix_tokens: int) -> float:
-        """Time to rebuild KV by re-prefilling a reusable prefix (recompute action)."""
-        return self.estimate_prefill(prefix_tokens).prefill_ms
+        """Time to rebuild KV when no historical prefix is reusable."""
+        return self.estimate_incremental_prefill(0, prefix_tokens).prefill_ms
+
+    def estimate_incremental_prefill(
+        self,
+        cached_prefix_tokens: int,
+        new_tokens: int,
+    ) -> PrefillResult:
+        """Prefill only a missing suffix while attending to cached prefix KV.
+
+        The suffix does not repeat the prefix's transformer work, but its
+        attention still observes that prefix.  Consequently its FLOPs are the
+        difference between full-prefix FLOPs before and after the suffix, not
+        simply ``prefill_flops(new_tokens)``.
+        """
+        cached = max(int(cached_prefix_tokens), 0)
+        new = max(int(new_tokens), 0)
+        if new == 0:
+            return PrefillResult(self.hw.fixed_overhead_ms, 0.0, 0.0, "compute")
+        total = cached + new
+        flops = max(
+            self.model.prefill_flops(total)
+            - self.model.prefill_flops(cached),
+            0.0,
+        )
+        t_comp = flops / self.hw.effective_compute()
+        bytes_read = (
+            self.model.total_weight_bytes()
+            + self.model.kv_bytes_for_tokens(total)
+        )
+        t_mem = bytes_read / self.hw.effective_bandwidth()
+        bound = "compute" if t_comp >= t_mem else "memory"
+        ms = max(t_comp, t_mem) * 1000.0 + self.hw.fixed_overhead_ms
+        return PrefillResult(ms, flops, float(bytes_read), bound)
+
+    def estimate_incremental_prefill_service(
+        self,
+        cached_prefix_tokens: int,
+        new_tokens: int,
+        batch_size: int = 1,
+    ) -> PrefillResult:
+        """Queue service demand for incremental suffix prefill."""
+        cached = max(int(cached_prefix_tokens), 0)
+        new = max(int(new_tokens), 0)
+        batch_size = max(int(batch_size), 1)
+        if new == 0:
+            return PrefillResult(
+                self.hw.fixed_overhead_ms / batch_size,
+                0.0,
+                0.0,
+                "compute",
+            )
+        total = cached + new
+        flops = max(
+            self.model.prefill_flops(total)
+            - self.model.prefill_flops(cached),
+            0.0,
+        )
+        t_comp = flops / self.hw.effective_compute()
+        bytes_read = (
+            self.model.total_weight_bytes() / batch_size
+            + self.model.kv_bytes_for_tokens(total)
+        )
+        t_mem = bytes_read / self.hw.effective_bandwidth()
+        bound = "compute" if t_comp >= t_mem else "memory"
+        ms = (
+            max(t_comp, t_mem) * 1000.0
+            + self.hw.fixed_overhead_ms / batch_size
+        )
+        return PrefillResult(ms, flops, float(bytes_read), bound)
 
     def estimate_prefill_batch(
         self, prompt_tokens_list: Iterable[int], max_batch_tokens: Optional[int] = None
@@ -193,8 +358,8 @@ _A800T_A2 = HardwareSpec(
     peak_flops_per_device=376e12,
     mem_bandwidth_per_device=1.6e12,
     mem_capacity_per_device=64e9,
-    compute_efficiency=0.5,
-    bandwidth_efficiency=0.7,
+    compute_efficiency=0.4,
+    bandwidth_efficiency=0.6,
     interconnect_bandwidth=400e9,
     fixed_overhead_ms=0.2,
 )

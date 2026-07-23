@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Dict, List, Optional
 
 from .config import ExperimentConfig, default_config, load_config
@@ -110,7 +111,12 @@ def _request_dict(req: Request, tag: str = "") -> Dict:
     return d
 
 
-def _workload_stats(requests: List[Request], duration_ms: float, mobility_start_frac: float) -> Dict:
+def _workload_stats(
+    requests: List[Request],
+    duration_ms: float,
+    mobility_start_frac: float,
+    visual_bytes_per_token: int = 0,
+) -> Dict:
     if not requests:
         return {"num_requests": 0}
 
@@ -121,6 +127,8 @@ def _workload_stats(requests: List[Request], duration_ms: float, mobility_start_
     prompts = [float(r.input_tokens) for r in requests]
     outputs = [float(r.output_len) for r in requests]
     prefixes = [float(r.prefix_tokens) for r in requests]
+    visual_tokens = [float(r.visual_tokens) for r in requests]
+    media_bytes = [v * visual_bytes_per_token for v in visual_tokens]
     turns = [float(r.turn_index) for r in requests]
     session_turns: Dict[str, int] = {}
     switch_after = duration_ms * mobility_start_frac
@@ -152,6 +160,9 @@ def _workload_stats(requests: List[Request], duration_ms: float, mobility_start_
         "output_len_p95": round(_pct(outputs, 95), 0),
         "prefix_tokens_avg": round(sum(prefixes) / len(prefixes), 1),
         "prefix_tokens_p95": round(_pct(prefixes, 95), 0),
+        "visual_tokens_avg": round(sum(visual_tokens) / len(visual_tokens), 1),
+        "media_payload_mb_avg": round(sum(media_bytes) / len(media_bytes) / 1e6, 3),
+        "media_payload_mb_total": round(sum(media_bytes) / 1e6, 1),
         "turn_index_avg": round(sum(turns) / len(turns), 2),
         "turns_per_session_avg": round(sum(turns_per_session) / len(turns_per_session), 2),
         "turns_per_session_p95": round(_pct([float(x) for x in turns_per_session], 95), 0),
@@ -319,13 +330,19 @@ def _build_workload_payload(
             "turns_mean": g.turns_mean,
             "shared_prefix_tokens": g.shared_prefix_tokens,
             "image_size": list(g.image_size),
+            "num_frames": g.num_frames,
         })
 
     by_model: Dict[str, Dict] = {}
     for model_name in experiment.workload_model_names():
         model_reqs = [r for r in requests if r.model_name == model_name]
         by_model[model_name] = {
-            "summary": _workload_stats(model_reqs, wl.duration_ms, wl.mobility_start_frac),
+            "summary": _workload_stats(
+                model_reqs,
+                wl.duration_ms,
+                wl.mobility_start_frac,
+                experiment.router.visual_bytes_per_token,
+            ),
             "distributions": _workload_distributions(
                 model_reqs, wl.duration_ms, cluster.num_nodes,
             ),
@@ -340,12 +357,64 @@ def _build_workload_payload(
         "mobility_granularity": wl.mobility_granularity,
         "total_concurrency": sum(g.concurrency for g in wl.groups),
         "groups": groups,
-        "summary": _workload_stats(requests, wl.duration_ms, wl.mobility_start_frac),
+        "summary": _workload_stats(
+            requests,
+            wl.duration_ms,
+            wl.mobility_start_frac,
+            experiment.router.visual_bytes_per_token,
+        ),
         "by_model": by_model,
     }
 
 
-def run_experiments(experiment: Optional[ExperimentConfig] = None) -> Dict:
+def _run_policy_model_job(
+    experiment: ExperimentConfig,
+    requests: List[Request],
+    model_name: str,
+    policy_value: str,
+) -> tuple:
+    """Run one independent (model, policy) simulation in a worker process."""
+    experiment.apply()
+    cluster = experiment.cluster
+    model = get_model(model_name)
+    result = simulate_trace(
+        Policy(policy_value),
+        requests,
+        model,
+        experiment.hardware,
+        experiment.new_network(),
+        num_nodes=cluster.num_nodes,
+        staleness_ms=cluster.staleness_ms,
+        gamma=experiment.router.gamma,
+        decode_batch_size=experiment.router.decode_batch_size,
+        sla_margin_ms=experiment.router.sla_margin_ms,
+        reject_intrinsically_infeasible=(
+            experiment.router.reject_intrinsically_infeasible
+        ),
+        collect_records=True,
+        kv_capacity_bytes=cluster.kv_capacity_bytes,
+        activation_reserve_bytes=cluster.activation_reserve_bytes,
+        prefill_batch_size=cluster.prefill_batch_size,
+        sla_slack_scheduling=cluster.sla_slack_scheduling,
+        token_id_bytes=experiment.router.token_id_bytes,
+        request_overhead_bytes=experiment.router.request_overhead_bytes,
+        response_overhead_bytes=experiment.router.response_overhead_bytes,
+        visual_bytes_per_token=experiment.router.visual_bytes_per_token,
+        kv_manager_config=experiment.kv_manager,
+        long_term_block_level_kv=(
+            experiment.router.long_term_block_level_kv
+        ),
+        long_term_kv_block_level_kv=(
+            experiment.router.long_term_kv_block_level_kv
+        ),
+    )
+    return model_name, policy_value, result
+
+
+def run_experiments(
+    experiment: Optional[ExperimentConfig] = None,
+    max_workers: Optional[int] = None,
+) -> Dict:
     """Run all configured policies for each model on one shared trace.
 
     ``experiment`` is an :class:`ExperimentConfig`; when omitted the built-in
@@ -363,9 +432,18 @@ def run_experiments(experiment: Optional[ExperimentConfig] = None) -> Dict:
     data: Dict = {
         "meta": {
             "hardware": hw.name,
+            "hardware_num_devices_per_node": hw.num_devices,
+            "hardware_effective_compute_flops": hw.effective_compute(),
+            "hardware_effective_hbm_bytes_per_s": hw.effective_bandwidth(),
+            "hardware_total_memory_bytes_per_node": hw.total_memory(),
             "num_nodes": cluster.num_nodes,
             "node_labels": _build_node_labels(experiment),
             "staleness_ms": cluster.staleness_ms,
+            "prefill_batch_size": cluster.prefill_batch_size,
+            "decode_batch_size": experiment.router.decode_batch_size,
+            "activation_reserve_bytes_per_node": (
+                cluster.activation_reserve_bytes
+            ),
             "duration_ms": experiment.workload.duration_ms,
             "mobility_ratio": experiment.workload.mobility_ratio,
             "mobility_start_frac": experiment.workload.mobility_start_frac,
@@ -377,38 +455,78 @@ def run_experiments(experiment: Optional[ExperimentConfig] = None) -> Dict:
             "total_concurrency": sum(g.concurrency for g in experiment.workload.groups),
             "seed": experiment.workload.seed,
             "router_gamma": experiment.router.gamma,
+            "kv_manager": {
+                "enabled": experiment.kv_manager.enabled,
+                "base_replication_factor": (
+                    experiment.kv_manager.base_replication_factor
+                ),
+                "max_replication_fraction": (
+                    experiment.kv_manager.max_replication_fraction
+                ),
+                "background_bandwidth_fraction": (
+                    experiment.kv_manager.background_bandwidth_fraction
+                ),
+                "continuation_reference_turns": (
+                    experiment.kv_manager.continuation_reference_turns
+                ),
+            },
             "total_requests": len(requests),
             "policies": experiment.policies,
         },
         "models": {},
     }
 
-    for model_name in experiment.workload_model_names():
-        model = get_model(model_name)
-        per_policy = {}
-        for pol in policies:
-            net = experiment.new_network()
-            res = simulate_trace(
-                pol, requests, model, hw, net,
-                num_nodes=cluster.num_nodes, staleness_ms=cluster.staleness_ms,
-                gamma=experiment.router.gamma,
-                sla_margin_ms=experiment.router.sla_margin_ms,
-                collect_records=True,
-                kv_capacity_bytes=cluster.kv_capacity_bytes,
-                activation_reserve_bytes=cluster.activation_reserve_bytes,
-                token_id_bytes=experiment.router.token_id_bytes,
-                request_overhead_bytes=experiment.router.request_overhead_bytes,
-                response_overhead_bytes=experiment.router.response_overhead_bytes,
-                visual_bytes_per_token=experiment.router.visual_bytes_per_token,
+    model_names = experiment.workload_model_names()
+    jobs = [(model_name, pol.value) for model_name in model_names for pol in policies]
+    if max_workers is None:
+        max_workers = min(4, len(jobs), os.cpu_count() or 1)
+    max_workers = max(int(max_workers), 1)
+
+    results: Dict[tuple, Dict] = {}
+    if max_workers == 1 or len(jobs) <= 1:
+        for model_name, policy_value in jobs:
+            _, _, result = _run_policy_model_job(
+                experiment, requests, model_name, policy_value
             )
-            per_policy[pol.value] = res
-        data["models"][model_name] = per_policy
+            results[(model_name, policy_value)] = result
+    else:
+        try:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(
+                        _run_policy_model_job,
+                        experiment,
+                        requests,
+                        model_name,
+                        policy_value,
+                    ): (model_name, policy_value)
+                    for model_name, policy_value in jobs
+                }
+                for future in as_completed(futures):
+                    model_name, policy_value, result = future.result()
+                    results[(model_name, policy_value)] = result
+        except (OSError, PermissionError):
+            # Restricted containers may prohibit process semaphores.  Keep the
+            # simulator usable there while normal desktop runs remain parallel.
+            results.clear()
+            for model_name, policy_value in jobs:
+                _, _, result = _run_policy_model_job(
+                    experiment, requests, model_name, policy_value
+                )
+                results[(model_name, policy_value)] = result
+
+    for model_name in model_names:
+        data["models"][model_name] = {
+            pol.value: results[(model_name, pol.value)] for pol in policies
+        }
 
     data["workload"] = _build_workload_payload(experiment, requests)
     wl = experiment.workload
     for model_name in experiment.workload_model_names():
         dist = data["workload"]["by_model"][model_name]["distributions"]
-        for pol in ("nearest", "greedy", "long_term"):
+        for pol in (
+            "nearest", "greedy", "greedy_kv", "long_term", "long_term_kv"
+        ):
             records = data["models"][model_name].get(pol, {}).get("records", [])
             dist["exec_over_time"][pol] = _exec_time_series(
                 records, wl.duration_ms, cluster.num_nodes,
@@ -441,7 +559,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   :root,[data-theme="dark"]{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#30363d;
     --fg:#e6edf3; --muted:#8b949e; --grid:#21262d;
-    --nearest:#8b949e; --greedy:#f0883e; --long_term:#3fb950; --long_term_kv:#58a6ff;
+    --nearest:#8b949e; --greedy:#f0883e; --greedy_kv:#a371f7; --long_term:#3fb950; --long_term_kv:#58a6ff; --greedy_rollout:#f2cc60; --oracle_prefetch:#db61a2; --oracle_kv:#d2a8ff;
     --good:#3fb950; --bad:#f85149; --warn:#d29922;
     --tooltip-bg:#1c2230; --tooltip-border:#484f58;
     --bar-label-on:#ffffff;
@@ -450,7 +568,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   [data-theme="light"]{
     --bg:#f6f8fa; --panel:#ffffff; --panel2:#f0f3f6; --border:#d0d7de;
     --fg:#1f2328; --muted:#656d76; --grid:#eaeef2;
-    --nearest:#656d76; --greedy:#bc4c00; --long_term:#1a7f37; --long_term_kv:#0969da;
+    --nearest:#656d76; --greedy:#bc4c00; --greedy_kv:#8250df; --long_term:#1a7f37; --long_term_kv:#0969da; --greedy_rollout:#9a6700; --oracle_prefetch:#bf3989; --oracle_kv:#8250df;
     --good:#1a7f37; --bad:#cf222e; --warn:#9a6700;
     --tooltip-bg:#ffffff; --tooltip-border:#d0d7de;
     --bar-label-on:#ffffff;
@@ -601,13 +719,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <div class="panel">
     <h3>策略汇总对比</h3>
-    <div class="hint">同一条请求轨迹下四种策略的关键指标；每列最优值高亮（绿色）。</div>
+    <div class="hint">同一条请求轨迹下各策略的关键指标；每列最优值高亮（绿色）。Oracle KV 仅作为主动放置收益上界，不是在线算法。</div>
     <div id="summaryTable"></div>
   </div>
 
   <div class="panel">
     <h3>Avg E2E 延迟分拆</h3>
-    <div class="hint">各项均为单请求平均耗时，分项合计应与 Avg E2E 一致；网络拆为请求转发和响应回传，状态获取拆为 KV 迁移和 KV 重算。</div>
+    <div class="hint">除“发生时均值”外，各项均为对全部请求摊销后的平均耗时，分项合计应与 Avg E2E 一致；“发生时均值”只在对应 migrate/recompute 请求上取平均，用于呈现一次被动状态恢复的实际惩罚。</div>
     <div id="latencyBreakdown"></div>
   </div>
 
@@ -619,7 +737,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <div class="panel">
     <h3>E2E 各阶段耗时分布</h3>
-    <div class="hint">每个 phase 单独一张累计分布曲线（ECDF），每张图内比较四种路由策略。横轴为该 phase 耗时，纵轴为累计请求比例；横轴使用对数映射以保留小于 1 ms 的差异。</div>
+    <div class="hint">每个 phase 单独一张累计分布曲线（ECDF），每张图内比较全部策略。横轴为该 phase 耗时，纵轴为累计请求比例；横轴使用对数映射以保留小于 1 ms 的差异。</div>
     <div id="latencyDistribution"></div>
   </div>
 
@@ -638,7 +756,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <div class="panel">
     <h3>Migrate 原因拆分</h3>
-    <div class="hint">硬约束类表示入口节点没有可执行动作；即时成本表示当前 E2E 对比选择迁移；FutureCost 表示 long-term 为降低未来成本主动牺牲当前 E2E。</div>
+    <div class="hint">硬约束类表示入口节点没有可执行动作；即时成本表示当前 E2E 对比选择迁移；Oracle FutureCost 表示 long-term 在已知本 session 真实剩余请求、入口和长度的有限时域搜索中，为降低后续累计成本而接受更高当前 E2E。</div>
     <div id="migrateReasons"></div>
   </div>
 
@@ -672,16 +790,16 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <script>
 const DATA = __DATA__;
-const POLICIES = ["nearest","greedy","long_term","long_term_kv"];
-const PLABEL = {nearest:"Nearest(基线)",greedy:"Greedy",long_term:"Long-term",long_term_kv:"Long-term+KV"};
-const PCOLOR = {nearest:"#8b949e",greedy:"#f0883e",long_term:"#3fb950",long_term_kv:"#58a6ff"};
+const POLICIES = DATA.meta.policies;
+const PLABEL = {nearest:"Nearest(基线)",greedy:"Greedy",greedy_kv:"Greedy + 主动 KV",long_term:"Long-term (被动 KV)",long_term_kv:"Long-term + 主动 KV",greedy_rollout:"Current-action + Greedy Rollout",oracle_prefetch:"Long-term + Oracle Prefetch (受约束)",oracle_kv:"Long-term + 完美 KV Readiness (上界)"};
+const PCOLOR = {nearest:"#8b949e",greedy:"#f0883e",greedy_kv:"#a371f7",long_term:"#3fb950",long_term_kv:"#58a6ff",greedy_rollout:"#f2cc60",oracle_prefetch:"#db61a2",oracle_kv:"#d2a8ff"};
 const NODE_COLORS=["#58a6ff","#3fb950","#f0883e"];
 const PRIORITY_COLORS={high:"#f85149",normal:"#8b949e"};
 const MIGRATE_REASON_LABEL={
   entry_sla:"入口 SLA",entry_memory:"入口 Memory",
   entry_sla_and_memory:"入口 SLA+Memory",
   entry_mixed_constraints:"入口混合约束",
-  immediate_cost:"即时成本",future_cost:"FutureCost",
+  immediate_cost:"即时成本",future_cost:"Oracle FutureCost",
   unclassified:"未分类"
 };
 const MIGRATE_REASON_COLOR={
@@ -747,7 +865,7 @@ document.getElementById("meta").innerHTML =
   `${meta.mobility_granularity}`+
   `${meta.mobility_granularity==="markov"?" / 驻留 "+meta.mobility_residency_turns+" 轮":""} · `+
   `总并发用户 ${meta.total_concurrency} · `+
-  `seed ${meta.seed} · gamma ${meta.router_gamma} · 请求总数 ${meta.total_requests} · staleness ${meta.staleness_ms}ms`;
+  `seed ${meta.seed} · gamma ${meta.router_gamma} · decode batch ${meta.decode_batch_size} · 请求总数 ${meta.total_requests} · staleness ${meta.staleness_ms}ms`;
 
 function tabs(){
   const el=document.getElementById("modelTabs"); el.innerHTML="";
@@ -774,12 +892,12 @@ function txt(x,y,s,cls,anchor){const t=el("text",{x,y,class:cls||"axlab","text-a
 function cards(){
   const M=DATA.models[currentModel];
   const base=M.nearest, lt=M.long_term_kv;
-  const reqs=base.num_requests;
+  const reqs=base.accepted_requests;
   const e2eImp=(base.avg_e2e_ms-lt.avg_e2e_ms)/base.avg_e2e_ms*100;
   const xnodeImp=(base.cross_node_ratio-lt.cross_node_ratio)*100;
   const migImp=(base.migrate_bytes_mb-lt.migrate_bytes_mb)/Math.max(base.migrate_bytes_mb,1e-9)*100;
   const c=[
-    ["请求数(该模型)",reqs,"",""],
+    ["已接纳请求数",reqs,"",""],
     ["P99 TTFT (Greedy)",fmt(M.greedy.p99_ttft_ms)+" ms","",""],
     ["P99 TTFT (LT+KV)",fmt(lt.p99_ttft_ms)+" ms","",""],
     ["跨节点↓ vs 基线",fmt(xnodeImp,1)+" pp",xnodeImp>0?"good":"bad","黏附改善"],
@@ -797,19 +915,34 @@ function cards(){
 function summaryTable(){
   const M=DATA.models[currentModel];
   const rows=[
+    ["到达请求数","offered_requests",0,"none"],
+    ["已接纳请求数","accepted_requests",0,"max"],
     ["avg E2E (ms)","avg_e2e_ms",1,"min"],
-    ["预测 FutureCost (ms)","avg_predicted_future_cost_ms",3,"none"],
+    ["Oracle 后续累计成本 (ms)","avg_predicted_future_cost_ms",3,"none"],
+    ["未来价值改变动作比例","future_driven_action_ratio",3,"pct"],
     ["P50 TTFT (ms)","p50_ttft_ms",1,"min"],
     ["P95 TTFT (ms)","p95_ttft_ms",1,"min"],
     ["P99 TTFT (ms)","p99_ttft_ms",1,"min"],
-    ["SLA 违约率 (%)","sla_violation_ratio",2,"min",100],
-    ["不可执行率 (%)","infeasible_ratio",2,"min",100],
+    ["已接纳请求 SLA 违约率 (%)","sla_violation_ratio",2,"min",100],
+    ["准入拒绝数","admission_rejected_count",0,"min"],
+    ["准入拒绝率 (%)","admission_rejected_ratio",2,"min",100],
     ["跨节点比例 (%)","cross_node_ratio",1,"min",100],
     ["用户入口迁移次数","mobility_transition_count",0,"min"],
     ["migrate 次数","migrate_count",0,"min"],
     ["recompute 次数","recompute_count",0,"min"],
     ["owner 切换","owner_switch_count",0,"min"],
     ["迁移字节 (MB)","migrate_bytes_mb",1,"min"],
+    ["后台预放置字节 (MB)","placement_completed_bytes_mb",1,"min"],
+    ["KV 总传输字节 (MB)","total_kv_transfer_bytes_mb",1,"min"],
+    ["后台预放置任务","placement_completed_tasks",0,"min"],
+    ["入口连续 KV readiness (%)","avg_entry_ready_ratio",2,"max",100],
+    ["入口残余 KV (MB)","avg_entry_residual_mb",1,"min"],
+    ["入口残余同步 (ms)","avg_entry_sync_ms",2,"min"],
+    ["入口残余重算 (ms)","avg_entry_recompute_ms",2,"none"],
+    ["入口有效恢复 (ms)","avg_entry_recovery_ms",2,"min"],
+    ["每轮转发额外成本 (ms)","avg_forwarding_premium_ms",3,"none"],
+    ["平均 breakpoint 轮数","avg_breakpoint_turns",1,"none"],
+    ["Long-term 有效区间占比 (%)","breakpoint_gap_ratio",2,"none",100],
     ["累计卸载成本 (ms)","offload_cost_ms",0,"min"],
   ];
   let h="<table><thead><tr><th>指标</th>"+POLICIES.map(p=>`<th>${PLABEL[p]}</th>`).join("")+"</tr></thead><tbody>";
@@ -833,8 +966,10 @@ function latencyBreakdown(){
     ["排队·Prefill","avg_queue_prefill_ms"],
     ["排队·重算","avg_queue_recompute_ms"],
     ["排队·Decode","avg_queue_decode_ms"],
-    ["KV 迁移","avg_migration_ms"],
-    ["KV 重算","avg_recompute_ms"],
+    ["KV 迁移·全请求摊销","avg_migration_ms"],
+    ["KV 迁移·发生时均值","conditional_migration_ms"],
+    ["KV 重算·全请求摊销","avg_recompute_ms"],
+    ["KV 重算·发生时均值","conditional_recompute_ms"],
     ["Prefill","avg_prefill_ms"],
     ["Decode","avg_decode_ms"],
     ["响应回传","avg_response_network_ms"],
@@ -954,6 +1089,7 @@ function barCharts(){
     ["P99 TTFT (ms)","p99_ttft_ms",1],
     ["跨节点比例 (%)","cross_node_ratio",100],
     ["迁移字节 (MB)","migrate_bytes_mb",1],
+    ["KV 总传输字节 (MB)","total_kv_transfer_bytes_mb",1],
     ["owner 切换","owner_switch_count",1],
   ];
   const W=560,titleH=20,barH=15,gap=5,groupGap=16,pad=120,rightReserve=50;
@@ -1363,7 +1499,7 @@ function buildExecLineCharts(execByPolicy, mobStartFrac){
   title.className="time-sec-title";
   title.textContent="实际处理实例（折线 · 各节点处理请求数）";
   wrap.appendChild(title);
-  const policies=[["nearest","Nearest(基线)"],["greedy","Greedy"],["long_term","Long-term"]];
+  const policies=[["nearest","Nearest(基线)"],["greedy","Greedy"],["greedy_kv","Greedy + 主动 KV"],["long_term","Long-term"],["long_term_kv","Long-term + 主动 KV"]];
   policies.forEach(([key,label])=>{
     const data=execByPolicy[key];
     if(!data||!data.series) return;
@@ -1450,14 +1586,14 @@ function renderWorkload(){
   if(g.length){
     groupsHtml=`<div class="subsec">负载分组配置（${currentModel}）</div>`+
       `<table><thead><tr><th>配置组</th><th>SLA (ms)</th><th>共享 prefix</th><th>入口配置</th>`+
-      `<th>请求数</th><th>占比</th><th>平均轮数</th><th>图像尺寸</th></tr></thead><tbody>`+
+      `<th>请求数</th><th>占比</th><th>平均轮数</th><th>图像/帧</th></tr></thead><tbody>`+
       g.map(x=>{
         const cnt=byGroup[x.name];
         const pct=(cnt!=null&&totalReqs)?(100*cnt/totalReqs).toFixed(1)+"%":"—";
         const entry=x.entry_mode==="ratios"?`${x.entry_ratios?.join(":")||"—"} / total ${x.concurrency}`:(x.entry_concurrency?.join(",")||"—");
         return `<tr><td>${x.name}</td><td>${x.sla_ms}</td><td>${x.shared_prefix_tokens}</td>`+
           `<td>${entry}</td><td>${cnt??"—"}</td><td>${pct}</td><td>${x.turns_mean}</td>`+
-          `<td>${x.image_size[0]?x.image_size[0]+"×"+x.image_size[1]:"—"}</td></tr>`;
+          `<td>${x.image_size[0]?x.image_size[0]+"×"+x.image_size[1]+" × "+(x.num_frames||1):"—"}</td></tr>`;
       }).join("")+
       `</tbody></table>`;
   }
@@ -1470,6 +1606,9 @@ function renderWorkload(){
     ["移动切换数", s.mobility_switched_count??"—"],
     ["移动切换占比", s.mobility_switched_ratio!=null?(s.mobility_switched_ratio*100).toFixed(1)+"%":"—"],
     ["累计 KV tokens", s.total_kv_tokens??"—"],
+    ["平均视觉 tokens", s.visual_tokens_avg??"—"],
+    ["平均媒体 payload", s.media_payload_mb_avg!=null?s.media_payload_mb_avg+" MB":"—"],
+    ["累计媒体 payload", s.media_payload_mb_total!=null?s.media_payload_mb_total+" MB":"—"],
   ];
 
   const samples=modelWl.samples||[];
@@ -1560,6 +1699,12 @@ if __name__ == "__main__":
     parser.add_argument("--config")
     parser.add_argument("--mobility-granularity", choices=("request", "session", "markov"))
     parser.add_argument("--open", action="store_true")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="parallel model-policy workers; 0 selects up to four automatically",
+    )
     args = parser.parse_args()
 
     out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
@@ -1575,16 +1720,23 @@ if __name__ == "__main__":
         experiment.workload.mobility_granularity = args.mobility_granularity
 
     print("running experiments (policies x models on shared trace)...")
-    data = run_experiments(experiment)
+    data = run_experiments(
+        experiment,
+        max_workers=None if args.workers == 0 else args.workers,
+    )
     export_json(data, json_path)
     render_html(data, html_path)
 
     for model_name, per in data["models"].items():
         print(f"\n[{model_name}]")
-        print(f"  {'policy':<14}{'p99_ttft':>9}{'xnode%':>8}{'migrMB':>8}{'ownsw':>7}")
+        print(
+            f"  {'policy':<14}{'p99_ttft':>9}{'xnode%':>8}"
+            f"{'migrMB':>8}{'placeMB':>9}{'ownsw':>7}"
+        )
         for pol, m in per.items():
             print(f"  {pol:<14}{m['p99_ttft_ms']:9.1f}"
                   f"{m['cross_node_ratio']*100:8.1f}{m['migrate_bytes_mb']:8.1f}"
+                  f"{m['placement_completed_bytes_mb']:9.1f}"
                   f"{m['owner_switch_count']:7d}")
 
     print(f"\nJSON  -> {json_path}")

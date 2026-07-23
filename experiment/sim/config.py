@@ -31,6 +31,7 @@ from .large_model import (
     get_model,
     register_model,
 )
+from .kv_manager import KVManagerConfig
 from .network import LinkSpec, NetworkSimulator, NetworkTopology
 
 
@@ -39,17 +40,25 @@ class ClusterConfig:
     num_nodes: int = 3
     staleness_ms: float = 0.0
     kv_capacity_bytes: Optional[float] = None      # None -> auto from HBM
-    activation_reserve_bytes: float = 4e9
+    activation_reserve_bytes: float = 64e9
+    prefill_batch_size: int = 4
+    sla_slack_scheduling: bool = True
 
 
 @dataclass
 class RouterConfig:
-    gamma: float = 0.9
+    gamma: float = 1.0
+    decode_batch_size: int = 32
     sla_margin_ms: float = 20.0
+    reject_intrinsically_infeasible: bool = True
+    long_term_block_level_kv: bool = False
+    long_term_kv_block_level_kv: bool = True
     token_id_bytes: int = 4
     request_overhead_bytes: int = 4096
     response_overhead_bytes: int = 4096
-    visual_bytes_per_token: int = 0
+    # Compressed image/video payload represented by one visual token.  This is
+    # separate from the token-id stream consumed by the model.
+    visual_bytes_per_token: int = 512
 
 
 @dataclass
@@ -61,6 +70,7 @@ class ExperimentConfig:
     cluster: ClusterConfig
     policies: List[str]
     router: RouterConfig
+    kv_manager: KVManagerConfig
 
     # -- runtime helpers ----------------------------------------------------
     def apply(self) -> "ExperimentConfig":
@@ -194,11 +204,13 @@ def _group_to_dict(g: WorkloadGroup) -> Dict:
         "entry_ratios": list(g.entry_ratios) if g.entry_ratios else None,
         "sla_ms": g.sla_ms,
         "arrival_rate": g.arrival_rate,
+        "inter_turn_mean_ms": g.inter_turn_mean_ms,
         "prompt_dist": _dist_to_dict(g.prompt_dist),
         "output_dist": _dist_to_dict(g.output_dist) if g.output_dist else None,
         "turns_mean": g.turns_mean,
         "turns_min": g.turns_min,
         "turns_max": g.turns_max,
+        "turns_dist": _dist_to_dict(g.turns_dist) if g.turns_dist else None,
         "image_size": list(g.image_size),
         "num_frames": g.num_frames,
         "shared_prefix_tokens": g.shared_prefix_tokens,
@@ -222,15 +234,20 @@ def _group_from_dict(d: Dict) -> WorkloadGroup:
         entry_ratios=d.get("entry_ratios"),
         sla_ms=d.get("sla_ms"),
         arrival_rate=d.get("arrival_rate"),
+        inter_turn_mean_ms=d.get("inter_turn_mean_ms"),
         prompt_dist=_dist_from_dict(d.get("prompt_dist", {})),
         output_dist=_dist_from_dict(d["output_dist"]) if d.get("output_dist") else None,
         turns_mean=d.get("turns_mean", 4.0),
         turns_min=d.get("turns_min", 1),
         turns_max=d.get("turns_max", 12),
+        turns_dist=(
+            _dist_from_dict(d["turns_dist"])
+            if d.get("turns_dist") else None
+        ),
         image_size=(img[0], img[1]),
         num_frames=d.get("num_frames", 1),
         shared_prefix_tokens=d.get("shared_prefix_tokens", 0),
-        history_growth=d.get("history_growth", 0.6),
+        history_growth=d.get("history_growth", 1.0),
     )
 
 
@@ -245,14 +262,37 @@ def to_dict(cfg: ExperimentConfig) -> Dict:
             "staleness_ms": cfg.cluster.staleness_ms,
             "kv_capacity_bytes": cfg.cluster.kv_capacity_bytes,
             "activation_reserve_bytes": cfg.cluster.activation_reserve_bytes,
+            "prefill_batch_size": cfg.cluster.prefill_batch_size,
+            "sla_slack_scheduling": cfg.cluster.sla_slack_scheduling,
         },
         "router": {
             "gamma": cfg.router.gamma,
+            "decode_batch_size": cfg.router.decode_batch_size,
             "sla_margin_ms": cfg.router.sla_margin_ms,
+            "reject_intrinsically_infeasible": (
+                cfg.router.reject_intrinsically_infeasible
+            ),
+            "long_term_block_level_kv": cfg.router.long_term_block_level_kv,
+            "long_term_kv_block_level_kv": (
+                cfg.router.long_term_kv_block_level_kv
+            ),
             "token_id_bytes": cfg.router.token_id_bytes,
             "request_overhead_bytes": cfg.router.request_overhead_bytes,
             "response_overhead_bytes": cfg.router.response_overhead_bytes,
             "visual_bytes_per_token": cfg.router.visual_bytes_per_token,
+        },
+        "kv_manager": {
+            "enabled": cfg.kv_manager.enabled,
+            "base_replication_factor": cfg.kv_manager.base_replication_factor,
+            "max_replication_fraction": cfg.kv_manager.max_replication_fraction,
+            "background_bandwidth_fraction": (
+                cfg.kv_manager.background_bandwidth_fraction
+            ),
+            "continuation_reference_turns": (
+                cfg.kv_manager.continuation_reference_turns
+            ),
+            "min_window_ms": cfg.kv_manager.min_window_ms,
+            "max_window_ms": cfg.kv_manager.max_window_ms,
         },
         "policies": list(cfg.policies),
         "hardware": _hardware_to_dict(cfg.hardware),
@@ -277,16 +317,42 @@ def from_dict(d: Dict) -> ExperimentConfig:
         num_nodes=cl.get("num_nodes", 3),
         staleness_ms=cl.get("staleness_ms", 0.0),
         kv_capacity_bytes=cl.get("kv_capacity_bytes"),
-        activation_reserve_bytes=cl.get("activation_reserve_bytes", 4e9),
+        activation_reserve_bytes=cl.get("activation_reserve_bytes", 64e9),
+        prefill_batch_size=max(int(cl.get("prefill_batch_size", 4)), 1),
+        sla_slack_scheduling=bool(cl.get("sla_slack_scheduling", True)),
     )
     rt = d.get("router", {})
     router = RouterConfig(
-        gamma=rt.get("gamma", 0.9),
+        gamma=rt.get("gamma", 1.0),
+        decode_batch_size=max(int(rt.get("decode_batch_size", 32)), 1),
         sla_margin_ms=rt.get("sla_margin_ms", 20.0),
+        reject_intrinsically_infeasible=bool(
+            rt.get("reject_intrinsically_infeasible", True)
+        ),
+        long_term_block_level_kv=rt.get(
+            "long_term_block_level_kv", False
+        ),
+        long_term_kv_block_level_kv=rt.get(
+            "long_term_kv_block_level_kv", True
+        ),
         token_id_bytes=rt.get("token_id_bytes", rt.get("request_bytes_per_token", 4)),
         request_overhead_bytes=rt.get("request_overhead_bytes", 4096),
         response_overhead_bytes=rt.get("response_overhead_bytes", 4096),
-        visual_bytes_per_token=rt.get("visual_bytes_per_token", 0),
+        visual_bytes_per_token=rt.get("visual_bytes_per_token", 512),
+    )
+    km = d.get("kv_manager", {})
+    kv_manager = KVManagerConfig(
+        enabled=km.get("enabled", True),
+        base_replication_factor=km.get("base_replication_factor", 2.0),
+        max_replication_fraction=km.get("max_replication_fraction", 0.50),
+        background_bandwidth_fraction=km.get(
+            "background_bandwidth_fraction", 0.20
+        ),
+        continuation_reference_turns=km.get(
+            "continuation_reference_turns", 4.0
+        ),
+        min_window_ms=km.get("min_window_ms", 1.0),
+        max_window_ms=km.get("max_window_ms", 5000.0),
     )
     hardware = _hardware_from_dict(d["hardware"])
     models = [_model_from_dict(m) for m in d["models"]]
@@ -299,15 +365,26 @@ def from_dict(d: Dict) -> ExperimentConfig:
         session_start_spread_frac=w.get("session_start_spread_frac", 0.8),
         mobility_start_frac=w.get("mobility_start_frac", 0.5),
         mobility_ratio=w.get("mobility_ratio", 0.2),
-        mobility_granularity=w.get("mobility_granularity", "request"),
-        mobility_residency_turns=w.get("mobility_residency_turns", 2),
+        mobility_granularity=w.get("mobility_granularity", "markov"),
+        mobility_residency_turns=w.get("mobility_residency_turns", 0),
         seed=w.get("seed", 0),
     )
-    policies = d.get("policies",
-                     ["nearest", "greedy", "long_term", "long_term_kv"])
+    policies = d.get(
+        "policies",
+        [
+            "nearest",
+            "greedy",
+            "greedy_kv",
+            "long_term",
+            "long_term_kv",
+            "oracle_prefetch",
+            "oracle_kv",
+        ],
+    )
     return ExperimentConfig(
         hardware=hardware, models=models, links=links,
         workload=workload, cluster=cluster, policies=policies, router=router,
+        kv_manager=kv_manager,
     )
 
 
@@ -332,10 +409,20 @@ def default_config() -> ExperimentConfig:
     workload = WorkloadConfig.default_experiment()
     cluster = ClusterConfig(num_nodes=3, staleness_ms=0.0)
     router = RouterConfig()
-    policies = ["nearest", "greedy", "long_term", "long_term_kv"]
+    kv_manager = KVManagerConfig()
+    policies = [
+        "nearest",
+        "greedy",
+        "greedy_kv",
+        "long_term",
+        "long_term_kv",
+        "oracle_prefetch",
+        "oracle_kv",
+    ]
     return ExperimentConfig(
         hardware=hw, models=models, links=links,
         workload=workload, cluster=cluster, policies=policies, router=router,
+        kv_manager=kv_manager,
     )
 
 

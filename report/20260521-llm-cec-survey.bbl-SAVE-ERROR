@@ -2270,69 +2270,6 @@
       \field{pages}{559\bibrangedash 578}
       \range{pages}{20}
     \endentry
-    \entry{vllmascend2026documentation}{online}{}{}
-      \name{author}{1}{}{%
-        {{hash=717bb40abeca4e4ba695957f5ed923b9}{%
-           family={{vLLM Ascend Team}},
-           familyi={v\bibinitperiod}}}%
-      }
-      \strng{namehash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{fullhash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{fullhashraw}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{bibnamehash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{authorbibnamehash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{authornamehash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{authorfullhash}{717bb40abeca4e4ba695957f5ed923b9}
-      \strng{authorfullhashraw}{717bb40abeca4e4ba695957f5ed923b9}
-      \field{extraname}{1}
-      \field{sortinit}{1}
-      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
-      \field{labelnamesource}{author}
-      \field{labeltitlesource}{title}
-      \field{title}{{vLLM Ascend Documentation}}
-      \field{urlday}{2}
-      \field{urlmonth}{7}
-      \field{urlyear}{2026}
-      \field{year}{2026}
-      \field{urldateera}{ce}
-      \verb{urlraw}
-      \verb https://docs.vllm.ai/projects/ascend/en/latest/
-      \endverb
-      \verb{url}
-      \verb https://docs.vllm.ai/projects/ascend/en/latest/
-      \endverb
-    \endentry
-    \entry{huawei2026mindie}{online}{}{}
-      \name{author}{1}{}{%
-        {{hash=0dfac60e4b573014cb76306c5bcf5455}{%
-           family={{Huawei Ascend}},
-           familyi={H\bibinitperiod}}}%
-      }
-      \strng{namehash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{fullhash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{fullhashraw}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{bibnamehash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{authorbibnamehash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{authornamehash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{authorfullhash}{0dfac60e4b573014cb76306c5bcf5455}
-      \strng{authorfullhashraw}{0dfac60e4b573014cb76306c5bcf5455}
-      \field{sortinit}{1}
-      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
-      \field{labelnamesource}{author}
-      \field{labeltitlesource}{title}
-      \field{title}{{MindIE}}
-      \field{urlday}{2}
-      \field{urlmonth}{7}
-      \field{urlyear}{2026}
-      \field{year}{2026}
-      \field{urldateera}{ce}
-      \verb{urlraw}
-      \verb https://www.hiascend.com/en/developer/software/mindie
-      \endverb
-      \verb{url}
-      \verb https://www.hiascend.com/en/developer/software/mindie
-      \endverb
-    \endentry
     \entry{wu2026fastserve}{inproceedings}{}{}
       \name{author}{9}{}{%
         {{hash=c8cdd92b6446bbd178a963d4029c34b1}{%
@@ -4373,6 +4310,38 @@
       \field{pages}{111\bibrangedash 126}
       \range{pages}{16}
     \endentry
+    \entry{vllmascend2026documentation}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=717bb40abeca4e4ba695957f5ed923b9}{%
+           family={{vLLM Ascend Team}},
+           familyi={v\bibinitperiod}}}%
+      }
+      \strng{namehash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{fullhash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{fullhashraw}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{bibnamehash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{authorbibnamehash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{authornamehash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{authorfullhash}{717bb40abeca4e4ba695957f5ed923b9}
+      \strng{authorfullhashraw}{717bb40abeca4e4ba695957f5ed923b9}
+      \field{extraname}{1}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{{vLLM Ascend Documentation}}
+      \field{urlday}{2}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://docs.vllm.ai/projects/ascend/en/latest/
+      \endverb
+      \verb{url}
+      \verb https://docs.vllm.ai/projects/ascend/en/latest/
+      \endverb
+    \endentry
     \entry{vllmascend2026installation}{online}{}{}
       \name{author}{1}{}{%
         {{hash=717bb40abeca4e4ba695957f5ed923b9}{%
@@ -4499,6 +4468,37 @@
       \endverb
       \verb{url}
       \verb https://docs.vllm.ai/projects/ascend/en/latest/user_guide/feature_guide/speculative_decoding.html
+      \endverb
+    \endentry
+    \entry{huawei2026mindie}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=0dfac60e4b573014cb76306c5bcf5455}{%
+           family={{Huawei Ascend}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{fullhash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{fullhashraw}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{bibnamehash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{authorbibnamehash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{authornamehash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{authorfullhash}{0dfac60e4b573014cb76306c5bcf5455}
+      \strng{authorfullhashraw}{0dfac60e4b573014cb76306c5bcf5455}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{{MindIE}}
+      \field{urlday}{2}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://www.hiascend.com/en/developer/software/mindie
+      \endverb
+      \verb{url}
+      \verb https://www.hiascend.com/en/developer/software/mindie
       \endverb
     \endentry
     \entry{vllm2026openai}{online}{}{}

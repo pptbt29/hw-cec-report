@@ -71,6 +71,18 @@ class ModelSpec:
             return int(self.weight_bytes)
         return int((self.num_params + self.vision_params) * self.dtype_bytes)
 
+    def decoder_weight_bytes(self) -> int:
+        """Weights read by one autoregressive decoder step.
+
+        ``total_weight_bytes`` also includes the vision encoder for multimodal
+        models.  Visual features are produced before language decoding, so the
+        ViT weights are not reread on every decoder step.
+        """
+        if self.weight_bytes is not None:
+            vision_bytes = int(self.vision_params * self.dtype_bytes)
+            return max(int(self.weight_bytes) - vision_bytes, 0)
+        return int(self.num_params * self.dtype_bytes)
+
     def kv_bytes_per_token(self) -> int:
         """K and V across all layers for a single token."""
         return int(
@@ -95,7 +107,7 @@ class ModelSpec:
     def decode_bytes_per_token(self, ctx_len: int) -> int:
         """Bytes read to generate one token (weights + KV of full context)."""
         ctx_len = max(ctx_len, 1)
-        return self.total_weight_bytes() + self.kv_bytes_per_token() * ctx_len
+        return self.decoder_weight_bytes() + self.kv_bytes_per_token() * ctx_len
 
     def visual_tokens(self, width: int = 0, height: int = 0, num_frames: int = 1) -> int:
         """Number of visual tokens contributed by image/video input."""

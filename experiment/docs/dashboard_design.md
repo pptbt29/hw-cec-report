@@ -47,14 +47,14 @@ for model in 出现的模型:
 | 区块 | 内容 | 解读 |
 | --- | --- | --- |
 | KPI 卡片 | 请求数、Greedy/LT+KV 的 P99 TTFT、跨节点改善、迁移字节改善、owner 切换 | 一眼看收益 |
-| 汇总对比表 | 11 项指标 × 4 策略，逐列高亮最优 | 全面对比 |
+| 汇总对比表 | 多项指标 × 配置启用的全部策略，逐列高亮最优 | 全面对比 |
 | 关键指标柱状 | P99 TTFT / 跨节点% / 迁移字节 / owner 切换 | 越低越好 |
 | 动作分布 | local/migrate/recompute/fresh 堆叠条 | 策略行为差异 |
 | P99 TTFT 时间序列 | 按到达时间分桶的滚动 P99，标注移动时刻 | 服务质量随时间 |
 | 累计跨节点曲线 | 各策略累计跨节点请求数 | **状态黏附**：Greedy 移动后更陡 |
 | 链路利用率 | 100G/25G 各策略传输字节 | 迁移落在哪条链路 |
 
-顶部 model tab 切换模型；颜色固定映射 nearest/greedy/long_term/long_term_kv。
+顶部 model tab 切换模型；颜色固定映射 nearest/greedy/greedy_kv/long_term/long_term_kv 及 Oracle 策略。
 
 ## 5. 使用
 

@@ -3,21 +3,39 @@
     "num_nodes": 3,
     "staleness_ms": 0.0,
     "kv_capacity_bytes": null,
-    "activation_reserve_bytes": 4000000000.0
+    "activation_reserve_bytes": 64000000000.0,
+    "prefill_batch_size": 4,
+    "sla_slack_scheduling": true
   },
   "router": {
-    "gamma": 0.9,
+    "gamma": 1.0,
+    "decode_batch_size": 32,
     "sla_margin_ms": 20.0,
+    "reject_intrinsically_infeasible": true,
+    "long_term_block_level_kv": false,
+    "long_term_kv_block_level_kv": true,
     "token_id_bytes": 4,
     "request_overhead_bytes": 4096,
     "response_overhead_bytes": 4096,
-    "visual_bytes_per_token": 0
+    "visual_bytes_per_token": 512
+  },
+  "kv_manager": {
+    "enabled": true,
+    "base_replication_factor": 2.0,
+    "max_replication_fraction": 0.5,
+    "background_bandwidth_fraction": 0.2,
+    "continuation_reference_turns": 4.0,
+    "min_window_ms": 1.0,
+    "max_window_ms": 5000.0
   },
   "policies": [
     "nearest",
     "greedy",
+    "greedy_kv",
     "long_term",
-    "long_term_kv"
+    "long_term_kv",
+    "oracle_prefetch",
+    "oracle_kv"
   ],
   "hardware": {
     "name": "A800T-A2",
@@ -25,8 +43,8 @@
     "peak_flops_per_device": 376000000000000.0,
     "mem_bandwidth_per_device": 1600000000000.0,
     "mem_capacity_per_device": 64000000000.0,
-    "compute_efficiency": 0.5,
-    "bandwidth_efficiency": 0.7,
+    "compute_efficiency": 0.4,
+    "bandwidth_efficiency": 0.6,
     "interconnect_bandwidth": 400000000000.0,
     "fixed_overhead_ms": 0.2
   },
@@ -147,104 +165,134 @@
     "seed": 0,
     "mobility_start_frac": 0.5,
     "mobility_ratio": 0.2,
-    "mobility_granularity": "request",
-    "mobility_residency_turns": 2,
+    "mobility_granularity": "markov",
+    "mobility_residency_turns": 0,
     "groups": [
       {
         "model_name": "CodeLlama34B",
         "name": "high",
-        "entry_mode": "counts",
-        "concurrency": 72,
-        "entry_concurrency": [
-          16,
-          24,
-          32
-        ],
-        "entry_ratios": null,
+        "entry_mode": "ratios",
+        "concurrency": 24,
+        "entry_concurrency": null,
+        "entry_ratios": [1,1,2],
         "sla_ms": 150.0,
         "arrival_rate": null,
+        "inter_turn_mean_ms": 2000.0,
         "prompt_dist": {
           "kind": "lognormal",
-          "mean": 800,
-          "std": 600,
+          "mean": 512,
+          "std": 512,
           "minimum": 32,
           "maximum": 4096
         },
-        "output_dist": null,
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "output_dist": {
+          "kind": "lognormal",
+          "mean": 384,
+          "std": 384,
+          "minimum": 16,
+          "maximum": 4096
+        },
+        "turns_mean": 9.0,
+        "turns_min": 2,
+        "turns_max": 24,
+        "turns_dist": {
+          "kind": "lognormal",
+          "mean": 9,
+          "std": 6,
+          "minimum": 2,
+          "maximum": 24
+        },
         "image_size": [
           0,
           0
         ],
         "num_frames": 1,
-        "shared_prefix_tokens": 256,
-        "history_growth": 0.6
+        "shared_prefix_tokens": 0,
+        "history_growth": 1.0
       },
       {
         "model_name": "CodeLlama34B",
         "name": "normal",
-        "entry_mode": "counts",
-        "concurrency": 288,
-        "entry_concurrency": [
-          64,
-          96,
-          128
-        ],
-        "entry_ratios": null,
+        "entry_mode": "ratios",
+        "concurrency": 96,
+        "entry_concurrency": null,
+        "entry_ratios": [1,1,2],
         "sla_ms": 500.0,
         "arrival_rate": null,
+        "inter_turn_mean_ms": 4000.0,
         "prompt_dist": {
           "kind": "lognormal",
-          "mean": 800,
-          "std": 600,
+          "mean": 512,
+          "std": 512,
           "minimum": 32,
           "maximum": 4096
         },
-        "output_dist": null,
-        "turns_mean": 5.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "output_dist": {
+          "kind": "lognormal",
+          "mean": 384,
+          "std": 384,
+          "minimum": 16,
+          "maximum": 4096
+        },
+        "turns_mean": 13.0,
+        "turns_min": 2,
+        "turns_max": 32,
+        "turns_dist": {
+          "kind": "lognormal",
+          "mean": 13,
+          "std": 10,
+          "minimum": 2,
+          "maximum": 32
+        },
         "image_size": [
           0,
           0
         ],
         "num_frames": 1,
-        "shared_prefix_tokens": 256,
-        "history_growth": 0.6
+        "shared_prefix_tokens": 0,
+        "history_growth": 1.0
       },
       {
         "model_name": "Qwen2-VL-7B-Instruct",
         "name": "default",
-        "entry_mode": "counts",
-        "concurrency": 72,
-        "entry_concurrency": [
-          16,
-          24,
-          32
-        ],
-        "entry_ratios": null,
+        "entry_mode": "ratios",
+        "concurrency": 24,
+        "entry_concurrency": null,
+        "entry_ratios": [1,1,2],
         "sla_ms": 500.0,
         "arrival_rate": null,
+        "inter_turn_mean_ms": 5000.0,
         "prompt_dist": {
           "kind": "lognormal",
-          "mean": 128,
-          "std": 96,
+          "mean": 256,
+          "std": 256,
           "minimum": 8,
-          "maximum": 1024
+          "maximum": 2048
         },
-        "output_dist": null,
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "output_dist": {
+          "kind": "lognormal",
+          "mean": 256,
+          "std": 256,
+          "minimum": 4,
+          "maximum": 2048
+        },
+        "turns_mean": 16.0,
+        "turns_min": 2,
+        "turns_max": 24,
+        "turns_dist": {
+          "kind": "lognormal",
+          "mean": 16,
+          "std": 6,
+          "minimum": 2,
+          "maximum": 24
+        },
         "image_size": [
           1024,
           768
         ],
-        "num_frames": 1,
-        "shared_prefix_tokens": 64,
-        "history_growth": 0.6
+        "num_frames": 4,
+        "shared_prefix_tokens": 0,
+        "history_growth": 1.0
       },
       {
         "model_name": "OpenVLA-7B",
@@ -259,6 +307,7 @@
         "entry_ratios": null,
         "sla_ms": 200.0,
         "arrival_rate": null,
+        "inter_turn_mean_ms": 100.0,
         "prompt_dist": {
           "kind": "fixed",
           "mean": 32,
@@ -273,16 +322,23 @@
           "minimum": 7,
           "maximum": 7
         },
-        "turns_mean": 3.0,
-        "turns_min": 1,
-        "turns_max": 12,
+        "turns_mean": 64.0,
+        "turns_min": 16,
+        "turns_max": 128,
+        "turns_dist": {
+          "kind": "lognormal",
+          "mean": 64,
+          "std": 32,
+          "minimum": 16,
+          "maximum": 128
+        },
         "image_size": [
           224,
           224
         ],
         "num_frames": 1,
         "shared_prefix_tokens": 0,
-        "history_growth": 0.0
+        "history_growth": 1.0
       }
     ]
   }

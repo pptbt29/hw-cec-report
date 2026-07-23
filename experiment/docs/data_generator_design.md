@@ -96,12 +96,14 @@ WorkloadGroup:
   entry_ratios      ratios 模式下各入口比例
   sla_ms            覆盖默认 SLA（如高优 150ms）
   arrival_rate      到达率（Poisson，请求/秒），或由并发数推导
+  inter_turn_mean_ms 同一 session 相邻请求的平均间隔
   prompt_dist       prompt 长度分布
   output_dist       输出长度分布（缺省取模型默认）
-  turns_dist        每会话轮数分布
+  turns_dist        每会话轮数分布（fixed/normal/lognormal）
   image_size        VLM 图像分辨率 (w, h)
   num_frames        VLA/VLM 帧数
   shared_prefix_tokens  组内共享 system prompt 长度
+  history_growth    每轮输入和输出进入下一轮 prefix 的比例，默认 1.0
 ```
 
 顶层配置：

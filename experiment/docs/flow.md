@@ -50,7 +50,7 @@ DataGenerator(config).generate()
    - 取 `ModelSpec`，确定 `sla`、`out_dist`（缺省取 `model.default_output_dist`）、到达率 `rate`。
    - `counts` 模式直接使用 `entry_concurrency`；`ratios` 模式按 `entry_ratios + concurrency`
      分配每个接入点的 session 数（单点 1–256）。
-   - 对每个入口的每个 session：采样 `num_turns`、`prefix_id`、`session_start`，初始化 `carried_tokens = shared_prefix_tokens`。
+   - 对每个入口的每个 session：优先从 `turns_dist` 采样 `num_turns`，再生成 `prefix_id`、`session_start`，初始化 `carried_tokens = shared_prefix_tokens`。
    - 对每一轮 `turn`：
      - `prompt_text` ← `prompt_dist.sample`；VLA 使用 fixed 均值，保证输入长度固定；
      - `visual_tokens` ← `model.visual_tokens(image_size, num_frames)`（VLM/VLA）；
@@ -58,9 +58,9 @@ DataGenerator(config).generate()
      - `input_tokens` ← `model.input_tokens(...)` 合成；
      - `output_len` ← `out_dist.sample`（**预设生成长度**）；VLA 使用 fixed 均值，保证输出长度固定；
      - `prefix_tokens = carried_tokens`（会话历史累加，turn 越大前缀越长）；
-     - `arrival_ms` ← 首轮 = session_start，之后按 `expovariate(rate)` 累加（Poisson）；
+     - `arrival_ms` ← 首轮 = session_start，之后按 `inter_turn_mean_ms` 对应的指数分布累加；组级 `arrival_rate` 不再被误用为每个 session 的轮间速率；
      - 追加一个 `Request`。
-     - 更新 `carried_tokens += history_growth*(input_tokens+output_len)`。
+     - 更新 `carried_tokens += history_growth*(input_tokens+output_len)`；默认 `history_growth=1.0`，完整保留历史输入和输出。
 3. `_apply_mobility`：按 request/session/markov 语义更新移动窗口后的 `entry_node`；
    `mobility_switched` 表示当前入口不在 home，`mobility_transitioned` 表示本请求真的发生了入口切换。
 4. 按 `arrival_ms` 排序，赋 `request_id`，返回 `List[Request]`。
@@ -115,10 +115,13 @@ return 指标 dict
   - `local_blocks >= located` → `LOCAL`（该节点已有完整可复用前缀，`hit_tokens=located_tokens`）；
   - 否则 → 同时生成 `MIGRATE`（`_migrate_action`）和 `RECOMPUTE`。
 
-`_migrate_action(located_hashes, dst, located_tokens)` 按策略分叉：
+`_migrate_action(located_hashes, dst, located_tokens)` 按 block-level 配置分叉：
 
-- `LONG_TERM_KV`（`block_level_kv=True`）→ `GlobalKVDirectory.plan_migration` 只传 dst 缺失 block、选最优源，`migrate_bytes=plan.bytes_to_move, src=plan.src`。
-- 其他策略 → 从单一 owner（`_owner_of`）整段搬运，`migrate_bytes = kv_bytes_for_tokens(located_tokens)`。
+- `block_level_kv=True` → `GlobalKVDirectory.plan_migration` 只传 dst 缺失 block、选最优源，`migrate_bytes=plan.bytes_to_move, src=plan.src`。
+- `block_level_kv=False` → 从单一 owner（`_owner_of`）整段搬运，`migrate_bytes = kv_bytes_for_tokens(located_tokens)`。
+
+默认 `LONG_TERM` 为 false，`GREEDY_KV` 与 `LONG_TERM_KV` 为 true。后台主动 placement 在
+`GREEDY_KV` 与 `LONG_TERM_KV` 中使用相同配置运行。
 
 ### 4.3 成本计算（`_cost`）
 
@@ -145,18 +148,16 @@ return 指标 dict
 - `GREEDY`：可行集（无可行则全集）里选 `e2e` 最小。
 - `LONG_TERM` / `LONG_TERM_KV`：对每个候选算 `q = e2e + gamma*_future_value`，选 `q` 最小。
 
-`_future_value`（长期项，防黏附）：
+`_future_value`（oracle-informed 长期启发式）：
 
 ```
-remaining = max(group.turns_mean - turn_index - 1, 0)
-按 request/session/markov 语义预测每个未来轮次的入口概率
-keep      = 后续请求继续转发到当前 exec 的期望通信成本
-relocate  = 一次迁移/重算成本 + 搬迁后的期望通信成本
-返回 min(keep, relocate)
+读取 trace 中本 session 的真实剩余 request、入口、input 和 output
+V_h(owner) = min_exec [E2E_h(owner,exec) + gamma*V_{h+1}(exec)]
+当前动作 q = e2e + gamma*V_{k+1}(current_exec)
 ```
 
-长期策略只在一次状态本地化确实能被后续通信节省回收时提前迁移，避免把整份 KV 迁移成本在每个
-remaining 轮次重复计算。
+该策略不训练预测器或 Q 网络。未来重算使用完整 `prefix_tokens`，折扣逐请求施加；session 真实结束后
+价值为 0。其他 session 的未来队列演化仍不在这项单 session 动态规划中。
 
 ## 5. 提交与状态反馈（`Router.commit`）
 
@@ -166,12 +167,14 @@ remaining 轮次重复计算。
    - `net.start_transfer(src, exec, migrate_bytes, t_now)` → `net.finish_transfer(flow, t_now+t_state)`，累加链路利用率；
    - `kv.plan_migration(located_hashes, exec, net)` → `kv.commit_migration(plan, switch_owner=True)`：把缺失 block 副本登记到 exec 并切 owner（累加 `migrate_bytes`、`owner_switch_count`）。
 2. 若动作是 `RECOMPUTE`：`kv.note_recompute()`（累加 `recompute_count`）。
-3. **会话状态落到 exec 节点**：`context_tokens = input_tokens + output_len`，
+3. **会话状态落到 exec 节点**：`context_tokens = prefix_tokens + input_tokens + output_len`，
    `make_blocks(...)` 生成该会话增长后的全部 block →
    `node.kv_store.insert(blocks)`（容量不足触发 LRU 淘汰）→
    对每个 block `kv.register(exec, b)` 且 `kv.set_owner(b, exec)`。
    这一步使后续同会话请求的前缀定位到 exec，正是状态黏附/迁移的来源。
 4. 负载与指标：`node.add_load(t_prefill + (recompute 时加 t_state))`、`node.record_ttft(ttft)`。
+
+请求状态提交后，`ProactiveKVManager.schedule_after_request` 根据入口转移概率、session 剩余活跃度和资源预算创建低优先级复制任务。事件循环在处理下一请求前调用 `advance(arrival_ms)`；只有完成的任务才写入目标 KV store 与全局目录，未完成任务继续占用对应链路的后台预算。
 
 ## 6. 指标统计（`simulate_trace` 返回）
 
@@ -182,6 +185,9 @@ remaining 轮次重复计算。
 - `cross_node_ratio`（exec≠entry 占比）；
 - `migrate_count`、`recompute_count`；
 - `owner_switch_count`、`migrate_bytes_mb`（取自 `GlobalKVDirectory.stats`）。
+- `placement_scheduled_bytes_mb`、`placement_completed_bytes_mb`、`placement_pending_bytes_mb`；
+- `placement_scheduled_tasks`、`placement_completed_tasks`、`placement_completed_blocks`。
+- `total_kv_transfer_bytes_mb`：前台按需迁移与已完成后台预放置之和，用于判断被动同步下降是否以更高总流量为代价。
 
 ## 7. 单请求端到端走查（示例）
 

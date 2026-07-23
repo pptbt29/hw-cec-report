@@ -1,0 +1,84 @@
+{"kind":"deck","id":"pr/kc24d1","name":"Deck"}
+{"kind":"layout","layoutId":"39698acf-fcf8-4169-af34-de6a8370c57b","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"c8882a8f-a11b-41ef-92d2-d1499d5728c9","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/t6ijb3","slide":1,"title":"就近执行忽略负载与状态位置，单请求穷举补齐当前决策","textShapes":14}
+{"kind":"textbox","id":"sh/0zq58rix","slide":1,"name":"s1-title","text":"就近执行忽略负载与状态位置，单请求穷举补齐当前决策","textPreview":"就近执行忽略负载与状态位置，单请求穷举补齐当前决策","textChars":25,"textLines":1,"bbox":[42,34,1160,82]}
+{"kind":"textbox","id":"sh/fyx4zm1c","slide":1,"name":"s1-kicker","text":"挑战不是“离用户最近”，而是同时决定请求去哪里算、历史 KV 如何获得。","textPreview":"挑战不是“离用户最近”，而是同时决定请求去哪里算、历史 KV 如何获得。","textChars":36,"textLines":1,"bbox":[44,112,1110,36]}
+{"kind":"shape","id":"sh/exon6h0r","slide":1,"name":"s1-timeline","bbox":[46,335,1178,0]}
+{"kind":"shape","id":"sh/dwfmxwj6","slide":1,"name":"s1-step12","bbox":[370,335,80,0]}
+{"kind":"shape","id":"sh/sv654ril","slide":1,"name":"s1-step23","bbox":[782,335,80,0]}
+{"kind":"shape","id":"sh/rux4vm10","slide":1,"name":"s1-node-0","bbox":[51,328,14,14]}
+{"kind":"textbox","id":"sh/qton2h0f","slide":1,"name":"s1-label-0","text":"场景挑战","textPreview":"场景挑战","textChars":4,"textLines":1,"bbox":[52,286,250,28]}
+{"kind":"textbox","id":"sh/xsj69gja","slide":1,"name":"s1-head-0","text":"入口、负载与 KV 位置同时变化","textPreview":"入口、负载与 KV 位置同时变化","textChars":16,"textLines":1,"bbox":[52,372,338,62]}
+{"kind":"textbox","id":"sh/cra5gbip","slide":1,"name":"s1-body-0","text":"用户移动改变入口；节点队列并不均衡；历史 KV 仍可能留在旧节点。最低网络距离不等于最低端到端时延。","textPreview":"用户移动改变入口；节点队列并不均衡；历史 KV 仍可能留在旧节点。最低网络距离不等于最低端到端时延。","textChars":50,"textLines":1,"bbox":[52,446,338,132]}
+{"kind":"shape","id":"sh/ydwrulcz","slide":1,"name":"s1-node-1","bbox":[461,328,14,14]}
+{"kind":"textbox","id":"sh/ze5snqt4","slide":1,"name":"s1-label-1","text":"基线缺陷","textPreview":"基线缺陷","textChars":4,"textLines":1,"bbox":[462,286,250,28]}
+{"kind":"textbox","id":"sh/0fe9wvup","slide":1,"name":"s1-head-1","text":"就近执行把请求锁在入口","textPreview":"就近执行把请求锁在入口","textChars":11,"textLines":1,"bbox":[462,372,338,62]}
+{"kind":"textbox","id":"sh/lgnap0ba","slide":1,"name":"s1-body-1","text":"入口拥塞时继续排队；KV 不在本地时还需同步或重算；远端空闲节点即使更快也不会被选择。","textPreview":"入口拥塞时继续排队；KV 不在本地时还需同步或重算；远端空闲节点即使更快也不会被选择。","textChars":43,"textLines":1,"bbox":[462,446,338,132]}
+{"kind":"shape","id":"sh/qpcrqlcn","slide":1,"name":"s1-node-2","bbox":[873,328,14,14]}
+{"kind":"textbox","id":"sh/balsjqt8","slide":1,"name":"s1-label-2","text":"设计一","textPreview":"设计一","textChars":3,"textLines":1,"bbox":[874,286,250,28]}
+{"kind":"textbox","id":"sh/cbe9sbut","slide":1,"name":"s1-head-2","text":"单请求穷举所有可行动作","textPreview":"单请求穷举所有可行动作","textChars":11,"textLines":1,"bbox":[874,372,338,62]}
+{"kind":"textbox","id":"sh/dcnalgbe","slide":1,"name":"s1-body-2","text":"枚举“节点 × reuse/sync/recompute”，统一估计转发、排队、状态恢复、prefill/decode 与结果返回，选择当前 E2E 最小的动作。","textPreview":"枚举“节点 × reuse/sync/recompute”，统一估计转发、排队、状态恢复、prefill/decode 与结果返回，选择当前 E2E 最小的动作。","textChars":81,"textLines":1,"bbox":[874,446,338,132]}
+{"kind":"shape","id":"sh/a5gb25cr","slide":1,"name":"s1-transition","bbox":[42,608,1196,48]}
+{"kind":"textbox","id":"sh/v6psvatc","slide":1,"name":"s1-transition-text","text":"新的短板：只优化当前请求，但本轮执行节点会决定新增 KV 在哪里增长，并改变后续多轮成本。","textPreview":"新的短板：只优化当前请求，但本轮执行节点会决定新增 KV 在哪里增长，并改变后续多轮成本。","textChars":45,"textLines":1,"bbox":[62,620,1150,26]}
+{"kind":"textbox","id":"sh/rqhon294","slide":1,"name":"source-1","text":"第六章｜长期成本感知的请求卸载","textPreview":"第六章｜长期成本感知的请求卸载","textChars":15,"textLines":1,"bbox":[44,682,1000,18]}
+{"kind":"textbox","id":"sh/6p87exsj","slide":1,"name":"page-1","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1180,676,55,20]}
+{"kind":"notes","id":"nt/t6ijb3","slide":1,"text":""}
+{"kind":"slide","id":"sl/t84wvi","slide":2,"title":"KV 预放置降低切换门槛，长期价值决定何时提前切换","textShapes":16}
+{"kind":"textbox","id":"sh/upoju5oz","slide":2,"name":"s2-title","text":"KV 预放置降低切换门槛，长期价值决定何时提前切换","textPreview":"KV 预放置降低切换门槛，长期价值决定何时提前切换","textChars":25,"textLines":1,"bbox":[42,34,1160,82]}
+{"kind":"textbox","id":"sh/hsf25k7q","slide":2,"name":"s2-kicker","text":"当状态恢复不再压倒其他成本，跨请求的执行位置选择才真正产生优化空间。","textPreview":"当状态恢复不再压倒其他成本，跨请求的执行位置选择才真正产生优化空间。","textChars":34,"textLines":1,"bbox":[44,112,1110,36]}
+{"kind":"shape","id":"sh/wr6lwf65","slide":2,"name":"s2-process-line","bbox":[48,584,1170,0]}
+{"kind":"shape","id":"sh/juxk7apg","slide":2,"name":"s2-ab-line","bbox":[942,405,190,0]}
+{"kind":"shape","id":"sh/ito3ypov","slide":2,"name":"s2-card-0","bbox":[42,164,376,376]}
+{"kind":"textbox","id":"sh/5wf29k7m","slide":2,"name":"s2-card-title-0","text":"新瓶颈｜状态恢复进入关键路径","textPreview":"新瓶颈｜状态恢复进入关键路径","textChars":14,"textLines":1,"bbox":[70,194,320,64]}
+{"kind":"textbox","id":"sh/4v6l0f61","slide":2,"name":"s2-card-body-0","text":"负载均衡或用户移动会把请求送到其他节点；目标节点缺失历史 KV prefix 时，必须执行同步或 prefill 重建。GB 级状态恢复可能抵消排队与请求转发带来的全部收益。","textPreview":"负载均衡或用户移动会把请求送到其他节点；目标节点缺失历史 KV prefix 时，必须执行同步或 prefill 重建。GB 级状态恢复可能抵消排队与请求转发带来的全部收益。","textChars":87,"textLines":1,"bbox":[70,276,320,216]}
+{"kind":"shape","id":"sh/ryhkbups","slide":2,"name":"s2-card-1","bbox":[452,164,376,376]}
+{"kind":"textbox","id":"sh/6x832po7","slide":2,"name":"s2-card-title-1","text":"设计二｜KV Manager 后台预放置","textPreview":"设计二｜KV Manager 后台预放置","textChars":20,"textLines":1,"bbox":[480,194,320,64]}
+{"kind":"textbox","id":"sh/cfip0bet","slide":2,"name":"s2-card-body-1","text":"请求完成后，依据入口转移概率与 session 活跃度，利用后台带宽增量复制候选节点缺失的连续 prefix。真正切换时只恢复 residual KV，把 state latency 降到与排队、转发相近的量级。","textPreview":"请求完成后，依据入口转移概率与 session 活跃度，利用后台带宽增量复制候选节点缺失的连续 prefix。真正切换时只恢复 residual KV，把 state latency 降到与排队、转发相近的量级。","textChars":106,"textLines":1,"bbox":[480,276,320,216]}
+{"kind":"shape","id":"sh/dgrq9gve","slide":2,"name":"s2-card-2","bbox":[862,164,376,376]}
+{"kind":"textbox","id":"sh/qd07ylw3","slide":2,"name":"s2-card-title-2","text":"新的边界｜长期价值","textPreview":"新的边界｜长期价值","textChars":9,"textLines":1,"bbox":[890,194,320,64]}
+{"kind":"textbox","id":"sh/re9876d8","slide":2,"name":"s2-card-body-2","text":"此时当前最优不再等于 session 最优。长期 Router 需要联合评估当前动作产生的新 KV 位置，以及未来多轮转发、排队与状态恢复成本。","textPreview":"此时当前最优不再等于 session 最优。长期 Router 需要联合评估当前动作产生的新 KV 位置，以及未来多轮转发、排队与状态恢复成本。","textChars":72,"textLines":1,"bbox":[890,276,320,112]}
+{"kind":"shape","id":"sh/03ip4ve5","slide":2,"name":"s2-a-node","bbox":[925,388,34,34]}
+{"kind":"shape","id":"sh/14rqd0vq","slide":2,"name":"s2-b-node","bbox":[1115,388,34,34]}
+{"kind":"textbox","id":"sh/e1072lwz","slide":2,"name":"s2-a","text":"A","textPreview":"A","textChars":1,"textLines":1,"bbox":[930,392,24,24]}
+{"kind":"textbox","id":"sh/z298bqdk","slide":2,"name":"s2-b","text":"B","textPreview":"B","textChars":1,"textLines":1,"bbox":[1120,392,24,24]}
+{"kind":"textbox","id":"sh/o7298ve1","slide":2,"name":"s2-example","text":"长 session 在前期将从 A 移动到 B：KV 尚小时提前切换，后续 KV 直接在 B 增长。","textPreview":"长 session 在前期将从 A 移动到 B：KV 尚小时提前切换，后续 KV 直接在 B 增长。","textChars":50,"textLines":1,"bbox":[892,440,310,70]}
+{"kind":"shape","id":"sh/98bqh0vm","slide":2,"name":"s2-stage-node-0","bbox":[43,577,14,14]}
+{"kind":"textbox","id":"sh/xcny5gje","slide":2,"name":"s2-stage-0","text":"状态门槛高","textPreview":"状态门槛高","textChars":5,"textLines":1,"bbox":[42,604,330,34]}
+{"kind":"shape","id":"sh/wbehcb2t","slide":2,"name":"s2-stage-node-1","bbox":[453,577,14,14]}
+{"kind":"textbox","id":"sh/bq5g361o","slide":2,"name":"s2-stage-1","text":"后台逐步降低 residual","textPreview":"后台逐步降低 residual","textChars":15,"textLines":1,"bbox":[452,604,330,34]}
+{"kind":"shape","id":"sh/apwza1k3","slide":2,"name":"s2-stage-node-2","bbox":[863,577,14,14]}
+{"kind":"textbox","id":"sh/lg7y9gjq","slide":2,"name":"s2-stage-2","text":"长期收益变得可实现","textPreview":"长期收益变得可实现","textChars":9,"textLines":1,"bbox":[862,604,330,34]}
+{"kind":"textbox","id":"sh/kfyhgbi5","slide":2,"name":"source-2","text":"核心链路：单请求穷举 → KV Manager → Long-term Router","textPreview":"核心链路：单请求穷举 → KV Manager → Long-term Router","textChars":42,"textLines":1,"bbox":[44,682,1000,18]}
+{"kind":"textbox","id":"sh/jepg761k","slide":2,"name":"page-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1180,676,55,20]}
+{"kind":"notes","id":"nt/t84wvi","slide":2,"text":""}
+{"kind":"slide","id":"sl/m04exb","slide":3,"title":"并发提高 50% 后，单请求穷举+KV 仍将平均 E2E 降低约 20%","textShapes":22}
+{"kind":"textbox","id":"sh/yt0vexob","slide":3,"name":"s3-title","text":"并发提高 50% 后，单请求穷举+KV 仍将平均 E2E 降低约 20%","textPreview":"并发提高 50% 后，单请求穷举+KV 仍将平均 E2E 降低约 20%","textChars":36,"textLines":1,"bbox":[42,32,1165,80]}
+{"kind":"shape","id":"sh/lgre9c7m","slide":3,"name":"s3-setup","bbox":[42,116,1196,112]}
+{"kind":"textbox","id":"sh/kvidg761","slide":3,"name":"s3-setup-head-0","text":"集群与链路","textPreview":"集群与链路","textChars":5,"textLines":1,"bbox":[66,136,240,26]}
+{"kind":"textbox","id":"sh/bqpw3ipk","slide":3,"name":"s3-setup-body-0","text":"3×A800T-A2\n100/100/25 Gbps","textPreview":"3×A800T-A2 | 100/100/25 Gbps","textChars":26,"textLines":2,"bbox":[66,170,250,50]}
+{"kind":"textbox","id":"sh/apgvaxoz","slide":3,"name":"s3-setup-head-1","text":"移动与重复","textPreview":"移动与重复","textChars":5,"textLines":1,"bbox":[348,136,240,26]}
+{"kind":"textbox","id":"sh/xsre5s7q","slide":3,"name":"s3-setup-body-1","text":"60 s · 5 seeds\n后半程 20% 转移","textPreview":"60 s · 5 seeds | 后半程 20% 转移","textChars":25,"textLines":2,"bbox":[348,170,250,50]}
+{"kind":"textbox","id":"sh/crydcn65","slide":3,"name":"s3-setup-head-2","text":"基础并发","textPreview":"基础并发","textChars":4,"textLines":1,"bbox":[628,136,240,26]}
+{"kind":"textbox","id":"sh/3mpwzipo","slide":3,"name":"s3-setup-body-2","text":"Code 24/96\nQwen-VL 24","textPreview":"Code 24/96 | Qwen-VL 24","textChars":21,"textLines":2,"bbox":[628,170,250,50]}
+{"kind":"textbox","id":"sh/2lgv6do3","slide":3,"name":"s3-setup-head-3","text":"150% 并发","textPreview":"150% 并发","textChars":7,"textLines":1,"bbox":[920,136,240,26]}
+{"kind":"textbox","id":"sh/o72h0b2d","slide":3,"name":"s3-setup-body-3","text":"Code 36/144\nQwen-VL 36","textPreview":"Code 36/144 | Qwen-VL 36","textChars":22,"textLines":2,"bbox":[920,170,250,50]}
+{"kind":"shape","id":"sh/psby9g3y","slide":3,"name":"s3-chart-frame","bbox":[42,256,650,368]}
+{"kind":"textbox","id":"sh/25kze1k7","slide":3,"name":"s3-chart-label","text":"平均 E2E latency（ms）","textPreview":"平均 E2E latency（ms）","textChars":18,"textLines":1,"bbox":[66,272,300,30]}
+{"kind":"shape","id":"sh/03ihcr21","slide":3,"name":"s3-stat-0","bbox":[734,262,504,96]}
+{"kind":"textbox","id":"sh/14ry5w3m","slide":3,"name":"s3-stat-title-0","text":"平均 E2E","textPreview":"平均 E2E","textChars":6,"textLines":1,"bbox":[758,278,160,24]}
+{"kind":"textbox","id":"sh/e10za1kb","slide":3,"name":"s3-stat-value-0","text":"−19.65% / −23.37%","textPreview":"−19.65% / −23.37%","textChars":17,"textLines":1,"bbox":[920,274,290,34]}
+{"kind":"textbox","id":"sh/f29g36lw","slide":3,"name":"s3-stat-note-0","text":"CodeLlama / Qwen2-VL","textPreview":"CodeLlama / Qwen2-VL","textChars":20,"textLines":1,"bbox":[758,320,440,20]}
+{"kind":"shape","id":"sh/kzmh8v2l","slide":3,"name":"s3-stat-1","bbox":[734,382,504,96]}
+{"kind":"textbox","id":"sh/l0vih036","slide":3,"name":"s3-stat-title-1","text":"P50 TTFT","textPreview":"P50 TTFT","textChars":8,"textLines":1,"bbox":[758,398,160,24]}
+{"kind":"textbox","id":"sh/947q5wry","slide":3,"name":"s3-stat-value-1","text":"−26.74% / −10.10%","textPreview":"−26.74% / −10.10%","textChars":17,"textLines":1,"bbox":[920,394,290,34]}
+{"kind":"textbox","id":"sh/83ypcrqd","slide":3,"name":"s3-stat-note-1","text":"CodeLlama / Qwen2-VL","textPreview":"CodeLlama / Qwen2-VL","textChars":20,"textLines":1,"bbox":[758,440,440,20]}
+{"kind":"shape","id":"sh/72p83m9s","slide":3,"name":"s3-stat-2","bbox":[734,502,504,96]}
+{"kind":"textbox","id":"sh/m1g7ah87","slide":3,"name":"s3-stat-title-2","text":"SLA 违约率","textPreview":"SLA 违约率","textChars":7,"textLines":1,"bbox":[758,518,160,24]}
+{"kind":"textbox","id":"sh/lg7q1wr2","slide":3,"name":"s3-stat-value-2","text":"−89.83% / −98.56%","textPreview":"−89.83% / −98.56%","textChars":17,"textLines":1,"bbox":[920,514,290,34]}
+{"kind":"textbox","id":"sh/kfyp8rqh","slide":3,"name":"s3-stat-note-2","text":"CodeLlama / Qwen2-VL","textPreview":"CodeLlama / Qwen2-VL","textChars":20,"textLines":1,"bbox":[758,560,440,20]}
+{"kind":"textbox","id":"sh/ze58zm9w","slide":3,"name":"s3-conclusion","text":"结论：在更高并发下，KV 状态准备与跨节点路由共同抵消了新增排队压力。","textPreview":"结论：在更高并发下，KV 状态准备与跨节点路由共同抵消了新增排队压力。","textChars":35,"textLines":1,"bbox":[734,610,504,40]}
+{"kind":"textbox","id":"sh/ydw76h8b","slide":3,"name":"source-3","text":"五个随机种子的均值；完整均值—最小/最大范围见第 6.4.8 节","textPreview":"五个随机种子的均值；完整均值—最小/最大范围见第 6.4.8 节","textChars":32,"textLines":1,"bbox":[44,682,1000,18]}
+{"kind":"textbox","id":"sh/xcnqxcrq","slide":3,"name":"page-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1180,676,55,20]}
+{"kind":"chart","id":"ch/fmtsve1c","slide":3,"name":"","chartType":"bar","bbox":[68,306,596,282]}
+{"kind":"notes","id":"nt/m04exb","slide":3,"text":""}

@@ -178,13 +178,27 @@ class KVCacheStore:
         return evicted
 
     def insert(self, blocks: List[KVBlock], t_now: float, pinned: Optional[Set[str]] = None) -> List[str]:
+        block_hashes = {blk.block_hash for blk in blocks}
+        pinned_now = set(pinned or set()) | block_hashes
+        new_blocks = [blk for blk in blocks if blk.block_hash not in self._blocks]
+        required_bytes = sum(blk.size_bytes for blk in new_blocks)
         evicted: List[str] = []
+        if self.free_bytes() < required_bytes:
+            # Reserve capacity for the whole request in one LRU pass.  The
+            # former per-block eviction repeatedly copied/scanned the complete
+            # OrderedDict and became quadratic for long-session KV caches.
+            evicted = self.evict(required_bytes, t_now, pinned_now)
+
         for blk in blocks:
             if blk.block_hash in self._blocks:
                 self.touch(blk.block_hash, t_now)
                 continue
             if self.free_bytes() < blk.size_bytes:
-                evicted += self.evict(blk.size_bytes, t_now, pinned)
+                # A single session can exceed the configured cache capacity.
+                # Keep the longest feasible contiguous prefix without
+                # overcommitting memory; the directory will treat the rest as
+                # unavailable after the caller unregisters prior evictions.
+                break
             self._blocks[blk.block_hash] = blk
             self._blocks.move_to_end(blk.block_hash)
             self._used += blk.size_bytes
@@ -235,6 +249,22 @@ class GlobalKVDirectory:
 
     def locate(self, block_hash: str) -> Set[int]:
         return set(self._locations.get(block_hash, set()))
+
+    def blocks_for_session(
+        self,
+        session_id: str,
+        prefix_id: str,
+        model_name: Optional[str] = None,
+    ) -> List[KVBlock]:
+        """Return the latest known block metadata in prefix order."""
+        blocks = [
+            block
+            for block in self._meta.values()
+            if block.session_id == session_id
+            and block.prefix_id == prefix_id
+            and (model_name is None or block.model_name == model_name)
+        ]
+        return sorted(blocks, key=lambda block: block.block_index)
 
     def longest_prefix(self, hashes: List[str], node: int) -> Tuple[int, int]:
         """Return (local_hit_blocks, remote_hit_blocks) for a prefix list."""

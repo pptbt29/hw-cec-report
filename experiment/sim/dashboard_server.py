@@ -169,7 +169,7 @@ _PAGE = r"""<!DOCTYPE html>
 </main>
 <script>
 const INITIAL_CONFIG = __CONFIG__;
-const POLICIES = ["nearest","greedy","long_term","long_term_kv"];
+const POLICIES = ["nearest","greedy","greedy_kv","long_term","long_term_kv","greedy_rollout","oracle_prefetch","oracle_kv"];
 let currentConfig = structuredClone(INITIAL_CONFIG);
 
 const $ = id => document.getElementById(id);
@@ -271,10 +271,16 @@ function renderGroups(cfg){
       `<div class="field-wide" data-field="ratios"><label>各入口比例</label><input data-k="entry_ratios" value="${ratios}" placeholder="1,1,2"></div>`+
       field("组总并发", `<input data-k="concurrency" type="number" min="${nodeCount}" step="1" value="${g.concurrency ?? total}">`)+
       field("到达率 req/s", `<input data-k="arrival_rate" type="number" min="0" step="0.01" value="${g.arrival_rate ?? ""}" placeholder="auto">`)+
+      field("轮间隔均值 ms", `<input data-k="inter_turn_mean_ms" type="number" min="1" step="100" value="${g.inter_turn_mean_ms ?? ""}" placeholder="legacy auto">`)+
       field("SLA ms", `<input data-k="sla_ms" type="number" min="1" step="1" value="${g.sla_ms ?? ""}">`)+
-      field("轮数均值", `<input data-k="turns_mean" type="number" min="1" step="0.1" value="${g.turns_mean ?? 4}">`)+
+      `<div class="dist-title">Session 轮数分布</div>`+
+      field("kind", `<select data-k="turns_kind"><option value="normal">normal</option><option value="lognormal">lognormal</option><option value="fixed">fixed</option></select>`)+
+      field("mean", `<input data-k="turns_mean" type="number" min="1" step="0.1" value="${g.turns_dist?.mean ?? g.turns_mean ?? 4}">`)+
+      field("std", `<input data-k="turns_std" type="number" min="0" step="0.1" value="${g.turns_dist?.std ?? Math.max((g.turns_mean ?? 4)*.4,1)}">`)+
+      field("min", `<input data-k="turns_min" type="number" min="1" step="1" value="${g.turns_dist?.minimum ?? g.turns_min ?? 1}">`)+
+      field("max", `<input data-k="turns_max" type="number" min="1" step="1" value="${g.turns_dist?.maximum ?? g.turns_max ?? 12}">`)+
       field("共享 prefix", `<input data-k="shared_prefix_tokens" type="number" min="0" step="1" value="${g.shared_prefix_tokens ?? 0}">`)+
-      field("history growth", `<input data-k="history_growth" type="number" min="0" step="0.05" value="${g.history_growth ?? 0.6}">`)+
+      field("history growth", `<input data-k="history_growth" type="number" min="0" max="1" step="0.05" value="${g.history_growth ?? 1.0}">`)+
       `<div class="dist-title">Prompt 分布</div>`+
       field("kind", `<select data-k="prompt_kind"><option value="fixed">fixed</option><option value="normal">normal</option><option value="lognormal">lognormal</option></select>`)+
       field("mean", `<input data-k="prompt_mean" type="number" min="1" step="1" value="${g.prompt_dist?.mean ?? 128}">`)+
@@ -300,6 +306,7 @@ function renderGroups(cfg){
     const g = groups[Number(row.dataset.i)] || {};
     row.querySelector('[data-k="prompt_kind"]').value = g.prompt_dist?.kind ?? "lognormal";
     row.querySelector('[data-k="output_kind"]').value = g.output_dist?.kind ?? "";
+    row.querySelector('[data-k="turns_kind"]').value = g.turns_dist?.kind ?? "normal";
     row.querySelector('[data-k="entry_mode"]').value = g.entry_mode || (g.entry_ratios ? "ratios" : "counts");
     syncEntryMode(row);
   });
@@ -320,7 +327,20 @@ function applyGroups(cfg){
         g[k] = raw ? raw.split(",").map(x=>Number(x.trim())).filter(x=>Number.isFinite(x)) : null;
         return;
       }
-      if(k === "arrival_rate" || k === "sla_ms"){ g[k] = raw === "" ? null : Number(raw); return; }
+      if(k === "arrival_rate" || k === "sla_ms" || k === "inter_turn_mean_ms"){ g[k] = raw === "" ? null : Number(raw); return; }
+      if(k === "turns_kind"){
+        g.turns_dist = g.turns_dist || {kind:"lognormal",mean:4,std:2,minimum:1,maximum:12};
+        g.turns_dist.kind = raw; return;
+      }
+      if(k === "turns_mean" || k === "turns_std" || k === "turns_min" || k === "turns_max"){
+        g.turns_dist = g.turns_dist || {kind:"lognormal",mean:4,std:2,minimum:1,maximum:12};
+        const field = {turns_mean:"mean",turns_std:"std",turns_min:"minimum",turns_max:"maximum"}[k];
+        g.turns_dist[field] = Number(raw);
+        if(k === "turns_mean") g.turns_mean = Number(raw);
+        if(k === "turns_min") g.turns_min = Number(raw);
+        if(k === "turns_max") g.turns_max = Number(raw);
+        return;
+      }
       if(k === "prompt_kind"){ g.prompt_dist = g.prompt_dist || {}; g.prompt_dist.kind = raw; return; }
       if(k === "prompt_mean"){ g.prompt_dist = g.prompt_dist || {}; g.prompt_dist.mean = Number(raw); return; }
       if(k === "prompt_std"){ g.prompt_dist = g.prompt_dist || {}; g.prompt_dist.std = Number(raw); return; }
@@ -366,10 +386,10 @@ function fillQuick(cfg){
   $("sessionStartSpread").value = cfg.workload?.session_start_spread_frac ?? 0.8;
   $("mobilityGranularity").value = cfg.workload?.mobility_granularity ?? "request";
   $("mobilityResidency").value = cfg.workload?.mobility_residency_turns ?? 2;
-  $("gamma").value = cfg.router?.gamma ?? 0.9;
+  $("gamma").value = cfg.router?.gamma ?? 1.0;
   $("slaMargin").value = cfg.router?.sla_margin_ms ?? 20;
   $("tokenBytes").value = cfg.router?.token_id_bytes ?? cfg.router?.request_bytes_per_token ?? 4;
-  $("visualBytes").value = cfg.router?.visual_bytes_per_token ?? 0;
+  $("visualBytes").value = cfg.router?.visual_bytes_per_token ?? 512;
   $("reqOverhead").value = cfg.router?.request_overhead_bytes ?? 4096;
   $("respOverhead").value = cfg.router?.response_overhead_bytes ?? 4096;
   fillPolicyChecks(cfg);
@@ -434,10 +454,11 @@ function init(){
         const source=groups.find(g=>g.model_name===modelName);
         const next=source?structuredClone(source):{
           model_name:modelName,name:"default",entry_mode:"counts",concurrency:3,
-          entry_concurrency:[1,1,1],entry_ratios:null,sla_ms:null,arrival_rate:null,
+          entry_concurrency:[1,1,1],entry_ratios:null,sla_ms:null,arrival_rate:null,inter_turn_mean_ms:4000,
           prompt_dist:{kind:"lognormal",mean:128,std:64,minimum:1,maximum:4096},
           output_dist:null,turns_mean:4,turns_min:1,turns_max:12,
-          image_size:[0,0],num_frames:1,shared_prefix_tokens:0,history_growth:.6
+          turns_dist:{kind:"lognormal",mean:4,std:2,minimum:1,maximum:12},
+          image_size:[0,0],num_frames:1,shared_prefix_tokens:0,history_growth:1
         };
         const count=groups.filter(g=>g.model_name===modelName).length+1;
         next.name=`group-${count}`; next.priority=next.name;
@@ -478,6 +499,7 @@ function latencyBreakdownTable(models){
   for(const [model, per] of Object.entries(models || {})){
     const keys = ["avg_e2e_ms","avg_request_network_ms","avg_queue_prefill_ms",
       "avg_queue_recompute_ms","avg_queue_decode_ms","avg_migration_ms",
+      "conditional_migration_ms","conditional_recompute_ms",
       "avg_recompute_ms","avg_prefill_ms","avg_decode_ms","avg_response_network_ms",
       "avg_e2e_component_sum_ms"];
     const best = Object.fromEntries(keys.map(k=>[k,Math.min(...Object.values(per).map(m=>m[k]))]));
@@ -574,10 +596,18 @@ def _text_response(
 
 
 class _DashboardServer(ThreadingHTTPServer):
-    def __init__(self, server_address, handler, initial_config: Dict, out_dir: str):
+    def __init__(
+        self,
+        server_address,
+        handler,
+        initial_config: Dict,
+        out_dir: str,
+        max_workers: int,
+    ):
         super().__init__(server_address, handler)
         self.initial_config = initial_config
         self.out_dir = out_dir
+        self.max_workers = max_workers
         self.run_lock = threading.Lock()
 
 
@@ -631,7 +661,10 @@ class _Handler(BaseHTTPRequestHandler):
             _json_response(self, 409, {"error": "已有模拟正在运行，请稍后再试"})
             return
         try:
-            data = run_experiments(experiment)
+            data = run_experiments(
+                experiment,
+                max_workers=self.server.max_workers,
+            )
             os.makedirs(self.server.out_dir, exist_ok=True)
             json_path = os.path.join(self.server.out_dir, "metrics.json")
             html_path = os.path.join(self.server.out_dir, "dashboard.html")
@@ -655,13 +688,22 @@ def serve(
     port: int = 8765,
     config_path: Optional[str] = None,
     open_browser: bool = False,
+    max_workers: int = 6,
 ) -> None:
+    if max_workers < 1:
+        raise ValueError("max_workers must be at least 1")
     cfg = load_config(config_path) if config_path else default_config()
     initial = to_dict(cfg)
     out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
-    httpd = _DashboardServer((host, port), _Handler, initial, out_dir)
+    httpd = _DashboardServer(
+        (host, port),
+        _Handler,
+        initial,
+        out_dir,
+        max_workers,
+    )
     url = f"http://{host}:{port}/"
-    print(f"interactive dashboard -> {url}")
+    print(f"interactive dashboard -> {url} (simulation workers: {max_workers})")
     if open_browser:
         webbrowser.open(url)
     try:
@@ -678,8 +720,16 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--open", action="store_true")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=6,
+        help="parallel model-policy simulation workers (default: 6)",
+    )
     args = parser.parse_args()
-    serve(args.host, args.port, args.config, args.open)
+    if args.workers < 1:
+        parser.error("--workers must be at least 1")
+    serve(args.host, args.port, args.config, args.open, args.workers)
 
 
 if __name__ == "__main__":

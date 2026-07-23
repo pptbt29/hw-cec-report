@@ -97,7 +97,8 @@ T_migrate      = network.transfer_time_ms(src*, dst, bytes_to_move)
 迁移完成后：dst 加入 replicas；按策略 set_owner(dst) 并对旧副本设 TTL
 ```
 
-> 多副本时从“传输成本最低的源”取数；100G 域内优先。这正是“低成本 KV 管理”相对纯长期路由的增量价值。
+> 多副本时从“传输成本最低的源”取数；100G 域内优先。默认配置下，该 block-level 机制只在
+> `LONG_TERM_KV` 中启用；也可通过开关为 `LONG_TERM` 启用，以单独测量其增益。
 
 ### 6.3 recompute（在 dst 重算前缀 KV）
 
@@ -115,7 +116,25 @@ T_recompute = compute_simulator.recompute_time_ms(reusable_prefix_tokens)
 - 动作执行后新增 KV（prefill 写入 + decode 增长）必须满足 `kv_used + new_kv <= kv_capacity`，否则该动作在约束过滤阶段被剔除，或触发淘汰。
 - 这把“显存不足导致不可执行请求”这一指标落到 KV store 上。
 
-## 8. 接口设计
+## 8. 后台增量 KV 预放置
+
+`ProactiveKVManager` 在每个请求提交新增 KV 后触发。测试进入移动阶段后，系统根据目标入口转移概率 \(p_{ij}\) 和 session continuation 估计得到的活跃度 \(\eta_k\)，计算动态复制比例：
+
+```text
+alpha(k,j) = clip(alpha0 * p(i,j) * eta(k), 0, alpha_max)
+```
+
+目标节点已经持有前 `r` 个连续 blocks 时，管理器只从 `r+1` 开始复制，并将计划 block 数向上对齐为完整 block。后台任务具有以下执行语义：
+
+1. 复制源为本轮实际执行节点，源副本继续保留；
+2. 复制字节数受动态比例、预计请求间隔、链路后台份额和目标 KV 剩余容量共同限制；
+3. 同一路径上的后台任务串行执行，跨不相交链路的任务可并行；
+4. 传输完成前，blocks 处于 in-flight 状态，不参与 Router 的 prefix 命中；
+5. 传输完成后，目标 KV store 和全局目录同时更新；容量不足沿用 KV store 的 LRU 策略。
+
+Router 的动作空间保持不变。后台预放置仅改变下一请求可观察到的 KV 分布，使被动 `migrate` 按目标节点实际缺失 blocks 计算传输量。
+
+## 9. 接口设计
 
 ```python
 @dataclass
@@ -153,7 +172,7 @@ class MigrationPlan:
     missing_hashes: List[str]; bytes_to_move: int; transfer_ms: float
 ```
 
-## 9. 与其他模块的关系
+## 10. 与其他模块的关系
 
 - 依赖 `large_model.ModelSpec`：`kv_block_size`、`kv_bytes_per_token`、block 字节数。
 - 依赖 `network.NetworkSimulator`：`plan_migration` 用其 `transfer_time_ms` 选源并定价。

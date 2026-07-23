@@ -1,4 +1,4 @@
-"""Sensitivity sweep for greedy vs long-term routing.
+"""Sensitivity sweep for greedy and long-term routing heuristics.
 
 Runs the same model/workload under request-level and session-level mobility,
 then varies the long-term discount/penalty weight. This makes it easy to see
@@ -36,7 +36,7 @@ def _print_row(
         avg_delta = f"{metrics['avg_e2e_ms'] - greedy['avg_e2e_ms']:+.2f}"
         p99_delta = f"{metrics['p99_ttft_ms'] - greedy['p99_ttft_ms']:+.2f}"
     print(
-        f"{granularity:<8} {policy:<13} {gamma:>5}"
+        f"{granularity:<8} {policy:<15} {gamma:>5}"
         f" {metrics['avg_e2e_ms']:9.2f} {avg_delta:>9}"
         f" {metrics['p99_ttft_ms']:9.2f} {p99_delta:>9}"
         f" {metrics['cross_node_ratio'] * 100:8.1f}"
@@ -61,7 +61,7 @@ def run_sweep(
     model = get_model(model_name)
 
     print(
-        "mobility policy        gamma   avg_e2e  d_avg_g"
+        "mobility policy          gamma   avg_e2e  d_avg_g"
         "  p99_ttft  d_p99_g   xnode%   migr  recomp     migMB"
     )
     for granularity in granularities:
@@ -81,10 +81,16 @@ def run_sweep(
             staleness_ms=cluster.staleness_ms,
             kv_capacity_bytes=cluster.kv_capacity_bytes,
             activation_reserve_bytes=cluster.activation_reserve_bytes,
+            prefill_batch_size=cluster.prefill_batch_size,
             token_id_bytes=token_id_bytes,
             request_overhead_bytes=request_overhead_bytes,
             response_overhead_bytes=response_overhead_bytes,
             visual_bytes_per_token=visual_bytes_per_token,
+            kv_manager_config=experiment.kv_manager,
+            long_term_block_level_kv=experiment.router.long_term_block_level_kv,
+            long_term_kv_block_level_kv=(
+                experiment.router.long_term_kv_block_level_kv
+            ),
         )
         _print_row(granularity, "greedy", "-", greedy)
 
@@ -100,12 +106,44 @@ def run_sweep(
                 gamma=gamma,
                 kv_capacity_bytes=cluster.kv_capacity_bytes,
                 activation_reserve_bytes=cluster.activation_reserve_bytes,
+                prefill_batch_size=cluster.prefill_batch_size,
                 token_id_bytes=token_id_bytes,
                 request_overhead_bytes=request_overhead_bytes,
                 response_overhead_bytes=response_overhead_bytes,
                 visual_bytes_per_token=visual_bytes_per_token,
+                kv_manager_config=experiment.kv_manager,
+                long_term_block_level_kv=(
+                    experiment.router.long_term_block_level_kv
+                ),
+                long_term_kv_block_level_kv=(
+                    experiment.router.long_term_kv_block_level_kv
+                ),
             )
             _print_row(granularity, "long_term", f"{gamma:.2g}", lt, greedy)
+
+        rollout = simulate_trace(
+            Policy.GREEDY_ROLLOUT,
+            requests,
+            model,
+            hw,
+            experiment.new_network(),
+            num_nodes=cluster.num_nodes,
+            staleness_ms=cluster.staleness_ms,
+            gamma=1.0,
+            kv_capacity_bytes=cluster.kv_capacity_bytes,
+            activation_reserve_bytes=cluster.activation_reserve_bytes,
+            prefill_batch_size=cluster.prefill_batch_size,
+            token_id_bytes=token_id_bytes,
+            request_overhead_bytes=request_overhead_bytes,
+            response_overhead_bytes=response_overhead_bytes,
+            visual_bytes_per_token=visual_bytes_per_token,
+            kv_manager_config=experiment.kv_manager,
+            long_term_block_level_kv=experiment.router.long_term_block_level_kv,
+            long_term_kv_block_level_kv=(
+                experiment.router.long_term_kv_block_level_kv
+            ),
+        )
+        _print_row(granularity, "greedy_rollout", "1", rollout, greedy)
 
         kv = simulate_trace(
             Policy.LONG_TERM_KV,
@@ -118,10 +156,16 @@ def run_sweep(
             gamma=max(gammas),
             kv_capacity_bytes=cluster.kv_capacity_bytes,
             activation_reserve_bytes=cluster.activation_reserve_bytes,
+            prefill_batch_size=cluster.prefill_batch_size,
             token_id_bytes=token_id_bytes,
             request_overhead_bytes=request_overhead_bytes,
             response_overhead_bytes=response_overhead_bytes,
             visual_bytes_per_token=visual_bytes_per_token,
+            kv_manager_config=experiment.kv_manager,
+            long_term_block_level_kv=experiment.router.long_term_block_level_kv,
+            long_term_kv_block_level_kv=(
+                experiment.router.long_term_kv_block_level_kv
+            ),
         )
         _print_row(granularity, "long_term_kv", f"{max(gammas):.2g}", kv, greedy)
 
@@ -135,7 +179,7 @@ def main() -> None:
         default="request,session,markov",
         help="Comma-separated list: request,session,markov",
     )
-    parser.add_argument("--gammas", default="0.1,0.3,0.5,0.9")
+    parser.add_argument("--gammas", default="0.9,1.0")
     parser.add_argument("--token-id-bytes", type=int, default=4)
     parser.add_argument("--request-overhead-bytes", type=int, default=4096)
     parser.add_argument("--response-overhead-bytes", type=int, default=4096)

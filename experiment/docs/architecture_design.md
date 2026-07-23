@@ -54,7 +54,7 @@
 | KV 缓存 | `kv_cache.py` | block 级 KV 存储、prefix 目录、命中/迁移/重算/淘汰 |
 | 计算节点 | `node.py`（后续） | 队列 + 计算 + KV store 组合成一个推理服务 |
 | 元数据目录 | `GlobalStateDirectory`（后续） | 聚合全网状态快照，供 router 读取（带 staleness） |
-| 路由器 | `Router`（后续） | 枚举动作、SLA/memory 过滤、四类策略选择 |
+| 路由器 | `Router`（后续） | 枚举动作、SLA/memory 过滤和多类策略选择 |
 | 事件驱动 | `Simulator`（后续） | 离散事件循环，回放轨迹、推进时钟、统计指标 |
 
 本次交付：`large_model`（重命名）、`network`、`kv_cache` 三个模块及设计文档；`node/Router/Simulator` 在架构文档中定义清楚，作为下一步实现。
@@ -65,7 +65,7 @@
 2. `Router` 从 `GlobalStateDirectory` 读取（可能过期的）各节点负载、显存、网络、KV 目录。
 3. `Router` 通过 `kv_cache` 的 prefix 目录定位该 session 历史 KV 的 owner 节点，枚举动作集合：`(o,local)`、`(i,migrate)`、`(i,recompute)`。
 4. 对每个动作用 `compute_simulator` + `network` 预测 TTFT、端到端时延、显存增量、状态获取成本，做 **SLA 与 memory 约束过滤**。
-5. 按策略（就近 / Greedy / 长期成本 / 长期成本+低成本 KV 管理）从可行动作中选择，必要时经 `network` 触发 KV block 迁移。
+5. 按策略（就近 / Greedy / 长期成本 / 长期成本+KV Manager）从可行动作中选择；前者默认采用整段被动同步，后者启用 block-level 同步和后台主动 placement。
 6. 目标节点入队、prefill、decode；`kv_cache` 写入新 block、更新 owner/副本；`network` 累加链路利用率。
 7. `request_finish` 更新节点状态、prefix/session 目录、时延与成本统计，反馈给后续路由决策。
 

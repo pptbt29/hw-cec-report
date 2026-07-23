@@ -114,6 +114,7 @@ class WorkloadGroup:
     entry_ratios: Optional[List[float]] = None
     sla_ms: Optional[float] = None
     arrival_rate: Optional[float] = None  # requests/sec; derived if None
+    inter_turn_mean_ms: Optional[float] = None
     prompt_dist: LengthDistribution = field(
         default_factory=lambda: LengthDistribution("lognormal", 512, 384, 16, 4096)
     )
@@ -121,10 +122,11 @@ class WorkloadGroup:
     turns_mean: float = 4.0
     turns_min: int = 1
     turns_max: int = 12
+    turns_dist: Optional[LengthDistribution] = None
     image_size: Tuple[int, int] = (0, 0)
     num_frames: int = 1
     shared_prefix_tokens: int = 0
-    history_growth: float = 0.6  # fraction of prior turn carried into prefix
+    history_growth: float = 1.0  # fraction of prior turn carried into prefix
 
 
 @dataclass
@@ -135,14 +137,24 @@ class WorkloadConfig:
     session_start_spread_frac: float = 0.8
     mobility_start_frac: float = 0.5
     mobility_ratio: float = 0.2
-    mobility_granularity: str = "request"  # request | session | markov
-    mobility_residency_turns: int = 2
+    mobility_granularity: str = "markov"  # request | session | markov
+    mobility_residency_turns: int = 0
     seed: int = 0
 
     @staticmethod
     def default_experiment() -> "WorkloadConfig":
-        code_prompt = LengthDistribution("lognormal", 800, 600, 32, 4096)
-        vlm_prompt = LengthDistribution("lognormal", 128, 96, 8, 1024)
+        # Coding-agent profile calibrated to the project concurrency/SLA
+        # baseline.  The common system prompt is assumed to be precomputed on
+        # every serving node, so only the per-session user append is generated
+        # and accounted as dynamic KV state.
+        code_prompt = LengthDistribution("lognormal", 512, 512, 32, 4096)
+        code_output = LengthDistribution("lognormal", 384, 384, 16, 4096)
+        high_turns = LengthDistribution("lognormal", 9, 6, 2, 24)
+        normal_turns = LengthDistribution("lognormal", 13, 10, 2, 32)
+        vlm_turns = LengthDistribution("lognormal", 16, 6, 2, 24)
+        vla_turns = LengthDistribution("lognormal", 64, 32, 16, 128)
+        vlm_prompt = LengthDistribution("lognormal", 256, 256, 8, 2048)
+        vlm_output = LengthDistribution("lognormal", 256, 256, 4, 2048)
         vla_prompt = LengthDistribution("fixed", 32, 0, 32, 32)
         vla_output = LengthDistribution("fixed", 7, 0, 7, 7)
         return WorkloadConfig(
@@ -151,35 +163,54 @@ class WorkloadConfig:
                     model_name="CodeLlama34B",
                     name="high",
                     priority="high",
-                    concurrency=72,
-                    entry_concurrency=[16, 24, 32],
+                    concurrency=24,
+                    entry_concurrency=[5, 8, 11],
                     sla_ms=150.0,
                     prompt_dist=code_prompt,
-                    turns_mean=3.0,
-                    shared_prefix_tokens=256,
+                    output_dist=code_output,
+                    turns_mean=9.0,
+                    turns_min=2,
+                    turns_max=24,
+                    turns_dist=high_turns,
+                    inter_turn_mean_ms=2000.0,
+                    shared_prefix_tokens=0,
+                    history_growth=1.0,
                 ),
                 WorkloadGroup(
                     model_name="CodeLlama34B",
                     name="normal",
                     priority="normal",
-                    concurrency=288,
-                    entry_concurrency=[64, 96, 128],
+                    concurrency=96,
+                    entry_concurrency=[21, 32, 43],
                     sla_ms=500.0,
                     prompt_dist=code_prompt,
-                    turns_mean=5.0,
-                    shared_prefix_tokens=256,
+                    output_dist=code_output,
+                    turns_mean=13.0,
+                    turns_min=2,
+                    turns_max=32,
+                    turns_dist=normal_turns,
+                    inter_turn_mean_ms=4000.0,
+                    shared_prefix_tokens=0,
+                    history_growth=1.0,
                 ),
                 WorkloadGroup(
                     model_name="Qwen2-VL-7B-Instruct",
                     name="default",
                     priority="normal",
-                    concurrency=72,
-                    entry_concurrency=[16, 24, 32],
+                    concurrency=24,
+                    entry_concurrency=[5, 8, 11],
                     sla_ms=500.0,
                     prompt_dist=vlm_prompt,
-                    turns_mean=3.0,
+                    output_dist=vlm_output,
+                    turns_mean=16.0,
+                    turns_min=2,
+                    turns_max=24,
+                    turns_dist=vlm_turns,
+                    inter_turn_mean_ms=5000.0,
                     image_size=(1024, 768),
-                    shared_prefix_tokens=64,
+                    num_frames=4,
+                    shared_prefix_tokens=0,
+                    history_growth=1.0,
                 ),
                 WorkloadGroup(
                     model_name="OpenVLA-7B",
@@ -190,17 +221,22 @@ class WorkloadConfig:
                     sla_ms=200.0,
                     prompt_dist=vla_prompt,
                     output_dist=vla_output,
-                    turns_mean=3.0,
+                    turns_mean=64.0,
+                    turns_min=16,
+                    turns_max=128,
+                    turns_dist=vla_turns,
+                    inter_turn_mean_ms=100.0,
                     image_size=(224, 224),
                     shared_prefix_tokens=0,
-                    history_growth=0.0,
+                    history_growth=1.0,
                 ),
             ],
             num_nodes=3,
             duration_ms=60000.0,
             mobility_start_frac=0.5,
             mobility_ratio=0.2,
-            mobility_residency_turns=2,
+            mobility_granularity="markov",
+            mobility_residency_turns=0,
             seed=0,
         )
 
@@ -217,8 +253,16 @@ class DataGenerator:
         return self._model_cache[name]
 
     def _sample_turns(self, group: WorkloadGroup) -> int:
+        if group.turns_dist is not None:
+            return group.turns_dist.sample(self.rng)
         value = self.rng.gauss(group.turns_mean, max(group.turns_mean * 0.4, 1.0))
         return int(max(group.turns_min, min(group.turns_max, round(value))))
+
+    @staticmethod
+    def _expected_turns(group: WorkloadGroup) -> float:
+        if group.turns_dist is not None:
+            return float(group.turns_dist.mean)
+        return float(group.turns_mean)
 
     def _arrival_rate(self, group: WorkloadGroup) -> float:
         if group.arrival_rate is not None:
@@ -290,6 +334,11 @@ class DataGenerator:
             entry_counts = self._entry_session_counts(group, node_count)
             group.concurrency = sum(entry_counts)
             rate = self._arrival_rate(group)
+            inter_turn_mean_ms = (
+                float(group.inter_turn_mean_ms)
+                if group.inter_turn_mean_ms is not None
+                else 1000.0 / max(rate, 1e-6)
+            )
 
             for home_node, n_sessions in enumerate(entry_counts):
                 for _ in range(n_sessions):
@@ -336,8 +385,8 @@ class DataGenerator:
                             inter_arrival = 0.0
                         else:
                             inter_arrival = self.rng.expovariate(
-                                max(rate, 1e-6)
-                            ) * 1000.0
+                                1.0 / max(inter_turn_mean_ms, 1e-6)
+                            )
                         clock += inter_arrival
                         if clock > self.config.duration_ms:
                             break
@@ -362,7 +411,7 @@ class DataGenerator:
                                 prefix_tokens=prefix_tokens,
                                 is_session_first=(turn == 0),
                                 turn_index=turn,
-                                expected_session_turns=group.turns_mean,
+                                expected_session_turns=self._expected_turns(group),
                                 home_node=home_node,
                                 mobility_granularity=self.config.mobility_granularity,
                                 mobility_ratio=self.config.mobility_ratio,
@@ -378,7 +427,7 @@ class DataGenerator:
                                     * self.config.mobility_start_frac
                                 ),
                                 expected_interarrival_ms=(
-                                    1000.0 / max(rate, 1e-6)
+                                    inter_turn_mean_ms
                                 ),
                             )
                         )

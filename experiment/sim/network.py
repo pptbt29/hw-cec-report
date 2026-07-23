@@ -38,6 +38,7 @@ class Flow:
     bottleneck_key: Tuple[int, int]
     num_bytes: float
     start_ms: float
+    background_fraction: float = 0.0
 
 
 class _LinkState:
@@ -47,6 +48,7 @@ class _LinkState:
         self.peak_concurrency = 0
         self.total_bytes = 0.0
         self.total_busy_ms = 0.0
+        self.background_fraction = 0.0
 
 
 class NetworkTopology:
@@ -126,33 +128,64 @@ class NetworkSimulator:
         latency = sum(h.latency_ms for h in hops)
         min_bw = float("inf")
         for h in hops:
-            bw = h.effective_bandwidth()
+            state = self._state[h.key()]
+            bw = h.effective_bandwidth() * max(
+                1.0 - state.background_fraction,
+                0.0,
+            )
             if contention:
-                flows = self._state[h.key()].active_flows
+                flows = state.active_flows
                 bw = bw / max(flows + 1, 1)
             min_bw = min(min_bw, bw)
         if min_bw == float("inf") or min_bw <= 0:
             return latency
         return latency + num_bytes / min_bw * 1000.0
 
-    def start_transfer(self, src: int, dst: int, num_bytes: float, t_now: float) -> Flow:
+    def start_transfer(
+        self,
+        src: int,
+        dst: int,
+        num_bytes: float,
+        t_now: float,
+        background_fraction: float = 0.0,
+    ) -> Flow:
         """Begin a transfer along the shortest path, updating link occupancy."""
         hops = self.topology.path(src, dst)
         hop_keys = [h.key() for h in hops]
         bottleneck = min(hops, key=lambda h: h.effective_bandwidth()) if hops else None
         bottleneck_key = bottleneck.key() if bottleneck else (src, dst)
+        background_fraction = max(min(float(background_fraction), 1.0), 0.0)
         for k in hop_keys:
             st = self._state[k]
-            st.active_flows += 1
-            st.peak_concurrency = max(st.peak_concurrency, st.active_flows)
-        return Flow(next(self._flow_ids), hop_keys, bottleneck_key, num_bytes, t_now)
+            if background_fraction > 0.0:
+                st.background_fraction = min(
+                    st.background_fraction + background_fraction,
+                    1.0,
+                )
+            else:
+                st.active_flows += 1
+                st.peak_concurrency = max(st.peak_concurrency, st.active_flows)
+        return Flow(
+            next(self._flow_ids),
+            hop_keys,
+            bottleneck_key,
+            num_bytes,
+            t_now,
+            background_fraction,
+        )
 
     def finish_transfer(self, flow: Flow, t_now: Optional[float] = None) -> None:
         for k in flow.hop_keys:
             st = self._state.get(k)
             if st is None:
                 continue
-            st.active_flows = max(st.active_flows - 1, 0)
+            if flow.background_fraction > 0.0:
+                st.background_fraction = max(
+                    st.background_fraction - flow.background_fraction,
+                    0.0,
+                )
+            else:
+                st.active_flows = max(st.active_flows - 1, 0)
         bottleneck = self._state.get(flow.bottleneck_key)
         if bottleneck is None:
             return
@@ -181,6 +214,7 @@ class NetworkSimulator:
             st.peak_concurrency = 0
             st.total_bytes = 0.0
             st.total_busy_ms = 0.0
+            st.background_fraction = 0.0
 
 
 def default_topology(num_nodes: int = 3) -> NetworkTopology:
