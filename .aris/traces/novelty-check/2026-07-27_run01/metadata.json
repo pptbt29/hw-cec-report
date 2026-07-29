@@ -1,0 +1,11 @@
+{
+  "skill": "novelty-check",
+  "purpose": "routeprep-kill-review",
+  "date": "2026-07-27",
+  "reviewer_backend": "collaboration-subagent",
+  "reviewer_model": "gpt-5.6-terra",
+  "reasoning_effort": "high",
+  "trace_mode": "full",
+  "status": "ok",
+  "note": "The one-shot Codex MCP reviewer tool was unavailable; an isolated cross-model collaboration subagent was used."
+}

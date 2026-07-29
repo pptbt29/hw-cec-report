@@ -1,0 +1,12 @@
+{
+  "date": "2026-07-24",
+  "candidate_dossier": "/Users/dazzysy/workspace/project/hw-cec-report/idea-stage/EDGE_TASK_SCHEDULING_CANDIDATE_DOSSIER_20260724_111654.md",
+  "reviewer_model": "gpt-5.6-sol",
+  "reasoning_effort": "xhigh",
+  "reviewer_context": "fresh, fork_turns=none",
+  "independence_note": "The available reviewer was a fresh same-provider model, not a heterogeneous model-family jury. Its verdict is advisory and was re-audited after additional directed literature search.",
+  "initial_winner": "C2 Batch-Ready Execution Options",
+  "winner_after_followup": "C5 Multi-Source State Assembly",
+  "final_report": "/Users/dazzysy/workspace/project/hw-cec-report/idea-stage/EDGE_TASK_SCHEDULING_IDEA_REPORT_20260724_113103.md"
+}
+

@@ -164,5 +164,441 @@
     "reason": "s2_verify_pending",
     "identifiers": {},
     "ts": 1784721679.5801458
+  },
+  "arxiv:2508.18572": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2508.18572"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2604.26508": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2604.26508"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2605.18853": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2605.18853"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2604.24086": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2604.24086"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2607.09045": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2607.09045"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2509.11480": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2509.11480"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2010.01370": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "2010.01370"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:1705.10528": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "1705.10528"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:1805.07708": {
+    "status": "verified",
+    "method": "arxiv",
+    "confidence": "high",
+    "reason": null,
+    "identifiers": {
+      "arxiv_id": "1805.07708"
+    },
+    "ts": 1784778158.066693
+  },
+  "arxiv:2412.10927": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2412.10927"
+    },
+    "ts": 1784819062.469316
+  },
+  "arxiv:1809.05239": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "1809.05239"
+    },
+    "ts": 1784819062.469316
+  },
+  "arxiv:2009.05682": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2009.05682"
+    },
+    "ts": 1784819062.469316
+  },
+  "arxiv:2501.09383": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2501.09383"
+    },
+    "ts": 1784819062.469316
+  },
+  "arxiv:2502.02175": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2502.02175"
+    },
+    "ts": 1784819062.469316
+  },
+  "title:82127a381bde96e4": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:755d4a79e1a6199d": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:d30370f71610fa46": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:263f4892411409a8": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:7bc0f7a784953fa6": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:3d267bb8dccdd9cf": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:4cf3df2fcfe2c4cb": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:fa892f3c65a1ed92": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:0a1c690ae36f42ac": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:eecce6418fc740e4": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:47ff67d1cfa4f09b": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "title:5acfb4baa07d0d48": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784823160.8738
+  },
+  "arxiv:2307.14350": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2307.14350"
+    },
+    "ts": 1784862637.27296
+  },
+  "doi:10.1109/jiot.2026.3709703": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "crossref_verify_pending",
+    "identifiers": {
+      "doi": "10.1109/jiot.2026.3709703"
+    },
+    "ts": 1784862637.27296
+  },
+  "doi:10.1109/tcomm.2026.3686718": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "crossref_verify_pending",
+    "identifiers": {
+      "doi": "10.1109/tcomm.2026.3686718"
+    },
+    "ts": 1784862637.27296
+  },
+  "doi:10.1016/j.future.2025.108030": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "crossref_verify_pending",
+    "identifiers": {
+      "doi": "10.1016/j.future.2025.108030"
+    },
+    "ts": 1784862637.27296
+  },
+  "title:54b736dc180f4788": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784862637.27296
+  },
+  "title:5c6ab72e03b802e7": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784862637.27296
+  },
+  "title:b5a58a8ad527ebd2": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784862637.27296
+  },
+  "title:a03bc259451d22ac": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1784862637.27296
+  },
+  "arxiv:2507.07400": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2507.07400"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2604.25899": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2604.25899"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2510.18586": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2510.18586"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2607.17181": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2607.17181"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2508.15919": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2508.15919"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2601.20309": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2601.20309"
+    },
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2607.02043": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2607.02043"
+    },
+    "ts": 1785126113.1789382
+  },
+  "title:db90cab28af39f69": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1785126113.1789382
+  },
+  "arxiv:2607.08565": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2607.08565"
+    },
+    "ts": 1785126317.9140968
+  },
+  "arxiv:2505.24095": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2505.24095"
+    },
+    "ts": 1785126396.514935
+  },
+  "arxiv:2601.10729": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2601.10729"
+    },
+    "ts": 1785126396.514935
+  },
+  "arxiv:2602.11688": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2602.11688"
+    },
+    "ts": 1785126396.514935
+  },
+  "arxiv:2606.22983": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "arxiv_verify_pending",
+    "identifiers": {
+      "arxiv_id": "2606.22983"
+    },
+    "ts": 1785126396.514935
   }
 }

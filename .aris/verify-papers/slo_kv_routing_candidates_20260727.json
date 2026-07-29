@@ -1,0 +1,140 @@
+[
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "resk",
+    "arxiv_id": null,
+    "doi": "10.1109/JIOT.2026.3709703",
+    "title": "Co-optimizing Request Scheduling and KV Caching for Edge LLM Serving"
+  },
+  {
+    "id": "libra",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Libra: Flexible Request Partitioning and Scheduling for Serving Unbalanced and Dynamic LLM Workloads"
+  },
+  {
+    "id": "cachedattention",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Cost-Efficient Large Language Model Serving for Multi-turn Conversations with CachedAttention"
+  },
+  {
+    "id": "kvflow",
+    "arxiv_id": "2507.07400",
+    "doi": null,
+    "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows"
+  },
+  {
+    "id": "dualmap",
+    "arxiv_id": "2602.06502",
+    "doi": null,
+    "title": "DualMap: Breaking the SLO-Cost Barrier in LLM Serving via Hotspot-Aware Load Rebalancing"
+  },
+  {
+    "id": "lmetric",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Simple Is Better: Multiplication May Be All You Need for LLM Request Scheduling"
+  },
+  {
+    "id": "pythia",
+    "arxiv_id": "2604.25899",
+    "doi": null,
+    "title": "Pythia: Toward Predictability-Driven Agent-Native LLM Serving"
+  },
+  {
+    "id": "continuum",
+    "arxiv_id": "2511.02230",
+    "doi": null,
+    "title": "Continuum: Efficient and Robust Multi-Turn LLM Agent Scheduling with KV Cache Time-to-Live"
+  },
+  {
+    "id": "tokencake",
+    "arxiv_id": "2510.18586",
+    "doi": null,
+    "title": "Tokencake: A KV-Cache-centric Serving Framework for LLM-based Multi-Agent Applications"
+  },
+  {
+    "id": "talaria",
+    "arxiv_id": "2607.17181",
+    "doi": null,
+    "title": "Talaria: Session-Aware Serverless Serving of Hundred-Billion-Parameter LLMs"
+  },
+  {
+    "id": "smetric",
+    "arxiv_id": "2607.08565",
+    "doi": null,
+    "title": "SMetric: Rethink LLM Scheduling for Serving Agents with Balanced Session-centric Scheduling"
+  },
+  {
+    "id": "hyperflexis",
+    "arxiv_id": "2508.15919",
+    "doi": null,
+    "title": "HyperFlexis: A Flexible and SLO-Aware LLM Inference Serving System"
+  },
+  {
+    "id": "superinfer",
+    "arxiv_id": "2601.20309",
+    "doi": null,
+    "title": "SuperInfer: SLO-Aware LLM Serving with Optimized GPU Memory Management"
+  },
+  {
+    "id": "load_aware_prefill_deflection",
+    "arxiv_id": "2607.02043",
+    "doi": null,
+    "title": "Load-Aware Prefill Deflection for SLO-Oriented LLM Serving"
+  },
+  {
+    "id": "mooncake",
+    "arxiv_id": "2407.00079",
+    "doi": null,
+    "title": "Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving"
+  },
+  {
+    "id": "randomized_kv_routing",
+    "arxiv_id": "2601.18999",
+    "doi": null,
+    "title": "Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"
+  },
+  {
+    "id": "skywalker",
+    "arxiv_id": "2505.24095",
+    "doi": "10.1145/3767295.3769353",
+    "title": "SkyWalker: A Locality-Aware Cross-Region Load Balancer for LLM Inference"
+  },
+  {
+    "id": "icdcs_edge_kv_migration",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Efficient KV Cache Migration for Geo-Distributed LLM Inference in Collaborative Edge Computing"
+  },
+  {
+    "id": "orbitflow",
+    "arxiv_id": "2601.10729",
+    "doi": null,
+    "title": "ORBITFLOW: SLO-Aware Long-Context LLM Serving with Fine-Grained KV Cache Reconfiguration"
+  },
+  {
+    "id": "robust_kv_uncertainty",
+    "arxiv_id": "2607.16892",
+    "doi": null,
+    "title": "Robust KV Cache Management for LLM Serving under Output Token Length Uncertainty"
+  },
+  {
+    "id": "gorgo",
+    "arxiv_id": "2602.11688",
+    "doi": null,
+    "title": "GORGO: Maximizing KV-Cache Reuse While Minimizing Network Latency in Cross-Region LLM Load Balancing"
+  },
+  {
+    "id": "liveserve",
+    "arxiv_id": "2606.22983",
+    "doi": null,
+    "title": "LiveServe: Interaction-Aware Serving for Real-Time Omni-Modal LLMs"
+  }
+]

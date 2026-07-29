@@ -1,0 +1,80 @@
+[
+  {
+    "id": "edge_handover",
+    "arxiv_id": "2603.28018",
+    "doi": null,
+    "title": "Low-Latency Edge LLM Handover via Joint KV Cache Transfer and Token Prefill"
+  },
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "strata",
+    "arxiv_id": "2508.18572",
+    "doi": null,
+    "title": "Strata: Hierarchical Context Caching for Long Context Language Model Serving"
+  },
+  {
+    "id": "joint_kv_routing",
+    "arxiv_id": "2601.18999",
+    "doi": null,
+    "title": "Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"
+  },
+  {
+    "id": "robust_kv",
+    "arxiv_id": "2607.16892",
+    "doi": null,
+    "title": "Robust KV Cache Management for LLM Serving under Output Token Length Uncertainty"
+  },
+  {
+    "id": "prosemcom_vlm",
+    "arxiv_id": "2604.26508",
+    "doi": null,
+    "title": "Progressive Semantic Communication for Efficient Edge-Cloud Vision-Language Models"
+  },
+  {
+    "id": "inar_vl",
+    "arxiv_id": "2605.18853",
+    "doi": null,
+    "title": "INAR-VL: Input-Aware Routing for Edge-Cloud Vision-Language Inference"
+  },
+  {
+    "id": "asyncshield",
+    "arxiv_id": "2604.24086",
+    "doi": null,
+    "title": "AsyncShield: A Plug-and-Play Edge Adapter for Asynchronous Cloud-based VLA Navigation"
+  },
+  {
+    "id": "cloud_drive",
+    "arxiv_id": "2607.09045",
+    "doi": null,
+    "title": "Can the Cloud Drive? Infrastructure Feasibility of Offloading Autonomous Driving Across 5G and 6G"
+  },
+  {
+    "id": "cross_platform_vla",
+    "arxiv_id": "2509.11480",
+    "doi": null,
+    "title": "Cross-Platform Scaling of Vision-Language-Action Models from Edge to Cloud GPUs"
+  },
+  {
+    "id": "lydroo",
+    "arxiv_id": "2010.01370",
+    "doi": "10.1109/TWC.2021.3085319",
+    "title": "Lyapunov-guided Deep Reinforcement Learning for Stable Online Computation Offloading in Mobile-Edge Computing Networks"
+  },
+  {
+    "id": "cpo",
+    "arxiv_id": "1705.10528",
+    "doi": null,
+    "title": "Constrained Policy Optimization"
+  },
+  {
+    "id": "lyapunov_safe_rl",
+    "arxiv_id": "1805.07708",
+    "doi": null,
+    "title": "A Lyapunov-based Approach to Safe Reinforcement Learning"
+  }
+]

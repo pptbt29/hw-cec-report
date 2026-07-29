@@ -610,60 +610,36 @@ P^{(k)}=
 三个入口的 session 数按 1:1:2 分配。基线总并发分别为 CodeLlama34B 高优 24、CodeLlama34B 普通 96 和 Qwen2-VL-7B-Instruct 24；150\% 负载下对应增加至 36、144 和 36，即实际入口并发分别由 \([6,6,12]\)、\([24,24,48]\)、\([6,6,12]\) 增加为 \([9,9,18]\)、\([36,36,72]\)、\([9,9,18]\)。
 
 \noindent\textbf{工作负载分布。}
-输入 tokens、输出 tokens 和 session request 数均采用对数正态分布，并将采样结果取整后限制在表中给定的范围内。公共 system/coding prompt 在三个同模型节点上预计算并常驻，不计入各 session 独有的历史上下文。历史保留系数取 1，表示某个 session 先前各轮的输入和输出 tokens 全部进入下一轮的历史 prefix，不做窗口截断或摘要压缩。
+记 \(\mathrm{LN_T}(\mu,\sigma;[l,u])\) 为按均值 \(\mu\)、标准差 \(\sigma\) 参数化，并将采样值限制在 \([l,u]\) 内的截断 lognormal 分布。公共 system/coding prompt 在三个同模型节点上预计算并常驻，不计入各 session 独有的历史上下文。历史保留系数取 1，表示某个 session 先前各轮的输入和输出 tokens 全部进入下一轮的历史 prefix，不做窗口截断或摘要压缩。工作负载配置如下。
 
 \begingroup
 \footnotesize
 \setlength{\LTpre}{4pt}
 \setlength{\LTpost}{6pt}
-\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.25\textwidth}
->{\raggedright\arraybackslash}p{0.23\textwidth}
->{\centering\arraybackslash}p{0.13\textwidth}
->{\centering\arraybackslash}p{0.13\textwidth}
->{\centering\arraybackslash}p{0.17\textwidth}@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}
+>{\raggedright\arraybackslash}p{0.27\textwidth}
+>{\raggedright\arraybackslash}p{0.27\textwidth}
+>{\raggedright\arraybackslash}p{0.27\textwidth}@{}}
 \toprule
-业务 & 随机变量 & 均值 & 标准差 & 取值范围 \\
+配置项 & CodeLlama 高优 & CodeLlama 普通 & Qwen2-VL 普通 \\
 \midrule
 \endfirsthead
 \toprule
-业务 & 随机变量 & 均值 & 标准差 & 取值范围 \\
+配置项 & CodeLlama 高优 & CodeLlama 普通 & Qwen2-VL 普通 \\
 \midrule
 \endhead
-CodeLlama 高优 & 单轮文本输入 tokens & 512 & 512 & \([32,4096]\) \\
-& 输出 tokens & 384 & 384 & \([16,4096]\) \\
-& Session requests & 9 & 6 & \([2,24]\) \\
-\addlinespace
-CodeLlama 普通 & 单轮文本输入 tokens & 512 & 512 & \([32,4096]\) \\
-& 输出 tokens & 384 & 384 & \([16,4096]\) \\
-& Session requests & 13 & 10 & \([2,32]\) \\
-\addlinespace
-Qwen2-VL 普通 & 单轮文本输入 tokens & 256 & 256 & \([8,2048]\) \\
-& 输出 tokens & 256 & 256 & \([4,2048]\) \\
-& Session requests & 16 & 6 & \([2,24]\) \\
-\bottomrule
-\end{longtable}
-\endgroup
-
-\begingroup
-\footnotesize
-\setlength{\LTpre}{2pt}
-\setlength{\LTpost}{6pt}
-\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.27\textwidth}
->{\raggedright\arraybackslash}p{0.51\textwidth}
->{\centering\arraybackslash}p{0.14\textwidth}@{}}
-\toprule
-业务 & 单轮附加输入 & SLA \\
-\midrule
-\endfirsthead
-\toprule
-业务 & 单轮附加输入 & SLA \\
-\midrule
-\endhead
-CodeLlama 高优 & 无 & 150 ms \\
-CodeLlama 普通 & 无 & 500 ms \\
-Qwen2-VL 普通 & 4 帧 \(1024\times768\) 图像 & 500 ms \\
+单轮输入 & \(\mathrm{LN_T}(512,512;[32,4096])\)\newline 纯文本 tokens
+& \(\mathrm{LN_T}(512,512;[32,4096])\)\newline 纯文本 tokens
+& \(\mathrm{LN_T}(256,256;[8,2048])\)\newline 纯文本 tokens，加 4 帧 \(1024\times768\) 图像 \\
+输出 tokens & \(\mathrm{LN_T}(384,384;[16,4096])\)
+& \(\mathrm{LN_T}(384,384;[16,4096])\)
+& \(\mathrm{LN_T}(256,256;[4,2048])\) \\
+Session requests & \(\mathrm{LN_T}(9,6;[2,24])\)
+& \(\mathrm{LN_T}(13,10;[2,32])\)
+& \(\mathrm{LN_T}(16,6;[2,24])\) \\
+平均轮间隔 & 2 s & 4 s & 5 s \\
+SLA & 150 ms & 500 ms & 500 ms \\
 \bottomrule
 \end{longtable}
 \endgroup

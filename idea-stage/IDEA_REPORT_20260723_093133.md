@@ -73,11 +73,11 @@ alpha(k,j) = clip(alpha0 * p(i,j) * eta(k), 0, alpha_max)
 
 paper 的在线环境应当是：真实剩余请求数、未来输入/输出规模、下一请求到达时间和用户未来位置都不可见；算法只能使用当前观测、历史信息、预测分布及其置信度。此时真正需要补全的不是 oracle，而是以下映射：
 
-\[
-\text{当前状态与预测分布}
-\longrightarrow
-\text{在线 Router/KV preparation 动作}.
-\]
+$$
+\left(s_t,\widehat{\mathcal P}_t\right)
+\longmapsto
+\left(a_t^{\mathrm{route}},a_t^{\mathrm{KV}}\right)
+$$
 
 因此，上一版将“未来信息过强”直接列为 Idea 硬伤并不准确。更准确的判断是：**oracle 设计没有问题，但 paper 的在线算法及其相对 oracle 的目标尚需定义。** 现有长期 Router 尚未稳定优于 Greedy，只能说明当前在线/近在线机制尚未证明长期价值，不能用来反驳 oracle 上界实验。
 
@@ -139,50 +139,50 @@ paper 的在线环境应当是：真实剩余请求数、未来输入/输出规�
 
 ### 5.1 Readiness curve
 
-对 session \(s\) 和候选节点 \(j\)，令 \(x\) 为节点已有的最新连续 KV 状态量，定义残余恢复曲线：
+对 session $s$ 和候选节点 $j$，令 $x$ 为节点已有的最新连续 KV 状态量，定义残余恢复曲线：
 
-\[
+$$
 R_{s,j}(x,t),
-\]
+$$
 
-它由剩余同步字节、可用带宽、重算吞吐、I/O 队列和已有旧版本共同决定，并随 \(x\) 增大而不增。
+它由剩余同步字节、可用带宽、重算吞吐、I/O 队列和已有旧版本共同决定，并随 $x$ 增大而不增。
 
 在线服务成本为：
 
-\[
+$$
 C_{s,j}(x,t)
 =T^{\mathrm{comm}}_{s,j}(t)
 +T^{\mathrm{queue}}_j(t)
 +R_{s,j}(x,t)
 +T^{\mathrm{compute}}_{s,j}(t).
-\]
+$$
 
 ### 5.2 两类 routeability certificate
 
 SLO 可行边界：
 
-\[
+$$
 x^{\mathrm{SLO}}_{s,j}
 =\min\left\{x:
 \Pr[C_{s,j}(x,t)\le D_s]\ge 1-\varepsilon
 \right\}.
-\]
+$$
 
 路由竞争边界：
 
-\[
+$$
 x^{\mathrm{win}}_{s,j}
 =\min\left\{x:
 \mathbb E[C_{s,j}(x,t)]
 \le C^{\mathrm{best}}_s(t)-\delta
 \right\}.
-\]
+$$
 
 达到前者说明节点可满足 SLA；达到后者说明它不仅可运行，而且足以改变 Router 的选择。Manager 的对象不再是模糊的“cache hit rate”，而是可验证的 routeability certificate。
 
 ### 5.3 多 session 在线资源分配
 
-每个 \((s,j)\) 是一个具有以下属性的准备任务：
+每个 $(s,j)$ 是一个具有以下属性的准备任务：
 
 - 下一次可能使用的目的地分布与到达时间分布；
 - 当前版本差和达到证书还缺的字节数；
@@ -194,7 +194,7 @@ Manager 应优先给“最可能在 deadline 前跨过有价值边界”的任�
 
 ### 5.4 版本化旧副本提供第二个关键结构
 
-自回归 session KV 是增长状态，而不是每轮完全替换的 blob。节点 \(j\) 的旧版本可表示为版本差 \(g_{s,j}\)，返回时仅补齐 suffix。由此产生两个联动决策：
+自回归 session KV 是增长状态，而不是每轮完全替换的 blob。节点 $j$ 的旧版本可表示为版本差 $g_{s,j}$，返回时仅补齐 suffix。由此产生两个联动决策：
 
 - 当前不更新旧副本，但保留它等待可能返回；
 - 逐步更新到 routeability 边界，而不要求追平完整最新版本。
@@ -203,7 +203,7 @@ Manager 应优先给“最可能在 deadline 前跨过有价值边界”的任�
 
 ### 5.5 Router 的角色应降级为证书消费者
 
-Router 读取每个节点的当前 \(C_{s,j}(x,t)\)、证书状态和残余恢复时间，做单请求或短窗口选择。若短时 rollout 已足够，就不需要以 DQN 为主贡献；学习模型只能作为估值加速器。
+Router 读取每个节点的当前 $C_{s,j}(x,t)$、证书状态和残余恢复时间，做单请求或短窗口选择。若短时 rollout 已足够，就不需要以 DQN 为主贡献；学习模型只能作为估值加速器。
 
 如果长期 Router 始终不能稳定超过相同 Manager 下的 Greedy，应删除“长期 Router”这一贡献。论文仍可成立为 **routeability-driven proactive KV preparation**，且主线反而更集中。
 
