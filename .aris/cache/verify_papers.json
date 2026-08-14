@@ -600,5 +600,21 @@
       "arxiv_id": "2606.22983"
     },
     "ts": 1785126396.514935
+  },
+  "title:d5ec31a3a989c9ff": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1786496321.668441
+  },
+  "title:218d03f7dbc683f6": {
+    "status": "verify_pending",
+    "method": null,
+    "confidence": null,
+    "reason": "s2_verify_pending",
+    "identifiers": {},
+    "ts": 1786496321.668441
   }
 }

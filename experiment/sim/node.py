@@ -18,6 +18,9 @@ from .large_model import ModelSpec
 from .network import NetworkSimulator
 
 
+SLACK_BUCKET_UPPER_BOUNDS_MS: Tuple[float, ...] = (0.0, 50.0, 200.0)
+
+
 @dataclass
 class NodeState:
     node_id: int
@@ -58,6 +61,33 @@ class NodeState:
                 recompute += r_ms
                 decode += d_ms
         return prefill + recompute + decode, prefill, recompute, decode
+
+    def waiting_work_by_slack(
+        self,
+        now_ms: float,
+    ) -> Tuple[Tuple[float, float, float], ...]:
+        """Aggregate waiting work into four latest-start slack buckets.
+
+        The buckets are ``(-inf, 0]``, ``(0, 50]``, ``(50, 200]`` and
+        ``(200, +inf)`` milliseconds.  Each bucket returns the remaining
+        prefill, recompute and decode work in milliseconds.  The currently
+        running, non-preemptible job is intentionally excluded and exposed
+        separately through ``running_queue``.
+        """
+        buckets = [[0.0, 0.0, 0.0] for _ in range(4)]
+        for latest_start, prefill, recompute, decode in self.waiting_queues:
+            slack_ms = latest_start - now_ms
+            bucket_index = len(SLACK_BUCKET_UPPER_BOUNDS_MS)
+            for index, upper_bound in enumerate(
+                SLACK_BUCKET_UPPER_BOUNDS_MS
+            ):
+                if slack_ms <= upper_bound:
+                    bucket_index = index
+                    break
+            buckets[bucket_index][0] += prefill
+            buckets[bucket_index][1] += recompute
+            buckets[bucket_index][2] += decode
+        return tuple(tuple(bucket) for bucket in buckets)
 
 
 @dataclass

@@ -56,20 +56,20 @@
     \centering
     \vspace*{2.5cm}
 
-    {\Huge \textbf{面向 CEC 场景的 LLM 推理优化：算法研究与应用综述}} \\[1.2cm]
-    {\Large Cloud-Edge-Client Collaborative LLM Inference Survey} \\[3.2cm]
+    {\Huge \textbf{面向协作边缘计算场景的 LLM 推理优化：算法研究与应用综述}} \\[1.2cm]
+    {\Large Collaborative Edge Computing for LLM Inference: Algorithms and Applications} \\[3.2cm]
 
     \begin{center}
         {\fontsize{14}{0}\selectfont \textbf{研究综述报告}} \\[0.5cm]
-        {\fontsize{12}{0}\selectfont \textbf{云-边-端协同计算与大模型推理优化}}
+        {\fontsize{12}{0}\selectfont \textbf{协作边缘计算赋能的大模型推理优化}}
     \end{center}
 
     \vfill
 
     \begin{center}
         \begin{tabular}{ll}
-            \textbf{版本：} & \textbf{v1.0} \\
-            \textbf{日期：} & \textbf{2026年5月} \\
+            \textbf{版本：} & \textbf{v2.0} \\
+            \textbf{日期：} & \textbf{2026年8月} \\
         \end{tabular}
     \end{center}
 
@@ -80,8 +80,9 @@
 \setstretch{1.75}
 
 \begin{abstract}
-大语言模型推理正在从云端集中式服务走向端、边、云协同参与的分布式服务形态。随着端侧设备、接入边缘、区域边缘和中心云共同进入推理路径，系统瓶颈不再只是单个模型或单个 GPU 实例的执行效率，而是模型部署、请求调度、KV/上下文状态管理、服务路径选择和业务 QoS 之间的联合权衡。CEC 场景下的 LLM inference 因而不能简单理解为云侧 serving 能力的边缘下沉，而需要在异构资源、动态网络、用户移动、隐私边界和服务连续性约束下重新组织推理系统。
-\par 本文围绕 CEC 场景下的大语言模型推理优化展开综述。首先，本文梳理 LLM inference 的基本执行机制、问题空间和以优化对象为主轴的 Layer--Scope 分类框架，并分析 CEC 相较云侧集中式 serving 带来的优化重心迁移。在此基础上，本文重点讨论三类算法问题：其一是资源自适应的模型切分部署方法，包括 layer-wise、tensor/operator-level、expert/component-level、inference phase 以及 semantic/token-level partitioning；其二是业务感知的 batching 参数优化方法，包括 queue-level dynamic/admission batching、continuous/iteration-level batching、chunked prefill/blended batching 和 disaggregated prefill-decode batching；其三是用户移动场景下的 LLM inference 请求调度与状态管理，包括 request/session routing、context/KV/runtime state migration and offloading，并把 multi-model/multi-agent workflow orchestration 作为相关扩展问题讨论。进一步地，本文总结三类算法之间的协同关系，讨论其在华为 Ascend 推理栈、vLLM Ascend、MindIE 和 CANN 等现有基础设施上的工程落点，并给出面向验证环境的实施路线、实验指标、baseline 设计和未来研究方向。本文旨在为云-边-端协同大模型推理系统的算法选型、实验验证和工程落地提供系统化参考。
+大语言模型（LLM）推理正从云端集中式服务逐步向网络边缘迁移，以满足低时延、高带宽效率及数据隐私等需求。然而，单个边缘节点（如基站、边缘服务器、边缘网关）受限于计算、存储和通信资源，难以独立承载完整的大模型部署。协作边缘计算（CEC）通过将地理分布、能力异构的终端设备、边缘服务器及 AI 加速板卡整合为统一的协作资源池，为突破这一瓶颈提供了可行路径。在 CEC 框架下，模型切分、请求调度、键值（KV）缓存与上下文管理、服务路径选择等关键环节均可跨节点联合优化。然而，边缘场景下算力异构，资源受限，动态网络条件和请求，以及用户移动性等特性给LLM推理系统带来了新的研究挑战。
+
+\par 本文围绕 CEC 场景下的大语言模型推理优化展开综述。首先，本文梳理 LLM inference 的基本执行机制、问题空间和“优化对象--执行范围”分类框架，并分析 CEC 相较云侧集中式 serving 新增的资源、网络、状态和移动性约束。在此基础上，本文重点讨论三类算法问题：\textbf{资源自适应模型切分部署、业务感知 batching，以及用户移动场景下的请求卸载与状态管理}。相关工作部分覆盖 layer、tensor、expert、prefill阶段和decoer阶段分离等切分方式；动态组批与 chunked prefill 等 batching  调度机制; 以及 request/session routing、context/KV/runtime state migration 和 multi-agent workflow orchestration 等请求调度方法。面向验证环境，报告进一步给出三项具体方案：以统一代价模型比较 TP、PP 和 PP+TP，并采用动态规划求解非均匀 PP 分割；以 CMDP 建模并采用带长期风险约束和安全投影的 Safe-RL 调节 batching策略，以确保不违反 SLO 约束；联合选择请求执行节点和 KV 获取方式，优化移动会话的长期服务成本。最后，本文讨论三类算法的协同关系及其在 Ascend 和 vLLM-Ascend 基础设施上的实现与评估方法。
 \end{abstract}
 
 \clearpage
@@ -96,9 +97,8 @@
 \input{sections/06-task-offloading}
 \input{sections/07-collaborative-optimization}
 \input{sections/08-huawei-implementation-plan}
-\input{sections/09-evaluation}
-\input{sections/10-challenges-and-future-work}
-\input{sections/11-conclusion}
+\input{sections/09-challenges-and-future-work}
+\input{sections/10-conclusion}
 \input{sections/references}
 
 \end{document}

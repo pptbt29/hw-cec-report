@@ -1,10 +1,10 @@
 \phantomsection
-\section*{十一、总结}
-\addcontentsline{toc}{section}{十一、总结}
+\section*{十、总结}
+\addcontentsline{toc}{section}{十、总结}
 
-本文围绕 CEC 场景下的大语言模型推理优化进行了系统综述。与传统数据中心 LLM serving 相比，CEC 推理需要额外处理端-边-云异构资源、无线链路波动、边缘节点负载变化、用户移动、KV/状态连续性、隐私边界和业务 QoS。现有研究已经分别在异构推理、LLM serving runtime、KV/cache 管理和移动边缘服务连续性方面提供了可借鉴基础，但这些机制需要被重新组织到一个可观测、可回退、可验证的协同推理框架中 \cite{jiang2023hexgen,yu2022orca,kwon2023efficient,agrawal2024taming,zhong2024distserve}, \cite{duan2022distributed}, \cite{patel2024splitwise}, \cite{qin2025mooncake,liu2024cachegen,srivatsa2025preble,gao2024cost,ouyang2018follow,sheng2024fairness}。
+本文围绕 CEC 场景下的大语言模型推理优化进行了系统综述。与传统数据中心 LLM serving 相比，CEC 推理需要额外处理异构边缘资源、无线与边缘网络波动、节点负载变化、用户移动、KV/状态连续性、隐私边界和业务 QoS。现有研究已经分别在异构推理、LLM serving runtime、KV/cache 管理和移动边缘服务连续性方面提供了可借鉴基础，但这些机制需要被重新组织到一个可观测、可回退、可验证的协作式边缘推理框架中 \cite{jiang2023hexgen,yu2022orca,kwon2023efficient,agrawal2024taming,zhong2024distserve}, \cite{duan2022distributed}, \cite{patel2024splitwise}, \cite{qin2025mooncake,liu2024cachegen,srivatsa2025preble,gao2024cost,ouyang2018follow,sheng2024fairness}。
 
-从算法主线看，资源自适应模型切分部署解决“模型如何跨异构节点展开”，业务感知 batching 解决“请求和 token 如何在实例内组织执行”，LLM inference task offloading 解决“请求、workflow 和运行时状态如何在多层网络中移动”。三者不是彼此独立的模块：模型切分会改变阶段容量和状态传输代价，batching 会改变实例队列和 SLO 风险，请求路由又会改变负载分布、prefix/KV 命中和后续状态位置。因此，CEC LLM 推理的系统价值来自分层闭环，而不是某一个单点算法。
+从算法主线看，资源自适应模型切分部署解决“模型如何跨异构节点展开”，业务感知 batching 解决“请求和 token 如何在实例内组织执行”，LLM inference task offloading 解决“请求、workflow 和运行时状态如何在协作网络中移动”。三者不是彼此独立的模块：模型切分会改变阶段容量和状态传输代价，batching 会改变实例队列和 SLO 风险，请求路由又会改变负载分布、prefix/KV 命中和后续状态位置。因此，CEC LLM 推理的系统价值来自跨时间尺度的协同闭环，而不是某一个单点算法。
 
 从工程实现看，更稳妥的路线是在 vLLM-Ascend 等现有 Ascend 推理栈上扩展资源自适应控制能力。底层 runtime 继续负责模型加载、算子执行、token 生成、KV 管理和实例内调度；外层控制面补齐多节点资源感知、layer-level profiling、模型分层部署规划、动态 batching 参数控制、状态索引、监控反馈和异常回退。EdgeShard 提供了 layer-level profiling、设备选择、model shard placement 和动态规划搜索的基础，但在 Ascend 环境中需要转化为 vLLM-Ascend 可执行的模板化部署方案。
 

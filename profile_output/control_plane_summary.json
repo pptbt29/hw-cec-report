@@ -1,0 +1,2111 @@
+{
+  "assumptions": {
+    "collector_node": 1,
+    "node_report_interval_ms": 1.0,
+    "link_report_interval_ms": 10.0,
+    "wire_bytes": {
+      "node_report": 224,
+      "link_report": 160,
+      "kv_range_update": 208,
+      "snapshot_query": 176,
+      "snapshot_response": 464
+    },
+    "unfinished_placement_reported": false,
+    "state_age_modeled": false,
+    "periodic_reports_begin_after_first_interval": true,
+    "profile_kind": "workload-trace metadata estimate; not Router event replay"
+  },
+  "agent_schema": {
+    "request_feature_dim": 19,
+    "phase_feature_dim": 1,
+    "local_feature_dim": 20,
+    "central_feature_dim": 72,
+    "observation_dim": 92,
+    "action_mask_dim": 9,
+    "central_continuous_feature_dim": 66,
+    "central_flag_feature_dim": 6,
+    "central_compact_bytes": 270,
+    "central_float32_bytes": 288,
+    "field_names": {
+      "local": [
+        "entry_node_0",
+        "entry_node_1",
+        "entry_node_2",
+        "input_tokens_norm",
+        "context_tokens_norm",
+        "request_bytes_norm",
+        "sla_ms_norm",
+        "output_length_bin_0",
+        "output_length_bin_1",
+        "output_length_bin_2",
+        "output_length_bin_3",
+        "output_length_bin_4",
+        "output_length_bin_5",
+        "output_length_bin_6",
+        "output_length_bin_7",
+        "continuation_h1",
+        "continuation_h2",
+        "continuation_h4",
+        "continuation_h8"
+      ],
+      "phase": [
+        "mobility_active"
+      ],
+      "per_node": [
+        "running_prefill_ms_norm",
+        "running_recompute_ms_norm",
+        "running_decode_ms_norm",
+        "waiting_overdue_prefill_ms_norm",
+        "waiting_overdue_recompute_ms_norm",
+        "waiting_overdue_decode_ms_norm",
+        "waiting_slack_0_50_prefill_ms_norm",
+        "waiting_slack_0_50_recompute_ms_norm",
+        "waiting_slack_0_50_decode_ms_norm",
+        "waiting_slack_50_200_prefill_ms_norm",
+        "waiting_slack_50_200_recompute_ms_norm",
+        "waiting_slack_50_200_decode_ms_norm",
+        "waiting_slack_over_200_prefill_ms_norm",
+        "waiting_slack_over_200_recompute_ms_norm",
+        "waiting_slack_over_200_decode_ms_norm",
+        "free_kv_memory_ratio",
+        "recent_p99_ttft_ms_norm"
+      ],
+      "per_link": [
+        "effective_available_bandwidth_norm",
+        "rtt_ms_norm",
+        "link_available"
+      ],
+      "per_node_kv": [
+        "complete_latest_version",
+        "contiguous_prefix_ratio",
+        "residual_sync_ms_norm",
+        "missing_suffix_recompute_ms_norm"
+      ],
+      "per_node_actions": [
+        "reuse",
+        "sync",
+        "recompute"
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "profiles": {
+    "baseline": {
+      "execution_updates_only": {
+        "runs": [
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1055,
+            "request_rate_rps": 17.583333333333332,
+            "collection": {
+              "generated_bytes": 43419440,
+              "link_carried_bytes": 27996208,
+              "generated_mbps": 5.789258666666667,
+              "link_carried_mbps": 3.7328277333333335
+            },
+            "per_request_pulls": {
+              "generated_bytes": 675200,
+              "link_carried_bytes": 480640,
+              "generated_mbps": 0.09002666666666667,
+              "link_carried_mbps": 0.06408533333333334,
+              "network_latency_ms": {
+                "mean": 0.07122533038441285,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44094640,
+              "link_carried_bytes": 28476848,
+              "generated_mbps": 5.879285333333333,
+              "link_carried_mbps": 3.796913066666667
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1055,
+                "generated_bytes": 219440,
+                "link_carried_bytes": 156208,
+                "generated_mbps": 0.02925866666666667,
+                "link_carried_mbps": 0.020827733333333334
+              },
+              "snapshot_queries": {
+                "messages": 1055,
+                "generated_bytes": 185680,
+                "link_carried_bytes": 132176,
+                "generated_mbps": 0.024757333333333333,
+                "link_carried_mbps": 0.017623466666666667
+              },
+              "snapshot_responses": {
+                "messages": 1055,
+                "generated_bytes": 489520,
+                "link_carried_bytes": 348464,
+                "generated_mbps": 0.06526933333333333,
+                "link_carried_mbps": 0.04646186666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14617088,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9489450666666666,
+                "capacity_fraction": 1.9489450666666666e-05
+              },
+              "B-C-100G": {
+                "bytes": 13859760,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.847968,
+                "capacity_fraction": 1.847968e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 0
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1121,
+            "request_rate_rps": 18.683333333333334,
+            "collection": {
+              "generated_bytes": 43433168,
+              "link_carried_bytes": 28005984,
+              "generated_mbps": 5.791089066666666,
+              "link_carried_mbps": 3.7341312
+            },
+            "per_request_pulls": {
+              "generated_bytes": 717440,
+              "link_carried_bytes": 510720,
+              "generated_mbps": 0.09565866666666667,
+              "link_carried_mbps": 0.068096,
+              "network_latency_ms": {
+                "mean": 0.07122693785310735,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44150608,
+              "link_carried_bytes": 28516704,
+              "generated_mbps": 5.886747733333333,
+              "link_carried_mbps": 3.8022272000000004
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1121,
+                "generated_bytes": 233168,
+                "link_carried_bytes": 165984,
+                "generated_mbps": 0.031089066666666665,
+                "link_carried_mbps": 0.0221312
+              },
+              "snapshot_queries": {
+                "messages": 1121,
+                "generated_bytes": 197296,
+                "link_carried_bytes": 140448,
+                "generated_mbps": 0.026306133333333336,
+                "link_carried_mbps": 0.0187264
+              },
+              "snapshot_responses": {
+                "messages": 1121,
+                "generated_bytes": 520144,
+                "link_carried_bytes": 370272,
+                "generated_mbps": 0.06935253333333334,
+                "link_carried_mbps": 0.0493696
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14641680,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.952224,
+                "capacity_fraction": 1.952224e-05
+              },
+              "B-C-100G": {
+                "bytes": 13875024,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8500032,
+                "capacity_fraction": 1.8500032e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 1
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1150,
+            "request_rate_rps": 19.166666666666668,
+            "collection": {
+              "generated_bytes": 43439200,
+              "link_carried_bytes": 28016800,
+              "generated_mbps": 5.791893333333333,
+              "link_carried_mbps": 3.7355733333333334
+            },
+            "per_request_pulls": {
+              "generated_bytes": 736000,
+              "link_carried_bytes": 544000,
+              "generated_mbps": 0.09813333333333332,
+              "link_carried_mbps": 0.07253333333333332,
+              "network_latency_ms": {
+                "mean": 0.07395509178743961,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44175200,
+              "link_carried_bytes": 28560800,
+              "generated_mbps": 5.890026666666667,
+              "link_carried_mbps": 3.8081066666666663
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1150,
+                "generated_bytes": 239200,
+                "link_carried_bytes": 176800,
+                "generated_mbps": 0.03189333333333333,
+                "link_carried_mbps": 0.02357333333333333
+              },
+              "snapshot_queries": {
+                "messages": 1150,
+                "generated_bytes": 202400,
+                "link_carried_bytes": 149600,
+                "generated_mbps": 0.02698666666666667,
+                "link_carried_mbps": 0.019946666666666668
+              },
+              "snapshot_responses": {
+                "messages": 1150,
+                "generated_bytes": 533600,
+                "link_carried_bytes": 394400,
+                "generated_mbps": 0.07114666666666668,
+                "link_carried_mbps": 0.052586666666666664
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14687472,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9583296000000001,
+                "capacity_fraction": 1.9583296000000002e-05
+              },
+              "B-C-100G": {
+                "bytes": 13873328,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8497770666666666,
+                "capacity_fraction": 1.8497770666666665e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 2
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1143,
+            "request_rate_rps": 19.05,
+            "collection": {
+              "generated_bytes": 43437744,
+              "link_carried_bytes": 28008688,
+              "generated_mbps": 5.7916992,
+              "link_carried_mbps": 3.7344917333333334
+            },
+            "per_request_pulls": {
+              "generated_bytes": 731520,
+              "link_carried_bytes": 519040,
+              "generated_mbps": 0.097536,
+              "link_carried_mbps": 0.06920533333333333,
+              "network_latency_ms": {
+                "mean": 0.07099399552833674,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44169264,
+              "link_carried_bytes": 28527728,
+              "generated_mbps": 5.8892352,
+              "link_carried_mbps": 3.803697066666667
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1143,
+                "generated_bytes": 237744,
+                "link_carried_bytes": 168688,
+                "generated_mbps": 0.031699200000000004,
+                "link_carried_mbps": 0.022491733333333333
+              },
+              "snapshot_queries": {
+                "messages": 1143,
+                "generated_bytes": 201168,
+                "link_carried_bytes": 142736,
+                "generated_mbps": 0.026822400000000003,
+                "link_carried_mbps": 0.019031466666666667
+              },
+              "snapshot_responses": {
+                "messages": 1143,
+                "generated_bytes": 530352,
+                "link_carried_bytes": 376304,
+                "generated_mbps": 0.0707136,
+                "link_carried_mbps": 0.05017386666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14659488,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9545983999999998,
+                "capacity_fraction": 1.9545984e-05
+              },
+              "B-C-100G": {
+                "bytes": 13868240,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8490986666666667,
+                "capacity_fraction": 1.8490986666666668e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 3
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1125,
+            "request_rate_rps": 18.75,
+            "collection": {
+              "generated_bytes": 43434000,
+              "link_carried_bytes": 28008064,
+              "generated_mbps": 5.7912,
+              "link_carried_mbps": 3.7344085333333332
+            },
+            "per_request_pulls": {
+              "generated_bytes": 720000,
+              "link_carried_bytes": 517120,
+              "generated_mbps": 0.096,
+              "link_carried_mbps": 0.06894933333333333,
+              "network_latency_ms": {
+                "mean": 0.07186308108641974,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44154000,
+              "link_carried_bytes": 28525184,
+              "generated_mbps": 5.8872,
+              "link_carried_mbps": 3.8033578666666665
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1125,
+                "generated_bytes": 234000,
+                "link_carried_bytes": 168064,
+                "generated_mbps": 0.0312,
+                "link_carried_mbps": 0.022408533333333334
+              },
+              "snapshot_queries": {
+                "messages": 1125,
+                "generated_bytes": 198000,
+                "link_carried_bytes": 142208,
+                "generated_mbps": 0.0264,
+                "link_carried_mbps": 0.018961066666666665
+              },
+              "snapshot_responses": {
+                "messages": 1125,
+                "generated_bytes": 522000,
+                "link_carried_bytes": 374912,
+                "generated_mbps": 0.0696,
+                "link_carried_mbps": 0.04998826666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14612848,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9483797333333335,
+                "capacity_fraction": 1.9483797333333333e-05
+              },
+              "B-C-100G": {
+                "bytes": 13912336,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8549781333333333,
+                "capacity_fraction": 1.8549781333333334e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 4
+          }
+        ],
+        "mean": {
+          "request_rate_rps": 18.64666666666667,
+          "collection_generated_mbps": 5.791028053333333,
+          "collection_link_carried_mbps": 3.734286506666667,
+          "pull_generated_mbps": 0.09547093333333333,
+          "pull_link_carried_mbps": 0.06857386666666668,
+          "pull_network_latency_mean_ms": 0.07185288732794326,
+          "pull_network_latency_p95_ms": 0.10005688888888889,
+          "pull_network_latency_p99_ms": 0.10005688888888889,
+          "total_generated_mbps": 5.886498986666667,
+          "total_link_carried_mbps": 3.8028603733333335,
+          "links": {
+            "A-B-100G": {
+              "throughput_mbps": 1.95249536,
+              "capacity_fraction": 1.95249536e-05
+            },
+            "B-C-100G": {
+              "throughput_mbps": 1.8503650133333334,
+              "capacity_fraction": 1.8503650133333334e-05
+            },
+            "A-C-25G": {
+              "throughput_mbps": 0.0,
+              "capacity_fraction": 0.0
+            }
+          }
+        }
+      },
+      "with_coalesced_proactive_updates": {
+        "runs": [
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1055,
+            "request_rate_rps": 17.583333333333332,
+            "collection": {
+              "generated_bytes": 43644912,
+              "link_carried_bytes": 28140768,
+              "generated_mbps": 5.819321599999999,
+              "link_carried_mbps": 3.7521024
+            },
+            "per_request_pulls": {
+              "generated_bytes": 675200,
+              "link_carried_bytes": 480640,
+              "generated_mbps": 0.09002666666666667,
+              "link_carried_mbps": 0.06408533333333334,
+              "network_latency_ms": {
+                "mean": 0.07122533038441285,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44320112,
+              "link_carried_bytes": 28621408,
+              "generated_mbps": 5.909348266666667,
+              "link_carried_mbps": 3.8161877333333334
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 2139,
+                "generated_bytes": 444912,
+                "link_carried_bytes": 300768,
+                "generated_mbps": 0.059321599999999995,
+                "link_carried_mbps": 0.0401024
+              },
+              "snapshot_queries": {
+                "messages": 1055,
+                "generated_bytes": 185680,
+                "link_carried_bytes": 132176,
+                "generated_mbps": 0.024757333333333333,
+                "link_carried_mbps": 0.017623466666666667
+              },
+              "snapshot_responses": {
+                "messages": 1055,
+                "generated_bytes": 489520,
+                "link_carried_bytes": 348464,
+                "generated_mbps": 0.06526933333333333,
+                "link_carried_mbps": 0.04646186666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14696544,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9595392,
+                "capacity_fraction": 1.9595392e-05
+              },
+              "B-C-100G": {
+                "bytes": 13924864,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8566485333333334,
+                "capacity_fraction": 1.8566485333333335e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 0
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1121,
+            "request_rate_rps": 18.683333333333334,
+            "collection": {
+              "generated_bytes": 43682768,
+              "link_carried_bytes": 28168848,
+              "generated_mbps": 5.824369066666667,
+              "link_carried_mbps": 3.7558464
+            },
+            "per_request_pulls": {
+              "generated_bytes": 717440,
+              "link_carried_bytes": 510720,
+              "generated_mbps": 0.09565866666666667,
+              "link_carried_mbps": 0.068096,
+              "network_latency_ms": {
+                "mean": 0.07122693785310735,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44400208,
+              "link_carried_bytes": 28679568,
+              "generated_mbps": 5.920027733333334,
+              "link_carried_mbps": 3.8239424
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 2321,
+                "generated_bytes": 482768,
+                "link_carried_bytes": 328848,
+                "generated_mbps": 0.06436906666666667,
+                "link_carried_mbps": 0.0438464
+              },
+              "snapshot_queries": {
+                "messages": 1121,
+                "generated_bytes": 197296,
+                "link_carried_bytes": 140448,
+                "generated_mbps": 0.026306133333333336,
+                "link_carried_mbps": 0.0187264
+              },
+              "snapshot_responses": {
+                "messages": 1121,
+                "generated_bytes": 520144,
+                "link_carried_bytes": 370272,
+                "generated_mbps": 0.06935253333333334,
+                "link_carried_mbps": 0.0493696
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14733616,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9644821333333333,
+                "capacity_fraction": 1.9644821333333333e-05
+              },
+              "B-C-100G": {
+                "bytes": 13945952,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8594602666666666,
+                "capacity_fraction": 1.8594602666666665e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 1
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1150,
+            "request_rate_rps": 19.166666666666668,
+            "collection": {
+              "generated_bytes": 43684224,
+              "link_carried_bytes": 28172592,
+              "generated_mbps": 5.8245632,
+              "link_carried_mbps": 3.7563456
+            },
+            "per_request_pulls": {
+              "generated_bytes": 736000,
+              "link_carried_bytes": 544000,
+              "generated_mbps": 0.09813333333333332,
+              "link_carried_mbps": 0.07253333333333332,
+              "network_latency_ms": {
+                "mean": 0.07395509178743961,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44420224,
+              "link_carried_bytes": 28716592,
+              "generated_mbps": 5.922696533333333,
+              "link_carried_mbps": 3.8288789333333333
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 2328,
+                "generated_bytes": 484224,
+                "link_carried_bytes": 332592,
+                "generated_mbps": 0.0645632,
+                "link_carried_mbps": 0.0443456
+              },
+              "snapshot_queries": {
+                "messages": 1150,
+                "generated_bytes": 202400,
+                "link_carried_bytes": 149600,
+                "generated_mbps": 0.02698666666666667,
+                "link_carried_mbps": 0.019946666666666668
+              },
+              "snapshot_responses": {
+                "messages": 1150,
+                "generated_bytes": 533600,
+                "link_carried_bytes": 394400,
+                "generated_mbps": 0.07114666666666668,
+                "link_carried_mbps": 0.052586666666666664
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14773168,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9697557333333333,
+                "capacity_fraction": 1.9697557333333335e-05
+              },
+              "B-C-100G": {
+                "bytes": 13943424,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8591232,
+                "capacity_fraction": 1.8591232e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 2
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1143,
+            "request_rate_rps": 19.05,
+            "collection": {
+              "generated_bytes": 43691920,
+              "link_carried_bytes": 28172592,
+              "generated_mbps": 5.825589333333333,
+              "link_carried_mbps": 3.7563456
+            },
+            "per_request_pulls": {
+              "generated_bytes": 731520,
+              "link_carried_bytes": 519040,
+              "generated_mbps": 0.097536,
+              "link_carried_mbps": 0.06920533333333333,
+              "network_latency_ms": {
+                "mean": 0.07099399552833674,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44423440,
+              "link_carried_bytes": 28691632,
+              "generated_mbps": 5.923125333333333,
+              "link_carried_mbps": 3.825550933333333
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 2365,
+                "generated_bytes": 491920,
+                "link_carried_bytes": 332592,
+                "generated_mbps": 0.06558933333333333,
+                "link_carried_mbps": 0.0443456
+              },
+              "snapshot_queries": {
+                "messages": 1143,
+                "generated_bytes": 201168,
+                "link_carried_bytes": 142736,
+                "generated_mbps": 0.026822400000000003,
+                "link_carried_mbps": 0.019031466666666667
+              },
+              "snapshot_responses": {
+                "messages": 1143,
+                "generated_bytes": 530352,
+                "link_carried_bytes": 376304,
+                "generated_mbps": 0.0707136,
+                "link_carried_mbps": 0.05017386666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14749968,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9666624,
+                "capacity_fraction": 1.9666623999999998e-05
+              },
+              "B-C-100G": {
+                "bytes": 13941664,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8588885333333334,
+                "capacity_fraction": 1.8588885333333333e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 3
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1125,
+            "request_rate_rps": 18.75,
+            "collection": {
+              "generated_bytes": 43664880,
+              "link_carried_bytes": 28156368,
+              "generated_mbps": 5.821984,
+              "link_carried_mbps": 3.7541824
+            },
+            "per_request_pulls": {
+              "generated_bytes": 720000,
+              "link_carried_bytes": 517120,
+              "generated_mbps": 0.096,
+              "link_carried_mbps": 0.06894933333333333,
+              "network_latency_ms": {
+                "mean": 0.07186308108641974,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44384880,
+              "link_carried_bytes": 28673488,
+              "generated_mbps": 5.917984,
+              "link_carried_mbps": 3.8231317333333332
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 2235,
+                "generated_bytes": 464880,
+                "link_carried_bytes": 316368,
+                "generated_mbps": 0.061984,
+                "link_carried_mbps": 0.0421824
+              },
+              "snapshot_queries": {
+                "messages": 1125,
+                "generated_bytes": 198000,
+                "link_carried_bytes": 142208,
+                "generated_mbps": 0.0264,
+                "link_carried_mbps": 0.018961066666666665
+              },
+              "snapshot_responses": {
+                "messages": 1125,
+                "generated_bytes": 522000,
+                "link_carried_bytes": 374912,
+                "generated_mbps": 0.0696,
+                "link_carried_mbps": 0.04998826666666667
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14702496,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9603328,
+                "capacity_fraction": 1.9603328e-05
+              },
+              "B-C-100G": {
+                "bytes": 13970992,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8627989333333332,
+                "capacity_fraction": 1.8627989333333335e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 4
+          }
+        ],
+        "mean": {
+          "request_rate_rps": 18.64666666666667,
+          "collection_generated_mbps": 5.8231654399999995,
+          "collection_link_carried_mbps": 3.7549644799999995,
+          "pull_generated_mbps": 0.09547093333333333,
+          "pull_link_carried_mbps": 0.06857386666666668,
+          "pull_network_latency_mean_ms": 0.07185288732794326,
+          "pull_network_latency_p95_ms": 0.10005688888888889,
+          "pull_network_latency_p99_ms": 0.10005688888888889,
+          "total_generated_mbps": 5.918636373333333,
+          "total_link_carried_mbps": 3.823538346666667,
+          "links": {
+            "A-B-100G": {
+              "throughput_mbps": 1.9641544533333335,
+              "capacity_fraction": 1.964154453333333e-05
+            },
+            "B-C-100G": {
+              "throughput_mbps": 1.8593838933333333,
+              "capacity_fraction": 1.8593838933333335e-05
+            },
+            "A-C-25G": {
+              "throughput_mbps": 0.0,
+              "capacity_fraction": 0.0
+            }
+          }
+        }
+      }
+    },
+    "target_150pct": {
+      "execution_updates_only": {
+        "runs": [
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1638,
+            "request_rate_rps": 27.3,
+            "collection": {
+              "generated_bytes": 43540704,
+              "link_carried_bytes": 28087520,
+              "generated_mbps": 5.8054272000000005,
+              "link_carried_mbps": 3.7450026666666667
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1048320,
+              "link_carried_bytes": 761600,
+              "generated_mbps": 0.139776,
+              "link_carried_mbps": 0.10154666666666667,
+              "network_latency_ms": {
+                "mean": 0.07269090218423552,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44589024,
+              "link_carried_bytes": 28849120,
+              "generated_mbps": 5.9452032,
+              "link_carried_mbps": 3.8465493333333334
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1638,
+                "generated_bytes": 340704,
+                "link_carried_bytes": 247520,
+                "generated_mbps": 0.045427199999999994,
+                "link_carried_mbps": 0.033002666666666666
+              },
+              "snapshot_queries": {
+                "messages": 1638,
+                "generated_bytes": 288288,
+                "link_carried_bytes": 209440,
+                "generated_mbps": 0.038438400000000005,
+                "link_carried_mbps": 0.027925333333333333
+              },
+              "snapshot_responses": {
+                "messages": 1638,
+                "generated_bytes": 760032,
+                "link_carried_bytes": 552160,
+                "generated_mbps": 0.1013376,
+                "link_carried_mbps": 0.07362133333333333
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14778208,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9704277333333333,
+                "capacity_fraction": 1.9704277333333334e-05
+              },
+              "B-C-100G": {
+                "bytes": 14070912,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8761216,
+                "capacity_fraction": 1.8761216e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 0
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1678,
+            "request_rate_rps": 27.966666666666665,
+            "collection": {
+              "generated_bytes": 43549024,
+              "link_carried_bytes": 28093968,
+              "generated_mbps": 5.806536533333333,
+              "link_carried_mbps": 3.7458624
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1073920,
+              "link_carried_bytes": 781440,
+              "generated_mbps": 0.14318933333333334,
+              "link_carried_mbps": 0.104192,
+              "network_latency_ms": {
+                "mean": 0.0728065919745729,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44622944,
+              "link_carried_bytes": 28875408,
+              "generated_mbps": 5.949725866666666,
+              "link_carried_mbps": 3.8500544
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1678,
+                "generated_bytes": 349024,
+                "link_carried_bytes": 253968,
+                "generated_mbps": 0.04653653333333333,
+                "link_carried_mbps": 0.0338624
+              },
+              "snapshot_queries": {
+                "messages": 1678,
+                "generated_bytes": 295328,
+                "link_carried_bytes": 214896,
+                "generated_mbps": 0.03937706666666667,
+                "link_carried_mbps": 0.0286528
+              },
+              "snapshot_responses": {
+                "messages": 1678,
+                "generated_bytes": 778592,
+                "link_carried_bytes": 566544,
+                "generated_mbps": 0.10381226666666667,
+                "link_carried_mbps": 0.0755392
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14762944,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9683925333333334,
+                "capacity_fraction": 1.9683925333333335e-05
+              },
+              "B-C-100G": {
+                "bytes": 14112464,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8816618666666667,
+                "capacity_fraction": 1.8816618666666668e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 1
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1652,
+            "request_rate_rps": 27.533333333333335,
+            "collection": {
+              "generated_bytes": 43543616,
+              "link_carried_bytes": 28092720,
+              "generated_mbps": 5.805815466666667,
+              "link_carried_mbps": 3.745696
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1057280,
+              "link_carried_bytes": 777600,
+              "generated_mbps": 0.14097066666666666,
+              "link_carried_mbps": 0.10368,
+              "network_latency_ms": {
+                "mean": 0.07358905569007264,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44600896,
+              "link_carried_bytes": 28870320,
+              "generated_mbps": 5.946786133333334,
+              "link_carried_mbps": 3.849376
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1652,
+                "generated_bytes": 343616,
+                "link_carried_bytes": 252720,
+                "generated_mbps": 0.045815466666666665,
+                "link_carried_mbps": 0.033696
+              },
+              "snapshot_queries": {
+                "messages": 1652,
+                "generated_bytes": 290752,
+                "link_carried_bytes": 213840,
+                "generated_mbps": 0.03876693333333334,
+                "link_carried_mbps": 0.028512
+              },
+              "snapshot_responses": {
+                "messages": 1652,
+                "generated_bytes": 766528,
+                "link_carried_bytes": 563760,
+                "generated_mbps": 0.10220373333333334,
+                "link_carried_mbps": 0.075168
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14780752,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9707669333333333,
+                "capacity_fraction": 1.9707669333333333e-05
+              },
+              "B-C-100G": {
+                "bytes": 14089568,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8786090666666666,
+                "capacity_fraction": 1.8786090666666665e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 2
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1742,
+            "request_rate_rps": 29.033333333333335,
+            "collection": {
+              "generated_bytes": 43562336,
+              "link_carried_bytes": 28110192,
+              "generated_mbps": 5.808311466666667,
+              "link_carried_mbps": 3.7480256
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1114880,
+              "link_carried_bytes": 831360,
+              "generated_mbps": 0.14865066666666665,
+              "link_carried_mbps": 0.110848,
+              "network_latency_ms": {
+                "mean": 0.07461188212782242,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44677216,
+              "link_carried_bytes": 28941552,
+              "generated_mbps": 5.956962133333334,
+              "link_carried_mbps": 3.8588736
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1742,
+                "generated_bytes": 362336,
+                "link_carried_bytes": 270192,
+                "generated_mbps": 0.04831146666666667,
+                "link_carried_mbps": 0.0360256
+              },
+              "snapshot_queries": {
+                "messages": 1742,
+                "generated_bytes": 306592,
+                "link_carried_bytes": 228624,
+                "generated_mbps": 0.04087893333333333,
+                "link_carried_mbps": 0.030483200000000002
+              },
+              "snapshot_responses": {
+                "messages": 1742,
+                "generated_bytes": 808288,
+                "link_carried_bytes": 602736,
+                "generated_mbps": 0.10777173333333334,
+                "link_carried_mbps": 0.0803648
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14805344,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9740458666666667,
+                "capacity_fraction": 1.9740458666666667e-05
+              },
+              "B-C-100G": {
+                "bytes": 14136208,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8848277333333334,
+                "capacity_fraction": 1.8848277333333334e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 3
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1715,
+            "request_rate_rps": 28.583333333333332,
+            "collection": {
+              "generated_bytes": 43556720,
+              "link_carried_bytes": 28108112,
+              "generated_mbps": 5.807562666666667,
+              "link_carried_mbps": 3.7477482666666666
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1097600,
+              "link_carried_bytes": 824960,
+              "generated_mbps": 0.14634666666666665,
+              "link_carried_mbps": 0.10999466666666667,
+              "network_latency_ms": {
+                "mean": 0.07520310774214449,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44654320,
+              "link_carried_bytes": 28933072,
+              "generated_mbps": 5.953909333333333,
+              "link_carried_mbps": 3.8577429333333333
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 1715,
+                "generated_bytes": 356720,
+                "link_carried_bytes": 268112,
+                "generated_mbps": 0.04756266666666666,
+                "link_carried_mbps": 0.03574826666666667
+              },
+              "snapshot_queries": {
+                "messages": 1715,
+                "generated_bytes": 301840,
+                "link_carried_bytes": 226864,
+                "generated_mbps": 0.040245333333333334,
+                "link_carried_mbps": 0.030248533333333334
+              },
+              "snapshot_responses": {
+                "messages": 1715,
+                "generated_bytes": 795760,
+                "link_carried_bytes": 598096,
+                "generated_mbps": 0.10610133333333333,
+                "link_carried_mbps": 0.07974613333333333
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14782448,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9709930666666666,
+                "capacity_fraction": 1.9709930666666667e-05
+              },
+              "B-C-100G": {
+                "bytes": 14150624,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8867498666666667,
+                "capacity_fraction": 1.8867498666666666e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 4
+          }
+        ],
+        "mean": {
+          "request_rate_rps": 28.083333333333332,
+          "collection_generated_mbps": 5.806730666666667,
+          "collection_link_carried_mbps": 3.746466986666667,
+          "pull_generated_mbps": 0.14378666666666667,
+          "pull_link_carried_mbps": 0.10605226666666667,
+          "pull_network_latency_mean_ms": 0.0737803079437696,
+          "pull_network_latency_p95_ms": 0.10005688888888889,
+          "pull_network_latency_p99_ms": 0.10005688888888889,
+          "total_generated_mbps": 5.950517333333333,
+          "total_link_carried_mbps": 3.852519253333333,
+          "links": {
+            "A-B-100G": {
+              "throughput_mbps": 1.9709252266666666,
+              "capacity_fraction": 1.9709252266666666e-05
+            },
+            "B-C-100G": {
+              "throughput_mbps": 1.8815940266666664,
+              "capacity_fraction": 1.8815940266666666e-05
+            },
+            "A-C-25G": {
+              "throughput_mbps": 0.0,
+              "capacity_fraction": 0.0
+            }
+          }
+        }
+      },
+      "with_coalesced_proactive_updates": {
+        "runs": [
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1638,
+            "request_rate_rps": 27.3,
+            "collection": {
+              "generated_bytes": 43895136,
+              "link_carried_bytes": 28317152,
+              "generated_mbps": 5.8526848,
+              "link_carried_mbps": 3.7756202666666665
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1048320,
+              "link_carried_bytes": 761600,
+              "generated_mbps": 0.139776,
+              "link_carried_mbps": 0.10154666666666667,
+              "network_latency_ms": {
+                "mean": 0.07269090218423552,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44943456,
+              "link_carried_bytes": 29078752,
+              "generated_mbps": 5.9924608,
+              "link_carried_mbps": 3.877166933333333
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 3342,
+                "generated_bytes": 695136,
+                "link_carried_bytes": 477152,
+                "generated_mbps": 0.0926848,
+                "link_carried_mbps": 0.06362026666666667
+              },
+              "snapshot_queries": {
+                "messages": 1638,
+                "generated_bytes": 288288,
+                "link_carried_bytes": 209440,
+                "generated_mbps": 0.038438400000000005,
+                "link_carried_mbps": 0.027925333333333333
+              },
+              "snapshot_responses": {
+                "messages": 1638,
+                "generated_bytes": 760032,
+                "link_carried_bytes": 552160,
+                "generated_mbps": 0.1013376,
+                "link_carried_mbps": 0.07362133333333333
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14904880,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9873173333333332,
+                "capacity_fraction": 1.9873173333333334e-05
+              },
+              "B-C-100G": {
+                "bytes": 14173872,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8898496,
+                "capacity_fraction": 1.8898496e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 0
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1678,
+            "request_rate_rps": 27.966666666666665,
+            "collection": {
+              "generated_bytes": 43919680,
+              "link_carried_bytes": 28331920,
+              "generated_mbps": 5.8559573333333335,
+              "link_carried_mbps": 3.7775893333333337
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1073920,
+              "link_carried_bytes": 781440,
+              "generated_mbps": 0.14318933333333334,
+              "link_carried_mbps": 0.104192,
+              "network_latency_ms": {
+                "mean": 0.0728065919745729,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44993600,
+              "link_carried_bytes": 29113360,
+              "generated_mbps": 5.999146666666667,
+              "link_carried_mbps": 3.8817813333333335
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 3460,
+                "generated_bytes": 719680,
+                "link_carried_bytes": 491920,
+                "generated_mbps": 0.09595733333333333,
+                "link_carried_mbps": 0.06558933333333333
+              },
+              "snapshot_queries": {
+                "messages": 1678,
+                "generated_bytes": 295328,
+                "link_carried_bytes": 214896,
+                "generated_mbps": 0.03937706666666667,
+                "link_carried_mbps": 0.0286528
+              },
+              "snapshot_responses": {
+                "messages": 1678,
+                "generated_bytes": 778592,
+                "link_carried_bytes": 566544,
+                "generated_mbps": 0.10381226666666667,
+                "link_carried_mbps": 0.0755392
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14898560,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9864746666666668,
+                "capacity_fraction": 1.986474666666667e-05
+              },
+              "B-C-100G": {
+                "bytes": 14214800,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8953066666666667,
+                "capacity_fraction": 1.8953066666666666e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 1
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1652,
+            "request_rate_rps": 27.533333333333335,
+            "collection": {
+              "generated_bytes": 43918432,
+              "link_carried_bytes": 28332128,
+              "generated_mbps": 5.855790933333334,
+              "link_carried_mbps": 3.777617066666667
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1057280,
+              "link_carried_bytes": 777600,
+              "generated_mbps": 0.14097066666666666,
+              "link_carried_mbps": 0.10368,
+              "network_latency_ms": {
+                "mean": 0.07358905569007264,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 44975712,
+              "link_carried_bytes": 29109728,
+              "generated_mbps": 5.996761599999999,
+              "link_carried_mbps": 3.881297066666667
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 3454,
+                "generated_bytes": 718432,
+                "link_carried_bytes": 492128,
+                "generated_mbps": 0.09579093333333333,
+                "link_carried_mbps": 0.06561706666666667
+              },
+              "snapshot_queries": {
+                "messages": 1652,
+                "generated_bytes": 290752,
+                "link_carried_bytes": 213840,
+                "generated_mbps": 0.03876693333333334,
+                "link_carried_mbps": 0.028512
+              },
+              "snapshot_responses": {
+                "messages": 1652,
+                "generated_bytes": 766528,
+                "link_carried_bytes": 563760,
+                "generated_mbps": 0.10220373333333334,
+                "link_carried_mbps": 0.075168
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14914288,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9885717333333335,
+                "capacity_fraction": 1.9885717333333335e-05
+              },
+              "B-C-100G": {
+                "bytes": 14195440,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8927253333333331,
+                "capacity_fraction": 1.8927253333333332e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 2
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1742,
+            "request_rate_rps": 29.033333333333335,
+            "collection": {
+              "generated_bytes": 43952128,
+              "link_carried_bytes": 28358128,
+              "generated_mbps": 5.8602837333333335,
+              "link_carried_mbps": 3.7810837333333334
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1114880,
+              "link_carried_bytes": 831360,
+              "generated_mbps": 0.14865066666666665,
+              "link_carried_mbps": 0.110848,
+              "network_latency_ms": {
+                "mean": 0.07461188212782242,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 45067008,
+              "link_carried_bytes": 29189488,
+              "generated_mbps": 6.0089344,
+              "link_carried_mbps": 3.891931733333333
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 3616,
+                "generated_bytes": 752128,
+                "link_carried_bytes": 518128,
+                "generated_mbps": 0.10028373333333333,
+                "link_carried_mbps": 0.06908373333333334
+              },
+              "snapshot_queries": {
+                "messages": 1742,
+                "generated_bytes": 306592,
+                "link_carried_bytes": 228624,
+                "generated_mbps": 0.04087893333333333,
+                "link_carried_mbps": 0.030483200000000002
+              },
+              "snapshot_responses": {
+                "messages": 1742,
+                "generated_bytes": 808288,
+                "link_carried_bytes": 602736,
+                "generated_mbps": 0.10777173333333334,
+                "link_carried_mbps": 0.0803648
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14946160,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9928213333333333,
+                "capacity_fraction": 1.9928213333333332e-05
+              },
+              "B-C-100G": {
+                "bytes": 14243328,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.8991103999999999,
+                "capacity_fraction": 1.8991104e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 3
+          },
+          {
+            "duration_ms": 60000.0,
+            "request_count": 1715,
+            "request_rate_rps": 28.583333333333332,
+            "collection": {
+              "generated_bytes": 43929040,
+              "link_carried_bytes": 28342944,
+              "generated_mbps": 5.857205333333333,
+              "link_carried_mbps": 3.7790592000000003
+            },
+            "per_request_pulls": {
+              "generated_bytes": 1097600,
+              "link_carried_bytes": 824960,
+              "generated_mbps": 0.14634666666666665,
+              "link_carried_mbps": 0.10999466666666667,
+              "network_latency_ms": {
+                "mean": 0.07520310774214449,
+                "p50": 0.10005688888888889,
+                "p95": 0.10005688888888889,
+                "p99": 0.10005688888888889
+              }
+            },
+            "total": {
+              "generated_bytes": 45026640,
+              "link_carried_bytes": 29167904,
+              "generated_mbps": 6.003552,
+              "link_carried_mbps": 3.8890538666666665
+            },
+            "categories": {
+              "node_reports": {
+                "messages": 180000,
+                "generated_bytes": 40320000,
+                "link_carried_bytes": 26880000,
+                "generated_mbps": 5.376,
+                "link_carried_mbps": 3.584
+              },
+              "link_reports": {
+                "messages": 18000,
+                "generated_bytes": 2880000,
+                "link_carried_bytes": 960000,
+                "generated_mbps": 0.384,
+                "link_carried_mbps": 0.128
+              },
+              "kv_range_updates": {
+                "messages": 3505,
+                "generated_bytes": 729040,
+                "link_carried_bytes": 502944,
+                "generated_mbps": 0.09720533333333332,
+                "link_carried_mbps": 0.0670592
+              },
+              "snapshot_queries": {
+                "messages": 1715,
+                "generated_bytes": 301840,
+                "link_carried_bytes": 226864,
+                "generated_mbps": 0.040245333333333334,
+                "link_carried_mbps": 0.030248533333333334
+              },
+              "snapshot_responses": {
+                "messages": 1715,
+                "generated_bytes": 795760,
+                "link_carried_bytes": 598096,
+                "generated_mbps": 0.10610133333333333,
+                "link_carried_mbps": 0.07974613333333333
+              }
+            },
+            "links": {
+              "A-B-100G": {
+                "bytes": 14912032,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9882709333333333,
+                "capacity_fraction": 1.9882709333333333e-05
+              },
+              "B-C-100G": {
+                "bytes": 14255872,
+                "capacity_bps": 100000000000.0,
+                "throughput_mbps": 1.9007829333333333,
+                "capacity_fraction": 1.9007829333333334e-05
+              },
+              "A-C-25G": {
+                "bytes": 0,
+                "capacity_bps": 25000000000.0,
+                "throughput_mbps": 0.0,
+                "capacity_fraction": 0.0
+              }
+            },
+            "seed": 4
+          }
+        ],
+        "mean": {
+          "request_rate_rps": 28.083333333333332,
+          "collection_generated_mbps": 5.856384426666667,
+          "collection_link_carried_mbps": 3.7781939200000005,
+          "pull_generated_mbps": 0.14378666666666667,
+          "pull_link_carried_mbps": 0.10605226666666667,
+          "pull_network_latency_mean_ms": 0.0737803079437696,
+          "pull_network_latency_p95_ms": 0.10005688888888889,
+          "pull_network_latency_p99_ms": 0.10005688888888889,
+          "total_generated_mbps": 6.000171093333334,
+          "total_link_carried_mbps": 3.8842461866666667,
+          "links": {
+            "A-B-100G": {
+              "throughput_mbps": 1.9886911999999999,
+              "capacity_fraction": 1.9886912e-05
+            },
+            "B-C-100G": {
+              "throughput_mbps": 1.8955549866666666,
+              "capacity_fraction": 1.8955549866666665e-05
+            },
+            "A-C-25G": {
+              "throughput_mbps": 0.0,
+              "capacity_fraction": 0.0
+            }
+          }
+        }
+      }
+    }
+  },
+  "metadata_field_groups": {
+    "running_stage_work": {
+      "dimension": 9,
+      "wire_type": "float32",
+      "field_bytes": 36
+    },
+    "waiting_slack_bucket_stage_work": {
+      "dimension": 36,
+      "wire_type": "float32",
+      "field_bytes": 144,
+      "slack_bucket_upper_bounds_ms": [
+        0.0,
+        50.0,
+        200.0
+      ]
+    },
+    "free_kv_memory_ratio": {
+      "dimension": 3,
+      "wire_type": "float32",
+      "field_bytes": 12
+    },
+    "recent_p99_ttft": {
+      "dimension": 3,
+      "wire_type": "float32",
+      "field_bytes": 12
+    },
+    "link_bandwidth_and_rtt": {
+      "dimension": 6,
+      "wire_type": "float32",
+      "field_bytes": 24
+    },
+    "link_available": {
+      "dimension": 3,
+      "wire_type": "uint8",
+      "field_bytes": 3
+    },
+    "complete_latest_kv": {
+      "dimension": 3,
+      "wire_type": "uint8",
+      "field_bytes": 3
+    },
+    "kv_prefix_and_recovery_times": {
+      "dimension": 9,
+      "wire_type": "float32",
+      "field_bytes": 36
+    }
+  },
+  "request_rate_sensitivity": {
+    "10": {
+      "pull_generated_mbps": 0.0512,
+      "collection_execution_only_generated_mbps": 5.7766399999999996,
+      "collection_proactive_upper_generated_mbps": 5.80992,
+      "total_proactive_upper_generated_mbps": 5.86112,
+      "all_generated_traffic_fraction_of_25gbps_reference": 0.0002344448
+    },
+    "100": {
+      "pull_generated_mbps": 0.512,
+      "collection_execution_only_generated_mbps": 5.9264,
+      "collection_proactive_upper_generated_mbps": 6.2592,
+      "total_proactive_upper_generated_mbps": 6.7712,
+      "all_generated_traffic_fraction_of_25gbps_reference": 0.000270848
+    },
+    "1000": {
+      "pull_generated_mbps": 5.12,
+      "collection_execution_only_generated_mbps": 7.4239999999999995,
+      "collection_proactive_upper_generated_mbps": 10.751999999999999,
+      "total_proactive_upper_generated_mbps": 15.872,
+      "all_generated_traffic_fraction_of_25gbps_reference": 0.00063488
+    },
+    "10000": {
+      "pull_generated_mbps": 51.2,
+      "collection_execution_only_generated_mbps": 22.4,
+      "collection_proactive_upper_generated_mbps": 55.68,
+      "total_proactive_upper_generated_mbps": 106.88,
+      "all_generated_traffic_fraction_of_25gbps_reference": 0.0042752
+    }
+  },
+  "node_count_sensitivity": {
+    "assumptions": {
+      "request_rate_rps": 28.083333333333332,
+      "topology": "full_mesh",
+      "kv_range_events_excluded": true,
+      "note": "logical generated traffic; physical link load depends on collector placement and routing"
+    },
+    "rows": {
+      "3": {
+        "num_nodes": 3,
+        "num_links": 3,
+        "central_feature_dim": 72,
+        "central_compact_bytes": 270,
+        "central_float32_bytes": 288,
+        "snapshot_response_wire_bytes": 464,
+        "bytes_per_pull": 640,
+        "periodic_report_generated_mbps": 5.76,
+        "pull_generated_mbps": 0.14378666666666665,
+        "periodic_report_messages_per_second": 3300.0
+      },
+      "10": {
+        "num_nodes": 10,
+        "num_links": 45,
+        "central_feature_dim": 345,
+        "central_compact_bytes": 1215,
+        "central_float32_bytes": 1380,
+        "snapshot_response_wire_bytes": 1556,
+        "bytes_per_pull": 1732,
+        "periodic_report_generated_mbps": 23.68,
+        "pull_generated_mbps": 0.3891226666666666,
+        "periodic_report_messages_per_second": 14500.0
+      },
+      "25": {
+        "num_nodes": 25,
+        "num_links": 300,
+        "central_feature_dim": 1425,
+        "central_compact_bytes": 4725,
+        "central_float32_bytes": 5700,
+        "snapshot_response_wire_bytes": 5876,
+        "bytes_per_pull": 6052,
+        "periodic_report_generated_mbps": 83.2,
+        "pull_generated_mbps": 1.3596826666666666,
+        "periodic_report_messages_per_second": 55000.0
+      },
+      "50": {
+        "num_nodes": 50,
+        "num_links": 1225,
+        "central_feature_dim": 4725,
+        "central_compact_bytes": 15075,
+        "central_float32_bytes": 18900,
+        "snapshot_response_wire_bytes": 19076,
+        "bytes_per_pull": 19252,
+        "periodic_report_generated_mbps": 246.4,
+        "pull_generated_mbps": 4.325282666666666,
+        "periodic_report_messages_per_second": 172500.0
+      },
+      "100": {
+        "num_nodes": 100,
+        "num_links": 4950,
+        "central_feature_dim": 16950,
+        "central_compact_bytes": 52650,
+        "central_float32_bytes": 67800,
+        "snapshot_response_wire_bytes": 67976,
+        "bytes_per_pull": 68152,
+        "periodic_report_generated_mbps": 812.8,
+        "pull_generated_mbps": 15.311482666666667,
+        "periodic_report_messages_per_second": 595000.0
+      }
+    }
+  }
+}

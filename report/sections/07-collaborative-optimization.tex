@@ -1,10 +1,10 @@
 \phantomsection
-\section*{七、三类算法的协同优化框架}
-\addcontentsline{toc}{section}{七、三类算法的协同优化框架}
+\section*{七、三类算法的协同优化}
+\addcontentsline{toc}{section}{七、三类算法的协同优化}
 
-前文分别从模型切分部署、业务感知 batching 和 LLM inference task offloading 三个角度讨论了 CEC-LLM 推理系统的关键算法。真实系统中，这三类算法并不是彼此独立的模块：模型切分部署决定模型组件、服务实例和推理阶段的空间分布；业务感知 batching 决定请求、prefill chunk 和 decode token 在实例内部或不同阶段资源池中的时间组织；task offloading 决定完整请求、复杂 workflow 以及 context/KV/runtime state 在端、边、云之间的路由、迁移和复用。三者共享模型位置、队列长度、KV cache 位置、链路状态、用户移动趋势和 SLO slack 等同一组系统状态，因此任何一类算法的局部优化都可能改变另外两类算法的可行域和收益。
+前文分别从模型切分部署、SLO感知 batching 和 LLM inference task offloading 三个角度讨论了 CEC-LLM 推理系统的关键算法。真实系统中，这三类算法并不是彼此独立的模块：模型切分部署决定模型组件、服务实例和推理阶段的空间分布；业务感知 batching 决定请求、prefill chunk 和 decode token 在实例内部或不同阶段资源池中的时间组织；task offloading 决定完整请求、复杂 workflow 以及 context/KV/runtime state 在协作边缘节点之间的路由、迁移和复用。三者共享模型位置、队列长度、KV cache 位置、链路状态、用户移动趋势和 SLO slack 等同一组系统状态，因此任何一类算法的局部优化都可能改变另外两类算法的可行域和收益。
 
-本章不再重新划分第四、五、六章的所有单点方法，而是围绕“三类算法之间怎样协同”组织已有工作。具体而言，协同优化关注的不是某个模型如何单独切分、某个 batch size 如何单独选择，或某个请求如何单独卸载，而是这些决策在多时间尺度、多资源层级和多运行时状态下如何形成闭环。已有工作已经从局部角度揭示了这种耦合关系：model caching 会影响 request offloading 的可选路径，prefill/decode disaggregation 会改变 batching 和 KV handoff，KVCache-centric serving 会把状态位置纳入 request scheduling，移动场景下的 context migration 又会反过来影响长期 session routing。
+本章不再重新划分第四、五、六章的所有单点方法，而是围绕“三类算法之间怎样协同”组织已有工作。具体而言，协同优化关注的不是某个模型如何单独切分、某个 batch size 如何单独选择，或某个请求如何单独卸载，而是这些决策在不同时间尺度、多个协作节点和多种运行时状态下如何形成闭环。已有工作已经从局部角度揭示了这种耦合关系：model caching 会影响 request offloading 的可选路径，prefill/decode disaggregation 会改变 batching 和 KV handoff，KVCache-centric serving 会把状态位置纳入 request scheduling，移动场景下的 context migration 又会反过来影响长期 session routing。
 
 本文将 CEC-LLM 推理中的三类算法协同关系划分为四类：
 \begin{enumerate}
@@ -55,7 +55,7 @@
 \tabrowrule
 14 & QoS-LLM-Router \cite{yang2025quality} & TMC 2025 & Request / Workflow Routing -- Runtime State Management & QoS-aware routing；queue / memory state & 将 edge LLM expert routing 建模为长期 QoS 优化，路由决策同时感知质量、响应长度、队列状态和 GPU memory \\
 \tabrowrule
-15 & CES-CB \cite{li2025cloud} & TSC 2025 & Request / Workflow Routing -- Runtime State Management & request cost prediction；edge batch selection & 利用 prompt embedding 和历史执行数据预测请求成本，在 edge/cloud 间选择请求集合，说明 routing 会影响队列阻塞和 batch 组成 \\
+15 & CES-CB \cite{li2025cloud} & TSC 2025 & Request / Workflow Routing -- Runtime State Management & request cost prediction；edge batch selection & 在其原始 edge/cloud 环境中利用 prompt embedding 和历史执行数据预测请求成本，说明 routing 会影响队列阻塞和 batch 组成 \\
 \tabrowrule
 16 & MasRouter \cite{yue2025masrouter} & ACL 2025 & Request / Workflow Routing -- Runtime State Management & multi-agent routing；model / role selection & 根据 query 决定 multi-agent 协作模式、agent 数量、角色和底层 LLM；在 CEC 中需要进一步映射为 workflow offloading \\
 \tabrowrule
@@ -88,7 +88,7 @@
 \subsection*{7.2 Model / Service Placement -- Request Offloading 协同}
 \addcontentsline{toc}{subsection}{7.2 Model / Service Placement -- Request Offloading 协同}
 
-模型/服务部署与请求卸载之间的耦合，是 CEC-LLM 推理系统中最直接的协同优化关系。由于边缘节点无法缓存所有 LLM、SLM、expert、adapter 或工具服务，模型能力是否提前部署会直接决定请求能否在近端被处理，以及是否需要跨边缘或上云。反过来，请求流量、用户会话分布和模型调用频率又会影响下一周期的模型缓存和服务部署收益。
+模型/服务部署与请求卸载之间的耦合，是 CEC-LLM 推理系统中最直接的协同优化关系。由于边缘节点无法缓存所有 LLM、SLM、expert、adapter 或工具服务，模型能力是否提前部署会直接决定请求能否在入口附近处理，以及是否需要转发到其他协作节点或调用可选外部服务。反过来，请求流量、用户会话分布和模型调用频率又会影响下一周期的模型缓存和服务部署收益。
 
 已有工作已经开始显式处理部署规划与请求卸载之间的时间尺度差异。SLM-LLM-Collab \cite{xu2025joint} 将 SLM caching 与 local/D2D/edge inference offloading 进行双时间尺度建模，说明模型缓存不是独立部署问题，而是为后续请求卸载提供可行路径。T2DRL \cite{xu2026serving} 进一步将 long-context LLM serving 中的 model caching、request management 和资源匹配联系起来，强调上下文长度和移动边缘资源会共同影响模型缓存与请求处理策略。H-MEC-Placement \cite{du2025online} 虽然不是 LLM-specific 工作，但从 general MEC 角度说明 service placement、task scheduling 和 resource allocation 在规划周期内存在强耦合。LVM-Offload \cite{zhuang2025joint} 则在 foundation model 服务中联合考虑模型选择、推理步数、任务卸载和资源分配。
 
@@ -107,7 +107,7 @@
 
 这一类协同的关键变量包括 partition template、stage boundary、prefill/decode pool capacity、batching window、active sequence set、chunk size、KV transfer time、TTFT/TPOT target 和 worker scaling。模型切分模板不能只描述模型层或阶段放在哪里，还需要暴露阶段容量、KV handoff 成本、batching 可容纳规模和 TTFT/TBT 估计。Batching 层也不能只根据当前队列最大化吞吐，而需要感知切分拓扑、状态位置和用户 SLA。
 
-在 CEC 系统中，模型切分与 batching 的协同尤其需要避免局部优化互相抵消。例如，阶段切分把 prefill 放到区域边缘可以提升 prefill 吞吐，但如果 KV 传回接入边缘的链路不稳定，decode TTFT 和后续 token latency 可能恶化；batching 策略为了追求高吞吐扩大等待窗口，可能让移动用户在 handover 前无法及时完成关键阶段；continuous batching 扩大 active set 能提升利用率，但也会提高 KV 显存压力，使请求迁移和状态复制更困难。因此，协同控制器需要同时观察阶段负载、batch 状态、KV 水位和链路状态。
+在 CEC 系统中，模型切分与 batching 的协同尤其需要避免局部优化互相抵消。例如，阶段切分把 prefill 放到算力更强的协作节点可以提升 prefill 吞吐，但如果 KV 传向 decode 节点的链路不稳定，decode TTFT 和后续 token latency 可能恶化；batching 策略为了追求高吞吐扩大等待窗口，可能让移动用户在 handover 前无法及时完成关键阶段；continuous batching 扩大 active set 能提升利用率，但也会提高 KV 显存压力，使请求迁移和状态复制更困难。因此，协同控制器需要同时观察阶段负载、batch 状态、KV 水位和链路状态。
 
 
 \phantomsection
@@ -120,46 +120,45 @@ Mooncake、Preble 和 CachedAttention 等 cache-centric serving 工作说明，p
 
 这一类协同的关键变量包括 session ID、prefix hash、KV block location、state size、state freshness、remote access latency、migration cost、recompute cost、queue state 和 request quality target。对于连续 session，路由动作和状态动作应被联合枚举：在已有 KV 的节点本地执行、将 KV 迁移到新节点执行、远程访问旧节点状态，或在新节点重新 prefill / recompute。不同动作的当前成本和长期收益不同，不能只用单次请求的最小时延判断。
 
-对于 multi-agent workflow，这种耦合更加复杂。MasRouter、Conductor 和 AFLOW 等工作主要从算法层研究如何选择 agent 数量、角色、模型和工作流结构，但在 CEC 系统中，每个 agent 背后的模型、工具、数据库和 memory 可能位于不同物理节点。因此，workflow orchestration 必须进一步转化为 workflow offloading：不仅决定 planner、solver、critic、verifier 等角色如何协作，还要决定这些组件在哪里执行、哪些 context 可以共享、哪些中间状态需要迁移，以及何时调用云端强模型进行 verification。
+对于 multi-agent workflow，这种耦合更加复杂。MasRouter、Conductor 和 AFLOW 等工作主要从算法层研究如何选择 agent 数量、角色、模型和工作流结构，但在 CEC 系统中，每个 agent 背后的模型、工具、数据库和 memory 可能位于不同物理节点。因此，workflow orchestration 必须进一步转化为 workflow offloading：不仅决定 planner、solver、critic、verifier 等角色如何协作，还要决定这些组件在哪里执行、哪些 context 可以共享、哪些中间状态需要迁移，以及何时调用能力更强的协作节点或外部模型服务进行 verification。
 
 
 \phantomsection
 \subsection*{7.5 Mobility-aware Hierarchical Control}
 \addcontentsline{toc}{subsection}{7.5 Mobility-aware Hierarchical Control}
 
-多用户移动性会同时影响模型部署、batching、请求路由和状态管理，因此它是三类算法协同优化中最重要的外部扰动之一。用户移动会改变区域请求热点，使原有 model placement 失效；会改变接入链路和候选 edge，使 request routing 的当前最优路径失效；会在请求或 workflow 执行过程中触发 handover，使中间状态和后续阶段的执行路径需要重新选择；也会使 long context、KV cache 和 agent memory 留在旧 edge，从而产生状态迁移、远程访问或重算之间的权衡。
+多用户移动性会同时影响模型部署、batching、请求路由和状态管理，因此它是三类算法协同优化中最重要的外部扰动之一。用户移动会改变区域请求热点，使原有 model placement 失效；会改变接入链路和候选服务节点，使 request routing 的当前最优路径失效；会在请求或 workflow 执行过程中触发 handover，使中间状态和后续阶段的执行路径需要重新选择；也会使 long context、KV cache 和 agent memory 留在原服务节点，从而产生状态迁移、远程访问或重算之间的权衡。
 
 已有移动性相关工作提供了局部研究基础。MGCO \cite{ghosh2025mgco} 说明，generative computation offloading 不能只根据当前状态短视决策，而需要利用长程移动信息进行规划。DT-MADTO \cite{chen2024mobility} 通过 digital twin 建模 DAG task、用户移动和中间数据流，说明移动性会改变 workflow/subtask offloading 的传输代价和拥塞状态。CA-AIGC-Migration \cite{wang2026context} 进一步将移动性与 long context migration 结合，说明状态迁移可以成为替代完整服务迁移的轻量机制。T2DRL \cite{xu2026serving} 则提示，在 mobile edge 场景中，long-context serving 的模型缓存、请求管理和资源匹配需要与移动场景共同考虑。
 
-这一类协同的关键变量包括 user trajectory、handover probability、future ingress node、service hotspot、state owner、migration bandwidth、session continuation probability 和 workload forecast。低频层根据用户移动和服务热点调整模型/服务布局；中频层根据负载和状态命中率调整 batching 与实例分流；高频层根据 handover、链路抖动和 context/KV 位置进行 request/workflow/state routing。三个时间尺度不需要每次都同时重优化，但必须共享预测和反馈。
+这一类协同的关键变量包括用户轨迹、切换概率、未来入口节点、服务热点、状态所在节点、迁移带宽、会话继续概率和负载预测。低频层根据用户移动和服务热点调整模型与服务布局；中频层根据负载和状态命中率调整 batching 与实例分流；高频层根据 handover、链路抖动和 context/KV 位置进行请求、工作流与状态路由。三个时间尺度不需要每次都同时重优化，但必须共享预测和反馈。
 
 现有研究还没有形成完整的 CEC-LLM 跨层闭环。很多工作只优化其中一层：有的关注 request offloading，有的关注 DAG subtask，有的关注 context migration，有的关注 model caching。未来更需要一个 mobility-aware hierarchical controller，使模型能力、请求路径、workflow 结构和状态位置能够随用户移动和 workload 变化自适应调整。
 
 
+% \phantomsection
+% \subsection*{7.6 算法方案对比与面向华为验证环境的建议}
+% \addcontentsline{toc}{subsection}{7.6 算法方案对比与面向华为验证环境的建议}
+
+% 结合第四、五、六章的项目约束，第七章不宜把协同优化写成一个不可落地的全局大优化问题。更合理的定位是：在已有模型切分规划器、业务感知 batching 控制器和长期成本感知请求卸载策略之上，实现一个\textbf{分层状态感知协同控制器}。它不替代底层 runtime 的 continuous batching、PD 分离、KV cache 管理或路由执行逻辑，而是统一读取部署模板、batch 状态、节点负载、链路状态和 KV/session 元数据，在不同时间尺度上修正各层参数。
+
+% 该控制器的第一部分是统一状态视图。系统需要收集模型/服务部署状态、可用切分模板、prefill/decode worker 容量、batching 参数、队列长度、TTFT/TPOT/E2E latency、KV cache 位置、prefix 命中率、节点显存、链路 RTT/带宽、请求优先级和用户入口变化。只有把这些信息放入同一个状态表，才能判断某个请求到底应该在入口附近执行、跨节点迁移状态、进入更大 batch，还是切换到其他可用服务实例。
+
+% 第二部分是分层决策周期。低频周期执行模型/服务 placement 与切分模板选择，重点看历史请求分布、未来热点、节点容量和模型能力覆盖；中频周期调节 batching window、batch token budget、prefill/decode ratio、admission threshold 和实例分流；高频周期执行 request routing、workflow placement、KV migrate/recompute/local 动作和异常回退。不同周期之间通过显式接口传递容量、成本和状态，而不是各自维护不一致的局部视图。
+
+% 第三部分是冲突检测与受控重配置。协同控制器需要识别三类典型冲突：模型切分带来的 KV handoff 成本超过 batching 收益；batching 为吞吐扩大等待窗口导致高优先级请求或移动用户违反 SLO；request routing 因已有 KV 黏附远端节点，长期造成跨节点通信。对于这些冲突，控制器应通过候选模板切换、batch 参数收缩、状态迁移/重算、路由惩罚项和冷却时间进行修正，避免频繁重配置造成调度震荡。
+
+% 验证设计上，建议第七章对应的实验分成四组。第一组是独立算法组合基线：分别启用第四章切分部署、第五章动态 batching、第六章请求卸载，但不共享状态，只用各自局部观测做决策。第二组是共享状态但无长期预测：三类算法读取统一节点、队列和 KV 元数据，但只优化当前窗口。第三组是分层协同控制：低频更新部署/切分模板，中频调节 batching 参数，高频执行状态感知请求卸载，并把移动入口、KV owner 和未来 session 成本纳入决策。第四组是扰动与消融：改变用户移动比例、链路带宽、KV cache 规模、长 prompt 比例、请求优先级分布和节点显存水位，分别关闭状态共享、移动预测、KV 迁移、batch 参数联动和切分模板联动，观察 P99 TTFT、平均 E2E latency、SLA violation、跨节点通信量、KV 命中率和满足 SLA 的并发数。
+
+% 因此，第七章面向验证环境最适合落地的是\textbf{统一元数据驱动的分层协同优化框架}。它的算法主线不是一次性求解所有 placement、batching 和 offloading 变量，而是建立“低频部署布局 -- 中频 serving 参数 -- 高频请求/状态路由”的闭环。这样既能和第四、五、六章的单项算法保持边界清晰，也能把协同收益落实到可测指标上：在满足 P99 TTFT SLA 的前提下提升并发能力，降低平均 E2E 时延，减少跨节点状态通信，并提高移动 session 的服务连续性 \cite{huawei2026internal}。
+
+
 \phantomsection
-\subsection*{7.6 算法方案对比与面向华为验证环境的建议}
-\addcontentsline{toc}{subsection}{7.6 算法方案对比与面向华为验证环境的建议}
-
-结合第四、五、六章的项目约束，第七章不宜把协同优化写成一个不可落地的全局大优化问题。更合理的定位是：在已有模型切分规划器、业务感知 batching 控制器和长期成本感知请求卸载策略之上，实现一个\textbf{分层状态感知协同控制器}。它不替代底层 runtime 的 continuous batching、PD 分离、KV cache 管理或路由执行逻辑，而是统一读取部署模板、batch 状态、节点负载、链路状态和 KV/session 元数据，在不同时间尺度上修正各层参数。
-
-该控制器的第一部分是统一状态视图。系统需要收集模型/服务部署状态、可用切分模板、prefill/decode worker 容量、batching 参数、队列长度、TTFT/TPOT/E2E latency、KV cache 位置、prefix 命中率、节点显存、链路 RTT/带宽、请求优先级和用户入口变化。只有把这些信息放入同一个状态表，才能判断某个请求到底应该近端执行、跨节点迁移状态、进入更大 batch，还是回退到云端/区域边缘。
-
-第二部分是分层决策周期。低频周期执行模型/服务 placement 与切分模板选择，重点看历史请求分布、未来热点、节点容量和模型能力覆盖；中频周期调节 batching window、batch token budget、prefill/decode ratio、admission threshold 和实例分流；高频周期执行 request routing、workflow placement、KV migrate/recompute/local 动作和异常回退。不同周期之间通过显式接口传递容量、成本和状态，而不是各自维护不一致的局部视图。
-
-第三部分是冲突检测与受控重配置。协同控制器需要识别三类典型冲突：模型切分带来的 KV handoff 成本超过 batching 收益；batching 为吞吐扩大等待窗口导致高优先级请求或移动用户违反 SLO；request routing 因已有 KV 黏附远端节点，长期造成跨节点通信。对于这些冲突，控制器应通过候选模板切换、batch 参数收缩、状态迁移/重算、路由惩罚项和冷却时间进行修正，避免频繁重配置造成调度震荡。
-
-验证设计上，建议第七章对应的实验分成四组。第一组是独立算法组合基线：分别启用第四章切分部署、第五章动态 batching、第六章请求卸载，但不共享状态，只用各自局部观测做决策。第二组是共享状态但无长期预测：三类算法读取统一节点、队列和 KV 元数据，但只优化当前窗口。第三组是分层协同控制：低频更新部署/切分模板，中频调节 batching 参数，高频执行状态感知请求卸载，并把移动入口、KV owner 和未来 session 成本纳入决策。第四组是扰动与消融：改变用户移动比例、链路带宽、KV cache 规模、长 prompt 比例、请求优先级分布和节点显存水位，分别关闭状态共享、移动预测、KV 迁移、batch 参数联动和切分模板联动，观察 P99 TTFT、平均 E2E latency、SLA violation、跨节点通信量、KV 命中率和满足 SLA 的并发数。
-
-因此，第七章面向验证环境最适合落地的是\textbf{统一元数据驱动的分层协同优化框架}。它的算法主线不是一次性求解所有 placement、batching 和 offloading 变量，而是建立“低频部署布局 -- 中频 serving 参数 -- 高频请求/状态路由”的闭环。这样既能和第四、五、六章的单项算法保持边界清晰，也能把协同收益落实到可测指标上：在满足 P99 TTFT SLA 的前提下提升并发能力，降低平均 E2E 时延，减少跨节点状态通信，并提高移动 session 的服务连续性 \cite{huawei2026internal}。
-
-
-\phantomsection
-\subsection*{7.7 小结}
-\addcontentsline{toc}{subsection}{7.7 小结}
+\subsection*{7.6 小结}
+\addcontentsline{toc}{subsection}{7.6 小结}
 
 总体来看，三类算法的协同优化不是简单地把模型切分、batching 和 task offloading 合并成一个大优化问题，而是要在实际工作揭示的局部耦合关系基础上，建立分层、多时间尺度、状态感知的控制框架。本章将相关耦合关系组织为四类：Model / Service Placement -- Request Offloading 协同、Model Partitioning -- Batching / Scheduling 协同、Request / Workflow Routing -- Runtime State Management 协同，以及 Mobility-aware Hierarchical Control。
 
-已有工作已经分别展示了 model caching 与 inference offloading、prefill/decode disaggregation 与 scheduling、KV cache 与 request routing、context migration 与 mobility-aware serving 之间的耦合，但这些机制仍然缺少面向 CEC-LLM inference 的统一组织。CEC 场景的核心挑战在于，模型能力、batch 状态、请求路径和运行时状态会随着用户移动、负载变化和链路波动持续变化；局部最优策略如果缺少共享状态和长期反馈，容易造成阶段失衡、尾延迟放大、KV 状态黏附或频繁迁移。
+已有工作已经分别展示了 model caching 与 inference offloading、prefill/decode disaggregation 与 scheduling、KV cache 与 request routing、context migration 与 mobility-aware serving 之间的耦合，但这些机制仍然缺少面向 CEC-LLM inference 的统一组织。CEC 场景的核心挑战在于，模型能力、batch 状态、请求路径和运行时状态会随着用户移动、负载变化和链路波动持续变化；局部最优策略如果缺少共享状态和长期反馈，容易造成阶段失衡、尾延迟放大、KV 状态黏附或频繁迁移。探索有效的协同优化方法是重要的研究方向。
 
-面向工程落地，协同优化应采用“统一状态视图 + 分层决策周期 + 受控重配置”的方式推进。低频层负责模型/服务部署和切分模板选择，中频层负责 batching 参数、admission 和阶段队列调节，高频层负责 request/workflow routing 与 context/KV/runtime state 处理。三层通过 TTFT/TPOT、queue length、KV 命中、链路状态、handover 和显存水位等指标持续反馈，从而使模型切分、batching 和 task offloading 不再只是并列算法，而是服务于同一 CEC-LLM 推理目标的协同控制闭环。
-
+%面向工程落地，协同优化应采用“统一状态视图 + 分层决策周期 + 受控重配置”的方式推进。低频层负责模型/服务部署和切分模板选择，中频层负责 batching 参数、admission 和阶段队列调节，高频层负责 request/workflow routing 与 context/KV/runtime state 处理。三层通过 TTFT/TPOT、queue length、KV 命中、链路状态、handover 和显存水位等指标持续反馈，从而使模型切分、batching 和 task offloading 不再只是并列算法，而是服务于同一 CEC-LLM 推理目标的协同控制闭环。

@@ -111,6 +111,19 @@ python -m sim.acceptance_experiment --workers 6 --seeds 0,1,2,3,4
 
 结果输出到 `output/acceptance/`，不覆盖日常 Dashboard。
 
+中心化元数据收集与逐请求拉取的流量估算使用同一组 60 s 工作负载和五个随机种子：
+
+```bash
+PYTHONPATH=experiment python -m sim.control_plane_experiment \
+  --seeds 0,1,2,3,4 \
+  --output profile_output/control_plane_summary.json
+```
+
+该计量器只统计压缩元数据的系统生成字节、物理链路承载字节和同步拉取的网络时间，不改变
+Router、KV Manager 或数据面 E2E 仿真。它只上报已经完成并提交的连续 KV range，不统计在途
+placement 状态。输出同时给出 Agent 输入字段大小、不同 RPS 下的流量，以及全连接拓扑中节点
+数量增加时的逻辑控制流量；节点规模结果不包含依赖具体 placement 策略的 KV range 更新。
+
 Dashboard 默认将彼此独立的“模型 × 策略”组合分配给最多 4 个进程。可显式控制并行度：
 
 ```bash

@@ -4532,47 +4532,6 @@
       \verb https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html
       \endverb
     \endentry
-    \entry{ouyang2018follow}{article}{}{}
-      \name{author}{3}{}{%
-        {{hash=8f6bcef5887ef1b7ece616f8109c7dea}{%
-           family={Ouyang},
-           familyi={O\bibinitperiod},
-           given={Tao},
-           giveni={T\bibinitperiod}}}%
-        {{hash=3d4b498f7b5894cc848a49f575d7a8ba}{%
-           family={Zhou},
-           familyi={Z\bibinitperiod},
-           given={Zhi},
-           giveni={Z\bibinitperiod}}}%
-        {{hash=4f4900cae2c11cda82284d85107e92ae}{%
-           family={Chen},
-           familyi={C\bibinitperiod},
-           given={Xu},
-           giveni={X\bibinitperiod}}}%
-      }
-      \list{publisher}{1}{%
-        {IEEE}%
-      }
-      \strng{namehash}{a18de0c1c81fd6a847edaa225304f45d}
-      \strng{fullhash}{86c587f0934198896351a710ecc70f37}
-      \strng{fullhashraw}{86c587f0934198896351a710ecc70f37}
-      \strng{bibnamehash}{86c587f0934198896351a710ecc70f37}
-      \strng{authorbibnamehash}{86c587f0934198896351a710ecc70f37}
-      \strng{authornamehash}{a18de0c1c81fd6a847edaa225304f45d}
-      \strng{authorfullhash}{86c587f0934198896351a710ecc70f37}
-      \strng{authorfullhashraw}{86c587f0934198896351a710ecc70f37}
-      \field{sortinit}{3}
-      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
-      \field{labelnamesource}{author}
-      \field{labeltitlesource}{title}
-      \field{journaltitle}{IEEE Journal on Selected Areas in Communications}
-      \field{number}{10}
-      \field{title}{Follow me at the edge: Mobility-aware dynamic service placement for mobile edge computing}
-      \field{volume}{36}
-      \field{year}{2018}
-      \field{pages}{2333\bibrangedash 2345}
-      \range{pages}{13}
-    \endentry
     \entry{jiang2025hexgen}{article}{}{}
       \name{author}{3}{}{%
         {{hash=541d680d5850c0594856e94753ccbdde}{%
@@ -4680,6 +4639,47 @@
       \field{year}{2024}
       \field{pages}{38\bibrangedash 56}
       \range{pages}{19}
+    \endentry
+    \entry{ouyang2018follow}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=8f6bcef5887ef1b7ece616f8109c7dea}{%
+           family={Ouyang},
+           familyi={O\bibinitperiod},
+           given={Tao},
+           giveni={T\bibinitperiod}}}%
+        {{hash=3d4b498f7b5894cc848a49f575d7a8ba}{%
+           family={Zhou},
+           familyi={Z\bibinitperiod},
+           given={Zhi},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=4f4900cae2c11cda82284d85107e92ae}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Xu},
+           giveni={X\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {IEEE}%
+      }
+      \strng{namehash}{a18de0c1c81fd6a847edaa225304f45d}
+      \strng{fullhash}{86c587f0934198896351a710ecc70f37}
+      \strng{fullhashraw}{86c587f0934198896351a710ecc70f37}
+      \strng{bibnamehash}{86c587f0934198896351a710ecc70f37}
+      \strng{authorbibnamehash}{86c587f0934198896351a710ecc70f37}
+      \strng{authornamehash}{a18de0c1c81fd6a847edaa225304f45d}
+      \strng{authorfullhash}{86c587f0934198896351a710ecc70f37}
+      \strng{authorfullhashraw}{86c587f0934198896351a710ecc70f37}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Journal on Selected Areas in Communications}
+      \field{number}{10}
+      \field{title}{Follow me at the edge: Mobility-aware dynamic service placement for mobile edge computing}
+      \field{volume}{36}
+      \field{year}{2018}
+      \field{pages}{2333\bibrangedash 2345}
+      \range{pages}{13}
     \endentry
   \enddatalist
 \endrefsection

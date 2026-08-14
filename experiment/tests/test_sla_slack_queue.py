@@ -42,6 +42,29 @@ class SLASlackQueueTest(unittest.TestCase):
         state = self.node.state()
         self.assertEqual(state.running_queue, (20.0, 0.0, 0.0))
 
+    def test_waiting_work_is_aggregated_by_slack_and_phase(self):
+        self.node.add_load(prefill_ms=10.0, latest_start_ms=100.0)
+        self.node.add_load(
+            prefill_ms=1.0,
+            recompute_ms=2.0,
+            latest_start_ms=90.0,
+        )
+        self.node.add_load(decode_ms=3.0, latest_start_ms=140.0)
+        self.node.add_load(prefill_ms=4.0, latest_start_ms=250.0)
+        self.node.add_load(recompute_ms=5.0, latest_start_ms=400.0)
+
+        state = self.node.state()
+        self.assertEqual(state.running_queue, (10.0, 0.0, 0.0))
+        self.assertEqual(
+            state.waiting_work_by_slack(now_ms=100.0),
+            (
+                (1.0, 2.0, 0.0),
+                (0.0, 0.0, 3.0),
+                (4.0, 0.0, 0.0),
+                (0.0, 5.0, 0.0),
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
