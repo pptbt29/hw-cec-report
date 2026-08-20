@@ -203,7 +203,7 @@ def routable_probability(
     ttfts: list[float],
     slo_s: float,
     shared_uncertainty_s: float,
-    node_uncertainty_s: float,
+    node_uncertainties_s: list[float],
 ) -> float:
     """Probability that at least one node meets the SLO under correlated error.
 
@@ -213,13 +213,24 @@ def routable_probability(
     independent. Treating every node as independent lets a cluster of nodes
     that all sit exactly on the SLO boundary look collectively safe, which
     removes the value of preparing any of them.
+
+    Node uncertainty is passed per node because queue error is not uniform
+    across the cluster: a node with a long projected backlog carries more
+    absolute error than an idle one.
     """
+    if len(ttfts) != len(node_uncertainties_s):
+        raise ValueError("ttfts and node_uncertainties_s must have equal length")
     if shared_uncertainty_s <= 0:
-        return at_least_one_success([success_probability(ttft, slo_s, node_uncertainty_s) for ttft in ttfts])
+        return at_least_one_success(
+            [success_probability(ttft, slo_s, sigma) for ttft, sigma in zip(ttfts, node_uncertainties_s)]
+        )
     total = 0.0
     for offset, weight in SHARED_STRATA:
         shift = offset * shared_uncertainty_s
         total += weight * at_least_one_success(
-            [success_probability(ttft + shift, slo_s, node_uncertainty_s) for ttft in ttfts]
+            [
+                success_probability(ttft + shift, slo_s, sigma)
+                for ttft, sigma in zip(ttfts, node_uncertainties_s)
+            ]
         )
     return total

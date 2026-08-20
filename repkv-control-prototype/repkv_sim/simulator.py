@@ -30,7 +30,7 @@ class Config:
     sessions: int = 48
     horizon_s: float = 240.0
     step_s: float = 0.5
-    hbm_blocks: int = 180
+    hbm_blocks: int = 520
     ttft_slo_s: float = 2.0
     prefill_blocks_s: float = 24.0
     decode_blocks_s: float = 10.0
@@ -43,6 +43,9 @@ class Config:
     preparation_horizon_s: float = 18.0
     queue_uncertainty_s: float = 0.25
     shared_uncertainty_s: float = 0.45
+    queue_uncertainty_scale: float = 0.8
+    shared_uncertainty_scale: float = 0.5
+    reprepare_cost_weight: float = 1.0
     block_batch: int = 4
     high_watermark: float = 0.92
     low_watermark: float = 0.82
@@ -498,6 +501,9 @@ class Simulator:
             return self.nodes[nid].busy_until
         return view[nid]
 
+    def _predicted_queue(self, state: SessionState, prediction: Prediction, node: Node) -> float:
+        return max(0.0, self._projected_busy_until(state.sid, node.nid) - prediction.predicted_arrival)
+
     def _predicted_ttft(
         self,
         state: SessionState,
@@ -512,9 +518,8 @@ class Simulator:
             availability,
             self.cfg.foreground_rates,
         )
-        queue = max(0.0, self._projected_busy_until(state.sid, node.nid) - prediction.predicted_arrival)
         prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
-        return queue + recovery.seconds + prompt
+        return self._predicted_queue(state, prediction, node) + recovery.seconds + prompt
 
     def _cluster_probability(
         self,
@@ -522,16 +527,29 @@ class Simulator:
         prediction: Prediction,
         override: tuple[int, int] | None = None,
     ) -> float:
-        ttfts = []
+        """Probability that the cluster serves this session's next turn in time.
+
+        Queue error is not a fixed number of seconds. The projected backlog of
+        §8.1 is a fluid quantity, and both the amount of load that materialises
+        and the node it lands on are uncertain in proportion to that backlog.
+        The cluster-wide part is folded into the shared term, scaled by the mean
+        projected queue; the node-specific part scales with each node's own
+        projected queue. With constant uncertainty the estimate stays near one
+        whenever the fluid queue is small, which is precisely the regime where
+        the fluid queue is least trustworthy.
+        """
+        ttfts: list[float] = []
+        queues: list[float] = []
         for node in self.nodes:
             hbm_override = override[1] if override and override[0] == node.nid else None
             ttfts.append(self._predicted_ttft(state, prediction, node, hbm_override))
-        return routable_probability(
-            ttfts,
-            self.cfg.ttft_slo_s,
-            self.cfg.shared_uncertainty_s,
-            self.cfg.queue_uncertainty_s,
-        )
+            queues.append(self._predicted_queue(state, prediction, node))
+        mean_queue = sum(queues) / max(1, len(queues))
+        shared = self.cfg.shared_uncertainty_s + self.cfg.shared_uncertainty_scale * mean_queue
+        node_uncertainties = [
+            self.cfg.queue_uncertainty_s + self.cfg.queue_uncertainty_scale * queue for queue in queues
+        ]
+        return routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
 
     def _complete_inflight(self, now: float) -> None:
         ready = [batch for batch in self.inflight if batch.complete_at <= now]
@@ -832,13 +850,23 @@ class Simulator:
         return node.committed + extra <= node.capacity
 
     def _eviction_score(self, sid: int, nid: int) -> float:
-        """Expected SLO-goodput loss per HBM block freed.
+        """Expected cost per HBM block freed, in the units used by preparation.
 
-        The same conditional return probability that drives preparation weights
-        the loss here, so a session that has waited past its median gap is
-        scored as returning soon rather than as no longer relevant. Only a
-        session with no remaining turn in its script has no predicted return
-        and is therefore free to reclaim.
+        Three terms. The first is the loss of SLO goodput, weighted by the same
+        conditional return probability that drives preparation, so a session
+        that has waited past its median gap is scored as returning soon rather
+        than as no longer relevant. The second is the demotion work itself. The
+        third is the background work needed to put the interval back before the
+        predicted return: demoted blocks stay on the host tier, so the rebuild
+        is a background restore of the same size, normalised and penalised
+        exactly as in `_collect_candidates`. Without it the controller can pay
+        for a preparation and then reclaim it in the same horizon at no
+        recorded cost, and when the probability terms are flat the ranking has
+        no gradient at all. The rebuild is charged whenever the session may
+        return, without modelling which node the router picks.
+
+        Only a session with no remaining turn in its script has no predicted
+        return and is therefore free to reclaim.
         """
         state = self.sessions[sid]
         replica = self._replica(nid, sid)
@@ -852,7 +880,16 @@ class Simulator:
         after = self._cluster_probability(state, prediction, (nid, replica.hbm_prefix - amount))
         expected_loss = prediction.return_probability * max(0.0, before - after)
         demotion_cost = 0.002 * amount
-        return (expected_loss + demotion_cost) / amount
+        rebuild_work = amount / max(
+            1.0, self.cfg.background_rates["restore"] * self.cfg.preparation_horizon_s
+        )
+        reprepare_cost = (
+            self.cfg.reprepare_cost_weight
+            * prediction.return_probability
+            * self.cfg.resource_penalty
+            * rebuild_work
+        )
+        return (expected_loss + demotion_cost + reprepare_cost) / amount
 
     def readiness_snapshot(self) -> list[dict[str, float | int | str]]:
         rows: list[dict[str, float | int | str]] = []
