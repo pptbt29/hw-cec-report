@@ -62,7 +62,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.no_ansi:
         BOLD = DIM = RESET = CLEAR = ""
-    cfg = Config(nodes=3, sessions=4, horizon_s=100.0, hbm_blocks=70)
+    cfg = Config(nodes=3, sessions=40, concurrent_sessions=6, horizon_s=100.0, hbm_blocks=160)
     simulator = Simulator(cfg, generate_workload(cfg, seed=7), "repkv", seed=7)
     if args.steps is not None:
         for _ in range(args.steps):

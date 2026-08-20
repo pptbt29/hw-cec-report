@@ -11,20 +11,35 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the causal RepKV control-plane prototype.")
     parser.add_argument("--seeds", default="1,2,3,4,5")
     parser.add_argument("--nodes", type=int, default=4)
-    parser.add_argument("--sessions", type=int, default=48)
+    parser.add_argument("--sessions", type=int, default=600, help="size of the session script pool")
+    parser.add_argument(
+        "--concurrent-sessions",
+        type=int,
+        default=40,
+        help="live sessions held by replenishment; 0 starts the whole pool at once",
+    )
     parser.add_argument("--horizon", type=float, default=240.0)
-    parser.add_argument("--hbm-blocks", type=int, default=180)
+    parser.add_argument("--hbm-blocks", type=int, default=520)
+    parser.add_argument("--think-scale", type=float, default=1.0)
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "outputs")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    cfg = Config(nodes=args.nodes, sessions=args.sessions, horizon_s=args.horizon, hbm_blocks=args.hbm_blocks)
+    cfg = Config(
+        nodes=args.nodes,
+        sessions=args.sessions,
+        concurrent_sessions=args.concurrent_sessions,
+        horizon_s=args.horizon,
+        hbm_blocks=args.hbm_blocks,
+        think_scale=args.think_scale,
+    )
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     rows = aggregate(run_experiment(cfg, seeds, args.output))
     columns = (
         "policy",
+        "requests",
         "slo_goodput_rps",
         "slo_attainment",
         "p99_ttft_s",
