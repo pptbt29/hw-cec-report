@@ -324,6 +324,12 @@ class Metrics:
     exhausted_replenishments: int = 0
     decode_seconds: float = 0.0
     host_evicted_blocks: int = 0
+    # A first turn has no prior KV, so nothing can be placed for it and its
+    # TTFT is set by prefilling the whole prompt. Continuation turns are the
+    # ones a placement policy can act on, and are reported separately.
+    continuation_requests: int = 0
+    continuation_successes: int = 0
+    deferred_admissions: int = 0
     background_seconds: dict[str, float] = field(
         default_factory=lambda: {name: 0.0 for name in RESOURCES}
     )
@@ -432,6 +438,7 @@ class Simulator:
         self.inflight: list[InFlightBatch] = []
         self.request_rows: list[dict[str, float | int | str]] = []
         self.arrivals: dict[float, list[Turn]] = {}
+        self.first_arrival: dict[tuple[int, int], float] = {}
         self.now = -cfg.step_s
         self.last_candidates: list[PlanCandidate] = []
         self.last_events: list[str] = []
@@ -530,6 +537,8 @@ class Simulator:
             "slo_successes": self.metrics.successes,
             "slo_goodput_rps": self.metrics.successes / self.cfg.horizon_s,
             "slo_attainment": self.metrics.successes / max(1, self.metrics.requests),
+            "continuation_attainment": self.metrics.continuation_successes
+            / max(1, self.metrics.continuation_requests),
             "p99_ttft_s": percentile(self.metrics.ttfts, 0.99),
             "transfer_blocks_per_success": (self.metrics.background["transfer"] + self.metrics.demand["transfer"]) / success,
             "restore_blocks_per_success": (self.metrics.background["restore"] + self.metrics.demand["restore"]) / success,
@@ -877,6 +886,7 @@ class Simulator:
     def _arrive(self, turn: Turn) -> None:
         self._invalidate()
         state = self.sessions[turn.sid]
+        arrived = self.first_arrival.setdefault((turn.sid, turn.index), self.now)
         if state.active_until > self.now:
             self.metrics.overlapping_turns += 1
             self.last_events.append(f"overlap sid={turn.sid} turn={turn.index}")
@@ -896,7 +906,14 @@ class Simulator:
             if self._available_capacity(node.nid, turn.sid) >= extra:
                 choices.append((ttft, node.nid, recovery.segments, extra))
         if not choices:
-            raise RuntimeError(f"no node can reserve active KV for sid={turn.sid}, context={final_context}")
+            # No node can hold this context even after reclaiming every
+            # evictable prefix. A real serving stack queues the request rather
+            # than failing it, so the turn is retried on the next control
+            # period and the wait is charged to its TTFT.
+            self.metrics.deferred_admissions += 1
+            self.last_events.append(f"defer sid={turn.sid} turn={turn.index} context={final_context}")
+            self._schedule(turn, self.now + self.cfg.step_s)
+            return
         ttft, nid, recovery_segments, extra = min(choices, key=lambda item: (item[0], item[1]))
         if not self._ensure_capacity(nid, extra, turn.sid):
             raise RuntimeError("capacity precheck and eviction disagree")
@@ -910,9 +927,10 @@ class Simulator:
             self.metrics.used_prepared_blocks += used
         for segment in recovery_segments:
             self.metrics.demand[segment.method] += segment.blocks
-        ttft = self._service_ttft(node, recovery_segments, prompt_s, commit=True)
+        service_ttft = self._service_ttft(node, recovery_segments, prompt_s, commit=True)
+        ttft = service_ttft + (self.now - arrived)
         decode_s = turn.output_blocks / self.cfg.decode_blocks_s
-        completion = self.now + ttft + decode_s
+        completion = self.now + service_ttft + decode_s
         node.decode_finish = [finish for finish in node.decode_finish if finish > self.now]
         node.decode_finish.append(completion)
         self.metrics.decode_seconds += decode_s
@@ -922,6 +940,9 @@ class Simulator:
         success = ttft <= self.cfg.ttft_slo_s
         self.metrics.requests += 1
         self.metrics.successes += int(success)
+        if turn.index > 0:
+            self.metrics.continuation_requests += 1
+            self.metrics.continuation_successes += int(success)
         self.metrics.ttfts.append(ttft)
         methods = "+".join(segment.method for segment in recovery_segments) or "hit"
         self.request_rows.append(

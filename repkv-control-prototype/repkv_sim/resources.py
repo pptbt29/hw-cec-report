@@ -117,17 +117,30 @@ class ResourceModel:
         return self.prefill_blocks_s
 
     @cached_property
+    def decode_slots(self) -> int:
+        """Sequences a node can decode concurrently.
+
+        The configured batch size is an upper bound, but KV memory is the real
+        one: every sequence in the batch keeps its whole context resident, so a
+        node cannot run more concurrent sequences than its HBM holds contexts.
+        At long context this bound is what limits a node, not the batch setting.
+        """
+        context_blocks = max(1, self.hardware.decode_context_tokens // self.model.block_tokens)
+        by_memory = max(1, self.hbm_blocks // context_blocks)
+        return min(self.hardware.decode_batch, by_memory)
+
+    @cached_property
     def decode_step_seconds(self) -> float:
         """Wall time of one decode step of a full batch.
 
         A step reads every weight once regardless of batch size, plus the KV of
         each sequence in the batch. Serving one sequence at a time would spend
         almost all HBM bandwidth on weight reads, which is why engines batch.
-        The step time is taken at a stated operating point: `decode_batch`
+        The step time is taken at a stated operating point: `decode_slots`
         sequences of `decode_context_tokens` each.
         """
         hardware = self.hardware
-        kv_bytes = hardware.decode_batch * self.model.kv_bytes_per_token * hardware.decode_context_tokens
+        kv_bytes = self.decode_slots * self.model.kv_bytes_per_token * hardware.decode_context_tokens
         step_bytes = self.model.weight_bytes + kv_bytes
         return step_bytes / hardware.aggregate_hbm_bytes_s
 
@@ -136,11 +149,6 @@ class ResourceModel:
         """Per-sequence decode rate. Every sequence in the batch advances one
         token per step, so this is one token per step time."""
         return 1.0 / (self.decode_step_seconds * self.model.block_tokens)
-
-    @cached_property
-    def decode_slots(self) -> int:
-        """Sequences a node can decode concurrently."""
-        return self.hardware.decode_batch
 
     @cached_property
     def transfer_blocks_s(self) -> float:
