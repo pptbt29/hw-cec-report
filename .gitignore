@@ -1,6 +1,7 @@
 .DS_Store
 .vscode/
 tmp/
+repkv-control-prototype/outputs/
 
 *.aux
 *.bcf
