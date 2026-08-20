@@ -25,7 +25,7 @@
 | `concurrent_sessions` | 0 | 并发存活 session 数；0 表示池内全部按各自起始时间进入 |
 | `horizon_s` | 240 s | 单个 seed 的模拟时长 |
 | `step_s` | 0.5 s | 控制周期 |
-| `hbm_blocks` | 180 | 每节点 HBM block 容量 |
+| `hbm_blocks` | 520 | 每节点 HBM block 容量 |
 | `ttft_slo_s` | 2.0 s | TTFT SLO |
 | `prefill_blocks_s` | 24 | 新 prompt prefill 速率 |
 | `decode_blocks_s` | 10 | output decode 速率 |
@@ -37,15 +37,19 @@
 | `high_watermark` | 0.92 | HBM 回收触发水位 |
 | `low_watermark` | 0.82 | HBM 回收目标水位 |
 | `arrival_forecast` | True | 是否用预测到达构造未来排队估计 |
-| `shared_uncertainty_s` | 0.45 s | 各节点共同承受的 TTFT 预测误差 |
-| `queue_uncertainty_s` | 0.25 s | 各节点独立的排队估计误差 |
+| `shared_uncertainty_s` | 0.45 s | 各节点共同承受的 TTFT 预测误差下限 |
+| `queue_uncertainty_s` | 0.25 s | 各节点独立的排队估计误差下限 |
+| `shared_uncertainty_scale` | 0.5 | 共同误差随各节点预测排队均值增长的系数 |
+| `queue_uncertainty_scale` | 0.8 | 独立误差随该节点预测排队增长的系数 |
+| `reprepare_cost_weight` | 1.0 | 回收分数中重建代价项的权重；0 表示关闭 |
+| `value_based_eviction` | True | 回收受害者按价值排序；False 退回 LRU，用于消融 |
 | `assumed_output_blocks` | 4.0 | output 长度估计的初值 |
 | `think_sigma` | 0.55 | 真实思考时间的对数正态尺度 |
 | `think_scale` | 1.0 | 思考时间整体缩放，用于调节负载 |
 | `predictor_sigma_scale` | 1.0 | 预测器使用的尺度相对真实值的比例 |
 | `min_return_probability` | 0.05 | 进入准备候选集所需的最低窗口返回概率 |
 
-`run.py` 的默认实验配置与 `Config` 默认值不同：它使用 `sessions=600`、`concurrent_sessions=40`、`hbm_blocks=520`，因为 `Config` 默认值不产生排队竞争（见第 13 节第 1 条）。
+`run.py` 的默认实验配置在 `Config` 默认值之上只改一项：`concurrent_sessions=40`。不做 session 补充时不产生排队竞争（见第 14 节第 1 条）。
 
 后台资源只允许使用前台标称速率的一部分：
 
@@ -334,16 +338,26 @@ P_s^{cluster}
 \left(
 1-
 \frac{1}
-{1+\exp((\widehat{TTFT}_{s,n}+\sigma_0 Z-D_s)/\sigma_n)}
+{1+\exp((\widehat{TTFT}_{s,n}+\sigma_{shared} Z-D_s)/\sigma_n)}
 \right)
 \right],
 $$
 
-其中 $\sigma_0=0.45$ 为共同误差尺度，$\sigma_n=0.25$ 为节点独立误差尺度，$Z$ 为标准正态，按五个等概率分层的条件均值做数值积分。
+其中 $Z$ 为标准正态，按五个等概率分层的条件均值做数值积分。
+
+两个误差尺度随预测排队增长，而不是常数：
+
+$$
+\sigma_{shared}=0.45+0.5\bar Q,
+\qquad
+\sigma_n=0.25+0.8Q_n,
+$$
+
+其中 $Q_n$ 为该节点在 $\widehat t_s$ 处的预测排队，$\bar Q$ 为各节点 $Q_n$ 的均值。理由是第 8.1 节的排队估计是流体量，它的可信度随排队本身下降：集群实际出现的负载量偏离均值多少属于共同误差，这些负载落在哪个节点上属于节点独立误差，两者的绝对幅度都随预测排队增长。取常数会让控制器在流体队列很小时最自信，而那恰是该估计最不可靠的区间。
 
 早期版本把各节点成功事件当作完全独立。该假设在本模型中明显不成立：当一个 session 的 KV 前缀在所有节点都缺失时，各节点需要恢复的是同一段历史，TTFT 主要由同一个恢复量决定而不是由各自队列决定。完全独立假设会把四个恰好位于 SLO 边界的节点合成为 0.94 的集群成功概率，从而系统性低估准备价值。
 
-$\sigma_0$ 和 $\sigma_n$ 是控制器参数，不是实测的预测误差分布。
+这四个系数是控制器参数，不是实测的预测误差分布。随排队放大改善的是分辨力而不是偏差：$P_s^{cluster}$ 的均值本身没有下降，但被判为不低于 0.9 的请求集合更小也更纯（见 `PROTOTYPE_VERDICT.md`）。偏差仍需替换第 8.1 节的排队模型。
 
 ### 9.2 计划收益
 
@@ -439,19 +453,22 @@ Score_e
 \frac{
 q_s(t,\Delta)\left(P_s^{before}-P_{s,e}^{after}\right)
 +0.002B_e
++\lambda q_s(t,\Delta)\dfrac{B_e}{r_{restore}^{bg}\Delta}
 }
 {B_e}.
 $$
 
-分数越低，表示每释放一个 HBM block 导致的预期路由损失越小，因此越先降级。脚本中已无下一轮的 session 没有预测，分数为 0，可以自由回收。降级只缩短 `hbm_prefix`，原前缀保留在 `host_prefix` 中。
+三项分别是路由收益的损失、降级操作本身的开销，以及在 $\widehat t_s$ 之前把该区间重建回来的后台代价。降级后的前缀保留在 `host_prefix` 中，因此重建是同样大小的一次后台 restore，归一化分母与惩罚系数 $\lambda=0.22$ 与第 9.3 节的 $V_{s,n}$ 完全一致，两侧因此在同一本资源账目上。重建按"该 session 可能返回"计费，不建模 router 届时会选哪个节点。
+
+没有这一项时，控制器可以先为一次准备付费，再在同一个窗口内把它回收而不产生任何记账；并且当概率项在高负载下趋于饱和、$P^{before}$ 与 $P^{after}$ 都接近 1 时，前两项对所有候选几乎相同，排序失去梯度而退化为按 session ID 选择。
+
+分数越低，表示每释放一个 HBM block 的预期代价越小，因此越先降级。脚本中已无下一轮的 session 没有预测，分数为 0，可以自由回收。降级只缩短 `hbm_prefix`，原前缀保留在 `host_prefix` 中。
 
 该分数与第 9.2 节的准备收益是同一个状态函数。实测把 40 个 block 的前缀从零建起来的收益为 0.24087，而按每次 4 个 block 从 40 削到 0 的十次损失之和为 0.23665，差值来自 $\max(0,\cdot)$ 的截断。因此在不同时刻分别计算不构成口径不一致。该分数对前缀长度是强凸的：40 到 0 的逐步损失依次为 0.0015、0.0028、0.0049、0.0085、0.0140、0.0218、0.0313、0.0415、0.0510、0.0594，最外层一刀比最内层便宜约 40 倍。
 
-`on_demand` 和 `eager_full` 不使用该预期损失分数，而按 `last_used` 执行 LRU 降级。
+`on_demand` 和 `eager_full` 不使用该分数，而按 `last_used` 执行 LRU 降级。`value_based_eviction=False` 使 `repkv` 也退回 LRU，用于把回收侧的贡献从准备侧分离出来。该消融显示回收侧贡献了 `repkv` 的全部可测收益（见 `PROTOTYPE_VERDICT.md`）。
 
-实现上没有维护回收优先队列，而是每次回收都对节点内所有 replica 重新求最小分数。当前 host tier 没有容量限制，降级也没有显式带宽和时延，而且降级后的前缀永久保留在 host tier，因此高压场景下会低估回收成本。也没有实现"删除 KV 但保留 token"的分支。
-
-分数中的 $0.002B_e$ 只代表降级操作本身的开销，不包含在 $\widehat t_s$ 之前重新准备该区间的代价。因此回收侧不会为"稍后需要重新搬回来"付费。
+实现上没有维护回收优先队列，而是每次回收都对节点内所有 replica 重新求最小分数。每个候选都要求两次 $P_s^{cluster}$，这是模拟器的主要开销来源。当前 host tier 没有容量限制，降级也没有显式带宽和时延，而且降级后的前缀永久保留在 host tier，因此高压场景下仍会低估回收成本，重建项的量级也没有实测支撑。也没有实现"删除 KV 但保留 token"的分支。
 
 ## 12. 三种策略的公平口径
 
@@ -477,33 +494,34 @@ A_T=\frac{N_{success}}{N_{requests}},
 G_T=\frac{N_{success}}{T}.
 $$
 
-还统计 P99 TTFT、每个成功请求对应的 transfer/restore/recompute blocks、每个成功请求对应的 HBM block-seconds、未使用准备比例、降级 blocks、取消 batches 和重叠轮次。
+还统计 P99 TTFT、每个成功请求对应的 transfer/restore/recompute blocks、每个成功请求对应的 HBM block-seconds、未使用准备比例、降级 blocks、取消 batches、重叠轮次和脚本池耗尽次数。
+
+`exhausted_replenishments` 必须为 0 才能认为该次运行达到了所要求的负载。它非零表示 `sessions` 脚本池在 horizon 结束前用完，此后存活并发逐步衰减，负载和 attainment 都不再对应设定值。提高 `concurrent_sessions` 而不同步提高 `sessions` 很容易触发：`sessions=48` 配 `concurrent_sessions=40` 会在 240 秒内耗尽 39 次，请求数从 493 掉到 158，attainment 虚高到 1.0000。
 
 `aggregate()` 对各 seed 的指标做简单宏平均。由于不同 seed 的请求数不同，宏平均 attainment 不等于把所有请求合并后的请求级加权 attainment。
 
 ## 14. 已知实现限制
 
-1. workload 是合成的，不是公开 trace；`Config` 默认值（4 节点、48 session、不做补充）节点利用率约 21%，不产生排队竞争，任何预放置策略在该配置上都无法被区分；
+1. workload 是合成的，不是公开 trace；`concurrent_sessions=0` 时不做 session 补充，节点利用率约 21%，不产生排队竞争，任何预放置策略在该配置上都无法被区分；`sessions` 与 `concurrent_sessions` 相互耦合，脚本池不足时运行会被静默截断，只能靠 `exhausted_replenishments` 事后发现；
 2. 预测器接收真实的类别参数，只是不知道抽样值和轮数上限；没有训练、校准和线上推理开销；
 3. router 使用准确队列和准确 KV 元数据，也没有 Preble-style 或 DualMap-style 变体，因此"可叠加到不同 router"未被验证；
 4. `readiness_snapshot()` 只被 `trace.py` 调用，router 实际直接读内部状态，元数据接口没有延迟或陈旧；
 5. 前台恢复只增加 TTFT，不占用共享网络或计算队列；
-6. host tier 容量、写入成本和降级成本被忽略，且降级后的前缀永久保留在 host tier，因此 HBM 竞争的代价被系统性低估；
-7. 回收分数不含重新准备的代价，准备与回收仍未在资源账目上闭环；
-8. 排队中的请求按完整 context 预留 HBM，这限制了可模拟的并发度，且不是经过验证的建模选择；
-9. 完整计划不预留未来资源，未达门槛的半程前缀没有回滚；
-10. block 没有对应真实 token 数、层、dtype、张量地址和 block table；
-11. 没有模拟 RDMA、CANN stream、NPU kernel、NUMA 和跨机故障；
-12. 默认速率和成本权重没有由 Ascend 910B 测量校准；
-13. 第 8.1 节的排队预测在高利用率下系统性偏低，导致 $P_s^{before}$ 高估，是当前高负载下预放置几乎不触发的直接原因。
+6. host tier 容量、写入成本和降级成本被忽略，且降级后的前缀永久保留在 host tier，因此 HBM 竞争的代价被系统性低估，回收分数中重建项的量级也没有实测支撑；
+7. 排队中的请求按完整 context 预留 HBM，这限制了可模拟的并发度，且不是经过验证的建模选择；
+8. 完整计划不预留未来资源，未达门槛的半程前缀没有回滚；
+9. block 没有对应真实 token 数、层、dtype、张量地址和 block table；
+10. 没有模拟 RDMA、CANN stream、NPU kernel、NUMA 和跨机故障；
+11. 默认速率和成本权重没有由 Ascend 910B 测量校准；
+12. 第 8.1 节的排队预测在高利用率下系统性偏低，导致 $P_s^{cluster}$ 高估，随排队放大不确定性改善了分辨力但没有修正偏差；
+13. 准备侧的收益在 $2\times2$ 消融中无法与零区分，因此第 9 节的准备判据尚未被任何实验结果支撑。
 
 ## 15. 下一阶段实现顺序
 
-1. 替换第 8.1 节的排队预测。当前形式按加权平均负载求确定性队列，而排队延迟对负载是凸函数，因此结果小于队列的期望值；实测在 84% 利用率下低估 6.3 倍，并使 $P_s^{before}$ 高估 0.26，价值过滤器因此把 99.8% 的可行方案判为没有必要。需要给出队列长度的分布而不是均值，或对历史预测误差做在线校正；
-2. 在回收分数中加入在 $\widehat t_s$ 之前重新准备的预计代价，使准备与回收在资源账目上闭环；需要先确定"确实需要重建"的概率如何估计；
+1. 替换第 8.1 节的排队预测。当前形式按加权平均负载求确定性队列，而排队延迟对负载是凸函数，因此结果小于队列的期望值；实测在 84% 利用率下低估 6.3 倍，并使 $P_s^{cluster}$ 高估 0.26，价值过滤器因此把 99.8% 的可行方案判为没有必要。需要给出队列长度的分布而不是均值，或对历史预测误差做在线校正。这一项同时影响准备判据和回收分数中的概率项；
+2. 界定准备侧确有正收益的条件。当前 $2\times2$ 消融在四个负载点上都无法把准备的边际贡献与零区分，因此需要给出可检验的适用条件（session 数远小于 HBM 容量、恢复代价远高于当前假设、到达时刻可从外部信号获得），而不是继续调整第 9 节的系数；
 3. 用公开多轮会话 trace 替换合成脚本，并用实测思考时间分布替换对数正态假设；
-4. 用 Ascend 实测 prefill、decode、host restore 和跨机传输数据校准参数；
+4. 用 Ascend 实测 prefill、decode、host restore 和跨机传输数据校准参数，其中 host 写入与降级成本决定回收分数中重建项的量级；
 5. 在真实 runtime 中验证 KV block 导出、连续前缀传输和导入正确性；
 6. 建立 router metadata 接口并测量状态延迟；
-7. 测量前后台并发干扰，替换当前固定资源比例；
-8. 增加 $2\times2$ 消融所需的策略组合，分离准备与回收的贡献。
+7. 测量前后台并发干扰，替换当前固定资源比例。

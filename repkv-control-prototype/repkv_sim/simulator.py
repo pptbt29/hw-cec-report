@@ -237,6 +237,7 @@ class Metrics:
     demoted_blocks: int = 0
     cancelled_batches: int = 0
     overlapping_turns: int = 0
+    exhausted_replenishments: int = 0
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -348,8 +349,16 @@ class Simulator:
         Without this the workload contains a fixed total number of turns, so
         shortening think times only front-loads the same work instead of
         sustaining load.
+
+        Once the script pool runs out, live concurrency decays for the rest of
+        the horizon and the run no longer measures the requested load. That is
+        counted rather than silently tolerated, because it is easy to hit by
+        raising `concurrent_sessions` without also enlarging `sessions`.
         """
-        if self.cfg.concurrent_sessions <= 0 or self._admitted >= len(self._pool):
+        if self.cfg.concurrent_sessions <= 0:
+            return
+        if self._admitted >= len(self._pool):
+            self.metrics.exhausted_replenishments += 1
             return
         self._admit(self._pool[self._admitted], at)
 
@@ -418,6 +427,7 @@ class Simulator:
             "demoted_blocks": self.metrics.demoted_blocks,
             "cancelled_batches": self.metrics.cancelled_batches,
             "overlapping_turns": self.metrics.overlapping_turns,
+            "exhausted_replenishments": self.metrics.exhausted_replenishments,
         }
         return summary, self.request_rows
 
