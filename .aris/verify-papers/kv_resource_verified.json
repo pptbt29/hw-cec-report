@@ -1,0 +1,150 @@
+{
+  "verdict": "WARN",
+  "hallucination_rate": 0.0,
+  "pending_rate": 0.8667,
+  "warnings": [
+    "transient_failures_present"
+  ],
+  "papers": [
+    {
+      "id": "symphony",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "kvflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2507.07400"
+      }
+    },
+    {
+      "id": "mooncake",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2407.00079"
+      }
+    },
+    {
+      "id": "llumnix",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2406.03243"
+      }
+    },
+    {
+      "id": "cachegen",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2310.07240"
+      }
+    },
+    {
+      "id": "infercept",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2402.01869"
+      }
+    },
+    {
+      "id": "superinfer",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "apt_serve",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2504.07494"
+      }
+    },
+    {
+      "id": "adaptive_kv_caching",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "crossref_verify_pending",
+      "identifiers": {
+        "doi": "10.1145/3767295.3803570"
+      }
+    },
+    {
+      "id": "resk",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "crossref_verify_pending",
+      "identifiers": {
+        "doi": "10.1109/jiot.2026.3709703"
+      }
+    },
+    {
+      "id": "joint_cache_routing",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "dualmap",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "cec_kv_migration",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "pythia",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.25899"
+      }
+    },
+    {
+      "id": "pbkv",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2605.06472"
+      }
+    }
+  ]
+}

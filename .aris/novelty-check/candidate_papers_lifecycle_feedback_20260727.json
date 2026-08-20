@@ -1,0 +1,56 @@
+[
+  {
+    "id": "continuum",
+    "arxiv_id": "2511.02230",
+    "doi": null,
+    "title": "Continuum: Efficient and Robust Multi-Turn LLM Agent Scheduling with KV Cache Time-to-Live"
+  },
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "kvflow",
+    "arxiv_id": "2507.07400",
+    "doi": null,
+    "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows"
+  },
+  {
+    "id": "pythia",
+    "arxiv_id": "2604.25899",
+    "doi": null,
+    "title": "Pythia: Exploiting Workflow Predictability for Efficient Agent-Native LLM Serving"
+  },
+  {
+    "id": "randomization_joint",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"
+  },
+  {
+    "id": "dualmap",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "DualMap: Enabling Both Cache Affinity and Load Balancing for Distributed LLM Serving"
+  },
+  {
+    "id": "cooptimizing_edge",
+    "arxiv_id": null,
+    "doi": "10.1109/JIOT.2026.3709703",
+    "title": "Co-optimizing Request Scheduling and KV Caching for Edge LLM Serving"
+  },
+  {
+    "id": "robust_kv",
+    "arxiv_id": "2607.16892",
+    "doi": null,
+    "title": "Robust KV Cache Management for LLM Serving under Output Token Length Uncertainty"
+  },
+  {
+    "id": "geo_migration_icdcs",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Efficient KV Cache Migration for Geo-Distributed LLM Inference in Collaborative Edge Computing"
+  }
+]
