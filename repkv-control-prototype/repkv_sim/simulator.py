@@ -15,6 +15,7 @@ from .planner import (
     cheapest_preparation,
     fastest_recovery,
     minimum_slo_preparation,
+    routable_probability,
     success_probability,
 )
 
@@ -39,12 +40,16 @@ class Config:
     background_restore_fraction: float = 0.45
     background_compute_fraction: float = 0.30
     preparation_horizon_s: float = 18.0
-    queue_uncertainty_s: float = 0.55
+    queue_uncertainty_s: float = 0.25
+    shared_uncertainty_s: float = 0.45
     block_batch: int = 4
     high_watermark: float = 0.92
     low_watermark: float = 0.82
     max_prepared_nodes_per_session: int = 2
     resource_penalty: float = 0.22
+    arrival_forecast: bool = True
+    assumed_output_blocks: float = 4.0
+    output_estimate_weight: float = 0.2
 
     @property
     def foreground_rates(self) -> dict[str, float]:
@@ -248,6 +253,8 @@ class Simulator:
         self.now = -cfg.step_s
         self.last_candidates: list[PlanCandidate] = []
         self.last_events: list[str] = []
+        self.output_estimate = cfg.assumed_output_blocks
+        self._forecast_cache: dict[int, dict[int, float]] | None = None
 
     def run(self) -> tuple[dict[str, float | int | str], list[dict[str, float | int | str]]]:
         steps = int(self.cfg.horizon_s / self.cfg.step_s) + 1
@@ -279,6 +286,7 @@ class Simulator:
     def step(self) -> list[str]:
         self.now = round(self.now + self.cfg.step_s, 9)
         self.last_events = []
+        self._forecast_cache = None
         self._complete_inflight(self.now)
         self._complete_requests(self.now)
         for turn in self.arrivals.get(self.now, []):
@@ -301,6 +309,68 @@ class Simulator:
             remote,
         )
 
+    def _pending_returns(self) -> list[tuple[float, int, Turn, SessionState]]:
+        pending: list[tuple[float, int, Turn, SessionState]] = []
+        for state in self.sessions.values():
+            if state.completed_turn < 0 or state.active_until > self.now:
+                continue
+            previous = self.turn_lookup.get((state.sid, state.completed_turn))
+            if previous is None:
+                continue
+            pending.append((max(self.now, previous.predicted_arrival), state.sid, previous, state))
+        return sorted(pending, key=lambda item: (item[0], item[1]))
+
+    def _forecast(self) -> dict[int, dict[int, float]]:
+        """Project per-node backlog at each session's predicted return time.
+
+        `busy_until` only covers work a node has already admitted, while a
+        preparation decision is about a moment several seconds ahead. Sessions
+        are inserted in predicted arrival order, so the view recorded for a
+        session covers every other session predicted to return earlier but not
+        its own load. Node choice mirrors the router and the added occupancy is
+        discounted by the session return probability.
+
+        A session whose predicted arrival has already passed contributes no
+        load: the point predictor no longer states when it will return, and
+        charging its full service demand to the current instant would inflate
+        every queue estimate. This makes the forecast a known under-estimate.
+        """
+        if self._forecast_cache is not None:
+            return self._forecast_cache
+        forecast: dict[int, dict[int, float]] = {}
+        if not self.cfg.arrival_forecast:
+            self._forecast_cache = forecast
+            return forecast
+        projected = {node.nid: node.busy_until for node in self.nodes}
+        decode_s = self.output_estimate / self.cfg.decode_blocks_s
+        for arrival, sid, previous, state in self._pending_returns():
+            forecast[sid] = dict(projected)
+            if previous.predicted_arrival <= self.now:
+                continue
+            prompt = previous.predicted_prompt_blocks / self.cfg.prefill_blocks_s
+            best_nid, best_ttft, best_service = 0, math.inf, 0.0
+            for node in self.nodes:
+                availability = self._availability(sid, node.nid)
+                recovery = fastest_recovery(
+                    availability.local_hbm,
+                    state.context_blocks,
+                    availability,
+                    self.cfg.foreground_rates,
+                )
+                ttft = max(0.0, projected[node.nid] - arrival) + recovery.seconds + prompt
+                if ttft < best_ttft:
+                    best_nid, best_ttft = node.nid, ttft
+                    best_service = recovery.seconds + prompt + decode_s
+            projected[best_nid] = max(projected[best_nid], arrival) + previous.return_probability * best_service
+        self._forecast_cache = forecast
+        return forecast
+
+    def _projected_busy_until(self, sid: int, nid: int) -> float:
+        view = self._forecast().get(sid)
+        if view is None:
+            return self.nodes[nid].busy_until
+        return view[nid]
+
     def _predicted_ttft(self, state: SessionState, previous: Turn, node: Node, hbm_override: int | None = None) -> float:
         predicted_time = max(self.now, previous.predicted_arrival)
         availability = self._availability(state.sid, node.nid, hbm_override)
@@ -310,17 +380,21 @@ class Simulator:
             availability,
             self.cfg.foreground_rates,
         )
-        queue = max(0.0, node.busy_until - predicted_time)
+        queue = max(0.0, self._projected_busy_until(state.sid, node.nid) - predicted_time)
         prompt = previous.predicted_prompt_blocks / self.cfg.prefill_blocks_s
         return queue + recovery.seconds + prompt
 
     def _cluster_probability(self, state: SessionState, previous: Turn, override: tuple[int, int] | None = None) -> float:
-        probabilities = []
+        ttfts = []
         for node in self.nodes:
             hbm_override = override[1] if override and override[0] == node.nid else None
-            ttft = self._predicted_ttft(state, previous, node, hbm_override)
-            probabilities.append(success_probability(ttft, self.cfg.ttft_slo_s, self.cfg.queue_uncertainty_s))
-        return at_least_one_success(probabilities)
+            ttfts.append(self._predicted_ttft(state, previous, node, hbm_override))
+        return routable_probability(
+            ttfts,
+            self.cfg.ttft_slo_s,
+            self.cfg.shared_uncertainty_s,
+            self.cfg.queue_uncertainty_s,
+        )
 
     def _complete_inflight(self, now: float) -> None:
         ready = [batch for batch in self.inflight if batch.complete_at <= now]
@@ -353,8 +427,11 @@ class Simulator:
         ready = [item for item in self.request_completions if item[0] <= now]
         self.request_completions = [item for item in self.request_completions if item[0] > now]
         for completion, turn, nid in sorted(ready, key=lambda item: (item[0], item[1].sid, item[1].index)):
+            self._forecast_cache = None
             node = self.nodes[nid]
             state = self.sessions[turn.sid]
+            weight = self.cfg.output_estimate_weight
+            self.output_estimate += weight * (turn.output_blocks - self.output_estimate)
             context = turn.history_blocks + turn.prompt_blocks + turn.output_blocks
             node.active_reservations.pop(turn.sid, None)
             replica = node.replicas.setdefault(turn.sid, KVReplica())
@@ -369,6 +446,7 @@ class Simulator:
             self.last_events.append(f"finish sid={turn.sid} turn={turn.index} n={nid} context={context}")
 
     def _arrive(self, turn: Turn) -> None:
+        self._forecast_cache = None
         state = self.sessions[turn.sid]
         if state.active_until > self.now:
             self.metrics.overlapping_turns += 1
@@ -447,7 +525,7 @@ class Simulator:
                 availability = self._availability(state.sid, node.nid)
                 if availability.local_hbm >= state.context_blocks:
                     continue
-                queue = max(0.0, node.busy_until - previous.predicted_arrival)
+                queue = max(0.0, self._projected_busy_until(state.sid, node.nid) - previous.predicted_arrival)
                 prompt = previous.predicted_prompt_blocks / self.cfg.prefill_blocks_s
                 if self.policy == "eager_full":
                     plan = cheapest_preparation(
@@ -518,6 +596,7 @@ class Simulator:
         return candidates
 
     def _prepare(self) -> None:
+        self._forecast_cache = None
         self.last_candidates = self._collect_candidates()
         budgets = {
             method: max(0, math.floor(rate * self.cfg.step_s + 1e-9))

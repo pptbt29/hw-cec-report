@@ -187,3 +187,39 @@ def at_least_one_success(probabilities: list[float]) -> float:
     for probability in probabilities:
         failure *= 1.0 - min(1.0, max(0.0, probability))
     return 1.0 - failure
+
+
+# Conditional means of the five equal-probability strata of a standard normal.
+SHARED_STRATA: tuple[tuple[float, float], ...] = (
+    (-1.3998, 0.2),
+    (-0.5244, 0.2),
+    (0.0, 0.2),
+    (0.5244, 0.2),
+    (1.3998, 0.2),
+)
+
+
+def routable_probability(
+    ttfts: list[float],
+    slo_s: float,
+    shared_uncertainty_s: float,
+    node_uncertainty_s: float,
+) -> float:
+    """Probability that at least one node meets the SLO under correlated error.
+
+    Errors in the predicted return time and the predicted prompt size shift
+    every node's TTFT by the same amount, so they are integrated as a shared
+    term outside the per-node product. Only queue error is treated as
+    independent. Treating every node as independent lets a cluster of nodes
+    that all sit exactly on the SLO boundary look collectively safe, which
+    removes the value of preparing any of them.
+    """
+    if shared_uncertainty_s <= 0:
+        return at_least_one_success([success_probability(ttft, slo_s, node_uncertainty_s) for ttft in ttfts])
+    total = 0.0
+    for offset, weight in SHARED_STRATA:
+        shift = offset * shared_uncertainty_s
+        total += weight * at_least_one_success(
+            [success_probability(ttft + shift, slo_s, node_uncertainty_s) for ttft in ttfts]
+        )
+    return total
