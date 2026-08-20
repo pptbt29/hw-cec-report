@@ -38,6 +38,7 @@ class PrefixAvailability:
 class RecoveryPlan:
     segments: tuple[WorkSegment, ...]
     seconds: float
+    compute_seconds: float = 0.0
 
     def blocks(self, method: str) -> int:
         return sum(segment.blocks for segment in self.segments if segment.method == method)
@@ -104,18 +105,24 @@ def fastest_recovery(
     """Return the fastest strict-source recovery of [start_prefix, context)."""
     regions = _regions(start_prefix, context_blocks, availability)
     if not regions:
-        return RecoveryPlan((), 0.0)
+        return RecoveryPlan((), 0.0, 0.0)
     if len(regions) == 1:
         left, right, methods = regions[0]
         method = max(methods, key=foreground_rates.__getitem__)
-        return RecoveryPlan((WorkSegment(method, left, right),), (right - left) / foreground_rates[method])
+        seconds = (right - left) / foreground_rates[method]
+        compute = seconds if method == "recompute" else 0.0
+        return RecoveryPlan((WorkSegment(method, left, right),), seconds, compute)
     segments: list[WorkSegment] = []
     seconds = 0.0
+    compute = 0.0
     for left, right, methods in regions:
         method = max(methods, key=foreground_rates.__getitem__)
         segments.append(WorkSegment(method, left, right))
-        seconds += (right - left) / foreground_rates[method]
-    return RecoveryPlan(_compress(segments), seconds)
+        span = (right - left) / foreground_rates[method]
+        seconds += span
+        if method == "recompute":
+            compute += span
+    return RecoveryPlan(_compress(segments), seconds, compute)
 
 
 def cheapest_preparation(
@@ -176,17 +183,22 @@ def minimum_slo_preparation(
     target can either.
     """
     current = fastest_recovery(availability.local_hbm, context_blocks, availability, foreground_rates)
-    budget = slo_s + 1e-9 - queue_s - prompt_s
-    if current.seconds <= budget:
+    # Recovery overlaps with the device queue rather than adding to it: a
+    # restore or a transfer proceeds while the device serves other requests.
+    # The two therefore have to fit under the deadline separately.
+    budget = slo_s + 1e-9 - prompt_s
+    if queue_s > budget:
         return None
-    if budget < 0:
+    if current.seconds <= budget:
         return None
     low, high = availability.local_hbm + 1, context_blocks
     if low > high:
         return None
 
     def residual_seconds(target: int) -> float:
-        hypothetical = PrefixAvailability(target, max(target, availability.local_host), availability.remote_hbm)
+        # Preparing into HBM does not put the interval on the host tier, so the
+        # sources available for what remains are the real ones.
+        hypothetical = PrefixAvailability(target, availability.local_host, availability.remote_hbm)
         return fastest_recovery(target, context_blocks, hypothetical, foreground_rates).seconds
 
     if residual_seconds(high) > budget:

@@ -19,8 +19,14 @@ def parse_args() -> argparse.Namespace:
         help="live sessions held by replenishment; 0 starts the whole pool at once",
     )
     parser.add_argument("--horizon", type=float, default=240.0)
-    parser.add_argument("--hbm-blocks", type=int, default=520)
+    parser.add_argument(
+        "--hbm-blocks",
+        type=int,
+        default=0,
+        help="override the HBM capacity derived from the hardware sheet",
+    )
     parser.add_argument("--think-scale", type=float, default=1.0)
+    parser.add_argument("--first-prompt-tokens", type=int, default=24000)
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "outputs")
     return parser.parse_args()
 
@@ -32,8 +38,19 @@ def main() -> None:
         sessions=args.sessions,
         concurrent_sessions=args.concurrent_sessions,
         horizon_s=args.horizon,
-        hbm_blocks=args.hbm_blocks,
+        hbm_blocks_override=args.hbm_blocks,
         think_scale=args.think_scale,
+        first_prompt_tokens=args.first_prompt_tokens,
+    )
+    derived = cfg.resources.describe()
+    print(
+        f"block={derived['block_bytes']/2**20:.2f} MiB  "
+        f"hbm={cfg.hbm_blocks} blocks  "
+        f"prefill={derived['prefill_blocks_s']*cfg.block_tokens:.0f} tok/s  "
+        f"decode={derived['decode_blocks_s']*cfg.block_tokens:.0f} tok/s  "
+        f"transfer={derived['transfer_blocks_s']*cfg.block_tokens:.0f} tok/s  "
+        f"restore={derived['restore_blocks_s']*cfg.block_tokens:.0f} tok/s  "
+        f"recompute={derived['recompute_blocks_s']*cfg.block_tokens:.0f} tok/s\n"
     )
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     rows = aggregate(run_experiment(cfg, seeds, args.output))

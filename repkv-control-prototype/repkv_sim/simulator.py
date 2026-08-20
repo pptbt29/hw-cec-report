@@ -21,28 +21,25 @@ from .planner import (
     success_probability,
 )
 from .predictor import ReturnModel, SessionClass
+from .resources import ResourceModel
 
 
 POLICIES = ("on_demand", "eager_full", "repkv")
+
+
+RESOURCES = ("compute", "link", "host")
 
 
 @dataclass(frozen=True)
 class Config:
     nodes: int = 4
     sessions: int = 48
-    horizon_s: float = 240.0
-    step_s: float = 0.5
-    hbm_blocks: int = 520
-    ttft_slo_s: float = 2.0
-    prefill_blocks_s: float = 24.0
-    decode_blocks_s: float = 10.0
-    transfer_blocks_s: float = 20.0
-    host_restore_blocks_s: float = 28.0
-    recompute_blocks_s: float = 12.0
-    background_transfer_fraction: float = 0.45
-    background_restore_fraction: float = 0.45
-    background_compute_fraction: float = 0.30
-    preparation_horizon_s: float = 18.0
+    horizon_s: float = 900.0
+    step_s: float = 1.0
+    ttft_slo_s: float = 3.0
+    resources: ResourceModel = ResourceModel()
+    hbm_blocks_override: int = 0
+    preparation_horizon_s: float = 60.0
     queue_uncertainty_s: float = 0.25
     shared_uncertainty_s: float = 0.45
     queue_uncertainty_scale: float = 0.8
@@ -50,43 +47,84 @@ class Config:
     reprepare_cost_weight: float = 1.0
     displacement_cost_weight: float = 1.0
     value_based_eviction: bool = True
-    block_batch: int = 4
+    block_batch: int = 128
     high_watermark: float = 0.92
     low_watermark: float = 0.82
     max_prepared_nodes_per_session: int = 2
     resource_penalty: float = 0.22
     arrival_forecast: bool = True
-    assumed_output_blocks: float = 4.0
     output_estimate_weight: float = 0.2
+    first_prompt_tokens: int = 4000
+    follow_prompt_tokens: int = 3000
+    output_tokens: int = 1500
+    size_sigma: float = 0.30
     think_sigma: float = 0.55
     think_scale: float = 1.0
-    think_floor_s: float = 6.0
-    think_ceiling_s: float = 75.0
+    think_floor_s: float = 15.0
+    think_ceiling_s: float = 900.0
     predictor_sigma_scale: float = 1.0
     min_return_probability: float = 0.05
     concurrent_sessions: int = 0
+
+    @property
+    def hbm_blocks(self) -> int:
+        return self.hbm_blocks_override or self.resources.hbm_blocks
+
+    @property
+    def block_tokens(self) -> int:
+        return self.resources.model.block_tokens
+
+    @property
+    def prefill_blocks_s(self) -> float:
+        return self.resources.prefill_blocks_s
+
+    @property
+    def decode_blocks_s(self) -> float:
+        return self.resources.decode_blocks_s
+
+    @property
+    def decode_slots(self) -> int:
+        return self.resources.decode_slots
+
+    @property
+    def host_blocks(self) -> int:
+        return self.resources.host_blocks
+
+    @cached_property
+    def assumed_output_blocks(self) -> float:
+        return max(1.0, self.output_tokens / self.block_tokens)
 
     # These are read on nearly every recovery computation, so they are built
     # once per Config rather than on each access.
     @cached_property
     def foreground_rates(self) -> dict[str, float]:
-        return {
-            "transfer": self.transfer_blocks_s,
-            "restore": self.host_restore_blocks_s,
-            "recompute": self.recompute_blocks_s,
-        }
+        return self.resources.rates
 
     @cached_property
     def background_rates(self) -> dict[str, float]:
-        return {
-            "transfer": self.transfer_blocks_s * self.background_transfer_fraction,
-            "restore": self.host_restore_blocks_s * self.background_restore_fraction,
-            "recompute": self.recompute_blocks_s * self.background_compute_fraction,
-        }
+        """Background work runs at the same physical rate as foreground work.
+
+        There is no fixed background fraction. A background batch is only
+        dispatched onto a resource that still has idle time in the current
+        control period, and once dispatched it occupies that resource exactly
+        as foreground work does, so the sharing is decided by contention rather
+        than by a constant.
+        """
+        return self.resources.rates
 
     @cached_property
     def method_costs(self) -> dict[str, float]:
-        return {"restore": 0.65, "transfer": 1.0, "recompute": 1.35}
+        """Seconds of a serial resource consumed per block.
+
+        Using the inverse rate makes the planner minimise resource-seconds,
+        which is the quantity foreground work competes for, instead of an
+        arbitrary preference ordering between methods.
+        """
+        return {method: 1.0 / rate for method, rate in self.resources.rates.items()}
+
+    @cached_property
+    def resource_of_method(self) -> dict[str, str]:
+        return self.resources.resource_of_method
 
 
 @dataclass(frozen=True)
@@ -167,16 +205,56 @@ class KVReplica:
 
 @dataclass
 class Node:
+    """One serving node with three serial resources.
+
+    `until` holds, per resource, the time it next becomes free. Device compute
+    carries prefill and recompute; the network link carries remote transfers;
+    the host link carries restores from DRAM. Foreground and background work
+    occupy the same timelines, so preparing KV in the background delays
+    whatever wants that resource next.
+
+    Decode is not on any of the three. Under continuous batching a request that
+    has been prefilled joins the running batch and every sequence in the batch
+    advances one token per step, so decode does not serialise behind other
+    requests; it occupies one of a fixed number of slots. `decode_finish` holds
+    the completion time of each occupied slot, so a request arriving when the
+    batch is full waits for the earliest slot to free.
+
+    Recovery that only needs the link or the host path can proceed while the
+    device prefills another request, which is why the three are tracked
+    separately rather than folded into one busy time.
+    """
+
     nid: int
     capacity: int
-    busy_until: float = 0.0
+    slots: int
+    host_capacity: int = 1 << 30
+    until: dict[str, float] = field(default_factory=lambda: {name: 0.0 for name in RESOURCES})
+    decode_finish: list[float] = field(default_factory=list)
     replicas: dict[int, KVReplica] = field(default_factory=dict)
     active_reservations: dict[int, int] = field(default_factory=dict)
     background_reserved: int = 0
 
     @property
+    def busy_until(self) -> float:
+        """When the device can start a newly queued request's prefill."""
+        return self.until["compute"]
+
+    def slot_free_at(self, now: float) -> float:
+        """When a decode slot becomes available."""
+        pending = [finish for finish in self.decode_finish if finish > now]
+        if len(pending) < self.slots:
+            return now
+        pending.sort()
+        return pending[len(pending) - self.slots]
+
+    @property
     def hbm_used(self) -> int:
         return sum(replica.hbm_prefix for replica in self.replicas.values())
+
+    @property
+    def host_used(self) -> int:
+        return sum(replica.host_prefix for replica in self.replicas.values())
 
     @property
     def active_extra(self) -> int:
@@ -244,6 +322,14 @@ class Metrics:
     cancelled_batches: int = 0
     overlapping_turns: int = 0
     exhausted_replenishments: int = 0
+    decode_seconds: float = 0.0
+    host_evicted_blocks: int = 0
+    background_seconds: dict[str, float] = field(
+        default_factory=lambda: {name: 0.0 for name in RESOURCES}
+    )
+    foreground_seconds: dict[str, float] = field(
+        default_factory=lambda: {name: 0.0 for name in RESOURCES}
+    )
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -258,9 +344,9 @@ def percentile(values: list[float], q: float) -> float:
 
 
 SESSION_CLASSES = (
-    SessionClass("fast", 12.0, 0.88),
-    SessionClass("normal", 22.0, 0.78),
-    SessionClass("slow", 40.0, 0.66),
+    SessionClass("fast", 45.0, 0.88),
+    SessionClass("normal", 120.0, 0.78),
+    SessionClass("slow", 300.0, 0.66),
 )
 
 
@@ -273,12 +359,23 @@ def generate_workload(cfg: Config, seed: int) -> Workload:
     per-session cap and a Bernoulli continuation draw, so some sessions stop
     early and are right-censored samples for the predictor.
 
+    Sizes are drawn in tokens and converted to whole KV blocks, so the workload
+    is stated in the same units as the model and the hardware sheet. The first
+    turn carries a long document or system prompt; later turns are short
+    questions over the accumulated history.
+
     The controller receives the class parameters, never these draws.
     """
     rng = random.Random(seed)
     turns: list[Turn] = []
     session_start: dict[int, float] = {}
     classes: dict[int, SessionClass] = {}
+    block_tokens = cfg.block_tokens
+    sigma = cfg.size_sigma
+
+    def blocks(tokens: float) -> int:
+        return max(1, int(math.ceil(tokens / block_tokens)))
+
     for sid in range(cfg.sessions):
         session_class = rng.choice(SESSION_CLASSES)
         classes[sid] = session_class
@@ -287,9 +384,10 @@ def generate_workload(cfg: Config, seed: int) -> Workload:
         think = 0.0
         max_turns = rng.randint(3, 8)
         for index in range(max_turns):
-            prompt = rng.randint(8, 16) if index == 0 else rng.randint(3, 9)
-            output = rng.randint(2, 7)
-            predicted_prompt = max(1, round((5.5 if index else 6.0) * math.exp(rng.gauss(0.0, 0.22))))
+            mean_prompt = cfg.first_prompt_tokens if index == 0 else cfg.follow_prompt_tokens
+            prompt = blocks(mean_prompt * math.exp(rng.gauss(0.0, sigma)))
+            output = blocks(cfg.output_tokens * math.exp(rng.gauss(0.0, sigma)))
+            predicted_prompt = blocks(mean_prompt * math.exp(rng.gauss(0.0, 0.22)))
             turns.append(
                 Turn(
                     sid=sid,
@@ -324,7 +422,10 @@ class Simulator:
         self.workload = workload
         self.policy = policy
         self.seed = seed
-        self.nodes = [Node(nid, cfg.hbm_blocks) for nid in range(cfg.nodes)]
+        self.nodes = [
+            Node(nid, cfg.hbm_blocks, cfg.decode_slots, cfg.host_blocks)
+            for nid in range(cfg.nodes)
+        ]
         self.sessions = {sid: SessionState(sid) for sid in range(cfg.sessions)}
         self.metrics = Metrics()
         self.request_completions: list[tuple[float, Turn, int]] = []
@@ -479,8 +580,25 @@ class Simulator:
         return self.nodes[nid].replicas.get(sid, KVReplica())
 
     def _availability(self, sid: int, nid: int, local_hbm_override: int | None = None) -> PrefixAvailability:
+        """Prefix bounds of the three sources this node can pull from.
+
+        The remote bound covers a peer's DRAM as well as its HBM. Both paths
+        leave the peer, cross the network and land in local HBM, and the network
+        is the narrower of the two links, so they take the same time. Excluding
+        a peer's DRAM would make recomputation look necessary in cases where a
+        real cluster would simply fetch the KV.
+        """
         local = self._replica(nid, sid)
-        remote = max((self._replica(node.nid, sid).hbm_prefix for node in self.nodes if node.nid != nid), default=0)
+        remote = 0
+        for node in self.nodes:
+            if node.nid == nid:
+                continue
+            replica = node.replicas.get(sid)
+            if replica is None:
+                continue
+            reachable = replica.hbm_prefix if replica.hbm_prefix > replica.host_prefix else replica.host_prefix
+            if reachable > remote:
+                remote = reachable
         return PrefixAvailability(
             local.hbm_prefix if local_hbm_override is None else local_hbm_override,
             local.host_prefix,
@@ -514,11 +632,28 @@ class Simulator:
         if not self.cfg.arrival_forecast:
             self._forecast_cache = forecast
             return forecast
-        projected = {node.nid: node.busy_until for node in self.nodes}
-        decode_s = self.output_estimate / self.cfg.decode_blocks_s
         count = len(self.nodes)
+        slot_count = self.cfg.decode_slots
+        projected = {node.nid: node.busy_until for node in self.nodes}
+        slots = {
+            node.nid: [finish for finish in node.decode_finish if finish > self.now]
+            for node in self.nodes
+        }
+        decode_estimate = self.output_estimate / self.cfg.decode_blocks_s
+
+        def slot_wait(nid: int, at: float) -> float:
+            busy = sorted(finish for finish in slots[nid] if finish > at)
+            if len(busy) < slot_count:
+                return at
+            return busy[len(busy) - slot_count]
+
         for arrival, sid, prediction, state in self._pending_returns():
-            forecast[sid] = dict(projected)
+            waits = {nid: slot_wait(nid, arrival) for nid in range(count)}
+            view = {
+                nid: projected[nid] if projected[nid] > waits[nid] else waits[nid]
+                for nid in range(count)
+            }
+            forecast[sid] = view
             prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
             best_nid, best_ttft, best_service = 0, math.inf, 0.0
             hbm, host = self._prefix_signature(sid)
@@ -528,11 +663,15 @@ class Simulator:
                     if other != nid and hbm[other] > remote:
                         remote = hbm[other]
                 recovery = self._recovery(hbm[nid], state.context_blocks, host[nid], remote)
-                ttft = max(0.0, projected[nid] - arrival) + recovery.seconds + prompt
+                queue = max(0.0, view[nid] - arrival)
+                ttft = max(queue, recovery.seconds) + prompt
                 if ttft < best_ttft:
                     best_nid, best_ttft = nid, ttft
-                    best_service = recovery.seconds + prompt + decode_s
+                    # Decode runs in a batch slot, not on the device timeline,
+                    # so only prefill and recompute occupy the device.
+                    best_service = recovery.compute_seconds + prompt
             projected[best_nid] = max(projected[best_nid], arrival) + prediction.return_probability * best_service
+            slots[best_nid].append(waits[best_nid] + prediction.return_probability * decode_estimate)
         self._forecast_cache = forecast
         return forecast
 
@@ -604,7 +743,9 @@ class Simulator:
             if queue < 0.0:
                 queue = 0.0
             queues.append(queue)
-            ttfts.append(queue + recovery.seconds + prompt)
+            # Recovery that uses the link or the host path runs while the
+            # device serves other requests, so the two overlap rather than add.
+            ttfts.append((queue if queue > recovery.seconds else recovery.seconds) + prompt)
         mean_queue = sum(queues) / count
         shared = self.cfg.shared_uncertainty_s + self.cfg.shared_uncertainty_scale * mean_queue
         node_uncertainties = [
@@ -646,7 +787,12 @@ class Simulator:
                 source_ok = replica.host_prefix >= batch.end
             elif batch.method == "transfer":
                 source_ok = any(
-                    other.nid != batch.nid and self._replica(other.nid, batch.sid).hbm_prefix >= batch.end
+                    other.nid != batch.nid
+                    and max(
+                        self._replica(other.nid, batch.sid).hbm_prefix,
+                        self._replica(other.nid, batch.sid).host_prefix,
+                    )
+                    >= batch.end
                     for other in self.nodes
                 )
             if replica.hbm_prefix != batch.start or not source_ok:
@@ -654,9 +800,11 @@ class Simulator:
                 self.last_events.append(f"cancel sid={batch.sid} n={batch.nid} {batch.method}[{batch.start},{batch.end})")
                 continue
             replica.hbm_prefix = batch.end
-            replica.host_prefix = max(replica.host_prefix, batch.end)
             replica.prepared_blocks += batch.blocks
             replica.last_used = batch.complete_at
+            if batch.method == "restore":
+                # Already on this node's DRAM; a restore does not add to it.
+                replica.host_prefix = max(replica.host_prefix, batch.end)
             self.metrics.prepared_blocks += batch.blocks
             self.metrics.background[batch.method] += batch.blocks
             self.last_events.append(f"complete sid={batch.sid} n={batch.nid} {batch.method}[{batch.start},{batch.end})")
@@ -674,9 +822,9 @@ class Simulator:
             node.active_reservations.pop(turn.sid, None)
             replica = node.replicas.setdefault(turn.sid, KVReplica())
             replica.hbm_prefix = context
-            replica.host_prefix = max(replica.host_prefix, context)
             replica.prepared_blocks = 0
             replica.last_used = completion
+            self._write_host(nid, turn.sid, context, completion)
             state.completed_turn = turn.index
             state.context_blocks = context
             state.active_until = 0.0
@@ -689,6 +837,43 @@ class Simulator:
             else:
                 self._replenish(completion)
 
+    def _service_ttft(
+        self,
+        node: Node,
+        segments: tuple[WorkSegment, ...],
+        prompt_s: float,
+        commit: bool,
+    ) -> float:
+        """Time to first token when this request is served by this node.
+
+        Recovery segments run in order, each queued behind whatever already
+        holds its resource, so a restore waits for the host link but not for
+        the device. Prefill then needs the device and a free decode slot. With
+        `commit` the resource timelines are advanced; without it the same
+        arithmetic is used to score the node without side effects.
+        """
+        rates = self.cfg.foreground_rates
+        resource_of = self.cfg.resource_of_method
+        held = dict(node.until)
+        ready = self.now
+        for segment in segments:
+            resource = resource_of[segment.method]
+            start = held[resource] if held[resource] > ready else ready
+            ready = start + segment.blocks / rates[segment.method]
+            held[resource] = ready
+            if commit:
+                self.metrics.foreground_seconds[resource] += ready - start
+        slot = node.slot_free_at(self.now)
+        if slot > ready:
+            ready = slot
+        start = held["compute"] if held["compute"] > ready else ready
+        first_token = start + prompt_s
+        held["compute"] = first_token
+        if commit:
+            self.metrics.foreground_seconds["compute"] += prompt_s
+            node.until.update(held)
+        return first_token - self.now
+
     def _arrive(self, turn: Turn) -> None:
         self._invalidate()
         state = self.sessions[turn.sid]
@@ -696,6 +881,7 @@ class Simulator:
             self.metrics.overlapping_turns += 1
             self.last_events.append(f"overlap sid={turn.sid} turn={turn.index}")
         final_context = turn.history_blocks + turn.prompt_blocks + turn.output_blocks
+        prompt_s = turn.prompt_blocks / self.cfg.prefill_blocks_s
         choices: list[tuple[float, int, tuple[WorkSegment, ...], int]] = []
         for node in self.nodes:
             availability = self._availability(turn.sid, node.nid)
@@ -705,8 +891,7 @@ class Simulator:
                 availability,
                 self.cfg.foreground_rates,
             )
-            queue = max(0.0, node.busy_until - self.now)
-            ttft = queue + recovery.seconds + turn.prompt_blocks / self.cfg.prefill_blocks_s
+            ttft = self._service_ttft(node, recovery.segments, prompt_s, commit=False)
             extra = max(0, final_context - self._replica(node.nid, turn.sid).hbm_prefix)
             if self._available_capacity(node.nid, turn.sid) >= extra:
                 choices.append((ttft, node.nid, recovery.segments, extra))
@@ -725,10 +910,12 @@ class Simulator:
             self.metrics.used_prepared_blocks += used
         for segment in recovery_segments:
             self.metrics.demand[segment.method] += segment.blocks
-        start = max(self.now, node.busy_until)
-        service_without_queue = ttft - max(0.0, node.busy_until - self.now)
-        completion = start + service_without_queue + turn.output_blocks / self.cfg.decode_blocks_s
-        node.busy_until = completion
+        ttft = self._service_ttft(node, recovery_segments, prompt_s, commit=True)
+        decode_s = turn.output_blocks / self.cfg.decode_blocks_s
+        completion = self.now + ttft + decode_s
+        node.decode_finish = [finish for finish in node.decode_finish if finish > self.now]
+        node.decode_finish.append(completion)
+        self.metrics.decode_seconds += decode_s
         state.active_until = completion
         state.active_node = nid
         self.request_completions.append((completion, turn, nid))
@@ -848,10 +1035,7 @@ class Simulator:
     def _prepare(self) -> None:
         self._invalidate()
         self.last_candidates = self._collect_candidates()
-        budgets = {
-            method: max(0, math.floor(rate * self.cfg.step_s + 1e-9))
-            for method, rate in self.cfg.background_rates.items()
-        }
+        horizon = self.now + self.cfg.step_s
         selected_sessions: set[int] = set()
         inflight_targets = {(batch.sid, batch.nid) for batch in self.inflight}
         ordered = sorted(self.last_candidates, key=lambda candidate: (candidate.slack_s, -candidate.score, candidate.sid, candidate.nid))
@@ -868,25 +1052,39 @@ class Simulator:
             current = self._replica(candidate.nid, candidate.sid).hbm_prefix
             if segment.start != current:
                 continue
-            amount = min(segment.blocks, budgets[segment.method], self.cfg.block_batch)
+            node = self.nodes[candidate.nid]
+            resource = self.cfg.resource_of_method[segment.method]
+            # Background work is opportunistic: it may only claim a resource
+            # that still has idle time left in this control period, and it then
+            # occupies that resource exactly as foreground work does.
+            free_at = node.until[resource]
+            if free_at >= horizon:
+                continue
+            amount = min(segment.blocks, self.cfg.block_batch)
             if amount <= 0:
                 continue
             end = current + amount
             if segment.method == "restore" and self._replica(candidate.nid, candidate.sid).host_prefix < end:
                 continue
             if segment.method == "transfer" and not any(
-                node.nid != candidate.nid and self._replica(node.nid, candidate.sid).hbm_prefix >= end
-                for node in self.nodes
+                other.nid != candidate.nid
+                and max(
+                    self._replica(other.nid, candidate.sid).hbm_prefix,
+                    self._replica(other.nid, candidate.sid).host_prefix,
+                )
+                >= end
+                for other in self.nodes
             ):
                 continue
             if not self._ensure_capacity(candidate.nid, amount, candidate.sid):
                 continue
-            node = self.nodes[candidate.nid]
             node.background_reserved += amount
-            duration = amount / self.cfg.background_rates[segment.method]
-            batch = InFlightBatch(candidate.sid, candidate.nid, segment.method, current, end, self.now + duration)
+            start = free_at if free_at > self.now else self.now
+            complete_at = start + amount / self.cfg.background_rates[segment.method]
+            node.until[resource] = complete_at
+            self.metrics.background_seconds[resource] += complete_at - start
+            batch = InFlightBatch(candidate.sid, candidate.nid, segment.method, current, end, complete_at)
             self.inflight.append(batch)
-            budgets[segment.method] -= amount
             selected_sessions.add(candidate.sid)
             self.last_events.append(
                 f"dispatch sid={candidate.sid} n={candidate.nid} {segment.method}[{current},{end}) "
@@ -937,6 +1135,43 @@ class Simulator:
             return 0.0
         return self._displacement_price(nid) * deficit
 
+    def _write_host(self, nid: int, sid: int, prefix: int, at: float) -> None:
+        """Record a prefix on the node's DRAM tier, evicting to make room.
+
+        The host tier is finite, so a session's KV does not stay recoverable
+        forever. Once the last copy of a prefix is gone from every node's HBM
+        and DRAM, the only way back is recomputation. Host eviction is
+        least-recently-used: the value ordering used for HBM is not applied
+        here, and whether it should be is a separate question.
+        """
+        node = self.nodes[nid]
+        replica = node.replicas.setdefault(sid, KVReplica(last_used=at))
+        if prefix <= replica.host_prefix:
+            return
+        replica.host_prefix = prefix
+        used = node.host_used
+        if used <= node.host_capacity:
+            return
+        victims = sorted(
+            (other for other, other_replica in node.replicas.items()
+             if other != sid and other_replica.host_prefix > 0),
+            key=lambda other: node.replicas[other].last_used,
+        )
+        for victim in victims:
+            if used <= node.host_capacity:
+                break
+            other = node.replicas[victim]
+            dropped = other.host_prefix
+            other.host_prefix = 0
+            used -= dropped
+            self.metrics.host_evicted_blocks += dropped
+            self.last_events.append(f"host-evict sid={victim} n={nid} {dropped} blocks")
+        if used > node.host_capacity:
+            # Nothing else to release: the write itself has to be truncated.
+            keep = max(0, replica.host_prefix - (used - node.host_capacity))
+            self.metrics.host_evicted_blocks += replica.host_prefix - keep
+            replica.host_prefix = keep
+
     def _available_capacity(self, nid: int, protected_sid: int) -> int:
         node = self.nodes[nid]
         evictable = sum(
@@ -970,7 +1205,7 @@ class Simulator:
             replica = node.replicas[victim]
             amount = min(self.cfg.block_batch, replica.hbm_prefix, node.committed + extra - target)
             old_prefix = replica.hbm_prefix
-            replica.host_prefix = max(replica.host_prefix, old_prefix)
+            self._write_host(nid, victim, old_prefix, self.now)
             replica.hbm_prefix -= amount
             prepared = min(amount, replica.prepared_blocks)
             replica.prepared_blocks -= prepared
@@ -1059,7 +1294,7 @@ class Simulator:
             if node.background_reserved < 0:
                 raise AssertionError("negative background reservation")
             for sid, replica in node.replicas.items():
-                if not 0 <= replica.hbm_prefix <= replica.host_prefix:
+                if replica.hbm_prefix < 0 or replica.host_prefix < 0:
                     raise AssertionError(f"invalid prefixes sid={sid} n={node.nid}: {replica}")
                 if not 0 <= replica.prepared_blocks <= replica.hbm_prefix:
                     raise AssertionError(f"invalid prepared count sid={sid} n={node.nid}: {replica}")
