@@ -1,0 +1,107 @@
+\documentclass[13.5pt]{extarticle}
+\usepackage[UTF8,fontset=fandol]{ctex}
+\IfFontExistsTF{Times New Roman}
+    {\setmainfont{Times New Roman}}
+    {\IfFontExistsTF{TeX Gyre Termes}{\setmainfont{TeX Gyre Termes}}{}}
+\usepackage[a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{xcolor}
+\definecolor{changeblue}{RGB}{0,82,170}
+\newcommand{\changed}[1]{{\color{changeblue}#1}}
+\newenvironment{changehighlight}{\par\begingroup\color{changeblue}}{\par\endgroup}
+\usepackage{hyperref}
+\usepackage{xurl}
+\Urlmuskip=0mu plus 2mu
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{graphicx}
+\newcommand{\tabrowrule}{\hline}
+\newcommand{\frameworkcell}[1]{\raisebox{-3.0\baselineskip}[0pt][0pt]{\parbox{0.13\textwidth}{\raggedright\arraybackslash #1}}}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{setspace}
+\usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
+\addbibresource{sections/references.bib}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=blue
+}
+\captionsetup{
+    font={scriptsize,stretch=1.5},
+    labelfont={bf},
+    textfont={rm},
+    labelsep=quad
+}
+\setlist{nosep,leftmargin=1.8em}
+\setcounter{secnumdepth}{0}
+\setcounter{tocdepth}{2}
+\titleformat{\section}{\Large\bfseries}{ }{0pt}{}
+\titleformat{\subsection}{\large\bfseries}{ }{0pt}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{ }{0pt}{}
+\let\oldsection\section
+\renewcommand{\section}{\clearpage\oldsection}
+\renewcommand{\abstractname}{%
+    \fontsize{16}{0}\selectfont
+    摘\nolinebreak\hspace{\ccwd}要
+    \vspace{0.5cm}
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2.5cm}
+
+    {\Huge \textbf{面向协作边缘计算场景的 LLM 推理优化：算法研究与应用综述}} \\[1.2cm]
+    {\Large Collaborative Edge Computing for LLM Inference: Algorithms and Applications} \\[3.2cm]
+
+    \begin{center}
+        {\fontsize{14}{0}\selectfont \textbf{研究综述报告}} \\[0.5cm]
+        {\fontsize{12}{0}\selectfont \textbf{协作边缘计算赋能的大模型推理优化}}
+    \end{center}
+
+    \vfill
+
+    \begin{center}
+        \begin{tabular}{ll}
+            \textbf{版本：} & \textbf{v2.0} \\
+            \textbf{日期：} & \textbf{2026年8月} \\
+        \end{tabular}
+    \end{center}
+
+    \vspace{1.5cm}
+\end{titlepage}
+
+\clearpage
+\setstretch{1.75}
+
+\begin{abstract}
+大语言模型（LLM）推理正从云端集中式服务逐步向网络边缘迁移，以满足低时延、高带宽效率及数据隐私等需求。然而，单个边缘节点（如基站、边缘服务器、边缘网关）受限于计算、存储和通信资源，难以独立承载完整的大模型部署。协作边缘计算（CEC）通过将地理分布、能力异构的终端设备、边缘服务器及 AI 加速板卡整合为统一的协作资源池，为突破这一瓶颈提供了可行路径。在 CEC 框架下，模型切分、请求调度、键值（KV）缓存与上下文管理、服务路径选择等关键环节均可跨节点联合优化。然而，边缘场景下算力异构，资源受限，动态网络条件和请求，以及用户移动性等特性给LLM推理系统带来了新的研究挑战。
+
+\par 本文围绕 CEC 场景下的大语言模型推理优化展开综述。首先，本文梳理 LLM inference 的基本执行机制、问题空间和“优化对象--执行范围”分类框架，并分析 CEC 相较云侧集中式 serving 新增的资源、网络、状态和移动性约束。在此基础上，本文重点讨论三类算法问题：\textbf{资源自适应模型切分部署、业务感知 batching，以及用户移动场景下的请求卸载与状态管理}。相关工作部分覆盖 layer、tensor、expert、prefill阶段和decoer阶段分离等切分方式；动态组批与 chunked prefill 等 batching  调度机制; 以及 request/session routing、context/KV/runtime state migration 和 multi-agent workflow orchestration 等请求调度方法。面向验证环境，报告进一步给出三项具体方案：以统一代价模型比较 TP、PP 和 PP+TP，并采用动态规划求解非均匀 PP 分割；以 CMDP 建模并采用带长期风险约束和安全投影的 Safe-RL 调节 batching策略，以确保不违反 SLO 约束；联合选择请求执行节点和 KV 获取方式，优化移动会话的长期服务成本。最后，本文讨论三类算法的协同关系及其在 Ascend 和 vLLM-Ascend 基础设施上的实现与评估方法。
+\end{abstract}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\input{sections/01-introduction}
+\input{sections/02-llm-inference-basics}
+\input{sections/03-cec-llm-inference}
+\input{sections/04-resource-adaptive-model-partitioning}
+\input{sections/05-business-aware-batching}
+\input{sections/06-task-offloading-highlight}
+\input{sections/07-collaborative-optimization}
+\input{sections/08-huawei-implementation-plan}
+\input{sections/09-challenges-and-future-work}
+\input{sections/10-conclusion}
+\input{sections/references}
+
+\end{document}

@@ -2,15 +2,15 @@
 \section*{六、CEC中的 LLM Inference Task Offloading}
 \addcontentsline{toc}{section}{六、CEC中的 LLM Inference Task Offloading}
 
-传统 CEC 计算卸载通常将任务建模为具有给定输入数据量、计算量、deadline 和能耗约束的计算 job，其核心问题是在本地设备、邻居设备、边缘服务器和云端之间选择执行位置，并联合优化通信资源和计算资源分配。在这一范式下，任务卸载的主要决策对象通常是完整任务、子任务、任务链断点或 DAG 节点，优化目标也多集中在时延、能耗、系统成本和队列稳定性等方面。
+传统边缘计算卸载通常将任务建模为具有给定输入数据量、计算量、deadline 和能耗约束的计算 job，其核心问题是在本地设备、邻居设备、边缘服务器及可选远程服务之间选择执行位置，并联合优化通信资源和计算资源分配。在这一范式下，任务卸载的主要决策对象通常是完整任务、子任务、任务链断点或 DAG 节点，优化目标也多集中在时延、能耗、系统成本和队列稳定性等方面。
 
 
-LLM inference task 改变了这一问题形态。与普通计算任务不同，LLM 推理的执行时间不仅由输入 prompt 决定，还受到输出长度、decode step 数、batch 状态、模型队列和上下文长度影响；一次请求也不一定只由单个模型独立完成，而可能需要多个模型、多个 agent、多个工具或多个 verifier 协作完成；多轮对话和长上下文服务则进一步引入 KV cache、prefix cache、session state、agent memory 和 user context 等运行时状态。因此，在 CEC 场景下，LLM inference task offloading 不再只是决定“一个任务是否卸载到边缘”，而是需要决定完整请求如何路由、多个模型或 agent 如何编排，以及支撑后续推理的 context/KV/runtime state 如何迁移、复用或重新计算。
+LLM inference task 改变了这一问题形态。与普通计算任务不同，LLM 推理的执行时间不仅由输入 prompt 决定，还受到输出长度、decode step 数、batch 状态、模型队列和上下文长度影响；一次请求也不一定只由单个模型独立完成，而可能需要多个模型、多个 agent、多个工具或多个 verifier 协作完成；多轮对话和长上下文服务则进一步引入 KV cache、prefix cache、session state、agent memory 和 user context 等运行时状态。因此，在 CEC 场景下，LLM inference task offloading 不再只是决定“任务是否离开请求入口节点”，而是需要决定完整请求如何在协作节点间路由、多个模型或 agent 如何编排，以及支撑后续推理的 context/KV/runtime state 如何迁移、复用或重新计算。
 
 
-基于上述特性，本章从一次 LLM 服务请求在 CEC 系统中的执行过程出发组织相关工作。具体而言，当一个 LLM request 到达系统后，首先需要决定该请求或会话应由哪个设备、边缘节点、云端服务或模型实例处理；对于复杂请求，系统可能进一步需要编排多个模型、agent 或工具形成协作式工作流；在请求执行和多轮交互过程中，context、KV cache、prefix cache、session state 和 agent memory 等运行时状态还需要在不同节点之间保留、迁移、复用或重新计算。因此，本章将现有方法划分为三类：request/session-level routing and offloading、multi-model/multi-agent workflow orchestration，以及 context/KV/runtime state offloading and migration，三类代表性工作分别在表~\ref{tab:request-session-routing}、表~\ref{tab:workflow-orchestration} 和表~\ref{tab:runtime-state-offloading} 中展开。
+基于上述特性，本章从一次 LLM 服务请求在 CEC 系统中的执行过程出发组织相关工作。具体而言，当一个 LLM request 到达系统后，首先需要决定该请求或会话应由哪个协作节点、模型实例或可选外部服务处理；对于复杂请求，系统可能进一步需要编排多个模型、agent 或工具形成协作式工作流；在请求执行和多轮交互过程中，context、KV cache、prefix cache、session state 和 agent memory 等运行时状态还需要在不同节点之间保留、迁移、复用或重新计算。因此，本章将现有方法划分为三类：request/session-level routing and offloading、multi-model/multi-agent workflow orchestration，以及 context/KV/runtime state offloading and migration，三类代表性工作分别在表~\ref{tab:request-session-routing}、表~\ref{tab:workflow-orchestration} 和表~\ref{tab:runtime-state-offloading} 中展开。
 
-\textbf{代表工作总览。} 表~\ref{tab:cec-offloading-overview} 汇总了 LLM inference task offloading 相关工作的主归属、相关机制和方法关键词。前三类对应本章 6.1--6.3 的文献脉络，最后一类面向项目场景，将 request routing、KV/state management、SLA/memory 约束和长期 session cost 放入同一决策闭环。
+\textbf{代表工作总览。} 表~\ref{tab:cec-offloading-overview} 汇总了 LLM inference task offloading 相关工作的主归属、相关机制和方法关键词。前三类对应本章 6.1--6.3 的文献脉络，最后一类面向项目场景，将 request routing、KV/state management、SLA/memory 约束和长期 session cost 放入同一决策闭环。表中部分工作采用 cloud-edge 或 edge-cloud 实验环境，本文借鉴其路由与状态管理机制，并将其映射到协作边缘节点之间的调度问题。
 \begingroup
 \scriptsize
 \setlength{\tabcolsep}{1.4pt}
@@ -24,7 +24,7 @@ LLM inference task 改变了这一问题形态。与普通计算任务不同，L
 \midrule
 1 & QoS-LLM-Router \cite{yang2025quality} & TMC 2025 & Request / Session-level Routing and Offloading & QoS-aware routing；state-aware scheduling & 结合请求质量、响应长度、GPU memory 和队列状态，将 edge LLM expert routing 建模为长期 QoS 优化问题 \\
 \tabrowrule
-2 & CES-CB \cite{li2025cloud} & TSC 2025 & Request / Session-level Routing and Offloading & request cost prediction；combinatorial bandit & 利用 prompt embedding 和历史执行数据预测请求成本，在 edge/cloud 之间选择可提升吞吐并缓解长请求阻塞的请求集合 \\
+2 & CES-CB \cite{li2025cloud} & TSC 2025 & Request / Session-level Routing and Offloading & request cost prediction；combinatorial bandit & 在其原始 edge/cloud 环境中，利用 prompt embedding 和历史执行数据预测请求成本，选择可提升吞吐并缓解长请求阻塞的请求集合 \\
 \tabrowrule
 3 & RouteLLM \cite{ong2024routellm} & ICLR 2025 & Request / Session-level Routing and Offloading & strong/weak model routing & 基于 query 难度和偏好数据判断是否调用强模型，在保持质量的同时降低强模型调用成本 \\
 \tabrowrule
@@ -64,10 +64,10 @@ LLM inference task 改变了这一问题形态。与普通计算任务不同，L
 \subsection*{6.1 Request / Session-level Routing and Offloading}
 \addcontentsline{toc}{subsection}{6.1 Request / Session-level Routing and Offloading}
 
-Request/session-level routing 是最接近传统 task offloading 的 LLM inference offloading 形式。它将完整 LLM 请求、query、conversation turn 或 session 作为基本决策对象，决定其应该由本地设备、邻居设备、接入边缘、区域边缘还是云端服务处理。与普通任务不同，LLM request 的处理时间往往难以在执行前准确确定，因为它不仅取决于 prompt length，还受到 output length、decode step 数、batch 状态和模型当前队列影响。对于多个 edge LLM experts、多个 SLM/LLM 服务或多层 device-edge-cloud 网络，系统还需要根据请求复杂度、模型能力、响应质量、时延约束、GPU memory、队列状态和云端成本进行联合决策。
+Request/session-level routing 是最接近传统 task offloading 的 LLM inference offloading 形式。它将完整 LLM 请求、query、conversation turn 或 session 作为基本决策对象，决定其应该由本地设备、邻近边缘节点、其他协作边缘实例还是可选外部服务处理。与普通任务不同，LLM request 的处理时间往往难以在执行前准确确定，因为它不仅取决于 prompt length，还受到 output length、decode step 数、batch 状态和模型当前队列影响。对于多个 edge LLM experts、多个 SLM/LLM 服务或分布式边缘网络，系统还需要根据请求复杂度、模型能力、响应质量、时延约束、GPU memory、队列状态和调用成本进行联合决策。
 
 
-这一类问题的核心矛盾是：edge 具有低时延、低回传开销和隐私优势，但计算资源和显存有限，长输出请求可能占据 batch 并造成 head-of-line blocking；cloud 算力充足且模型能力更强，但会带来更高 RTT、带宽开销和数据出域风险。对于 CEC 系统而言，请求路由不应只回答“是否卸载到边缘”，还需要回答“卸载到哪个 edge server”“调用哪个 LLM expert”“是否先由 SLM 处理”“是否需要递归升级到更强模型或云端模型”等问题。表~\ref{tab:request-session-routing} 汇总了该方向的代表性工作。
+这一类问题的核心矛盾是：靠近用户的节点具有低时延、低回传开销和数据本地性优势，但计算资源和显存有限，长输出请求可能占据 batch 并造成 head-of-line blocking；能力更强或能够聚合请求的远端节点可提供更大的模型与请求池，却会增加 RTT、带宽开销和数据出域风险。对于 CEC 系统而言，请求路由需要回答“由哪个 edge server 执行”“调用哪个 LLM expert”“是否先由 SLM 处理”以及“何时升级到更强的协作节点或外部模型服务”等问题。表~\ref{tab:request-session-routing} 汇总了该方向的代表性工作。
 
 
 \begin{table}[!htbp]
@@ -102,7 +102,7 @@ Request/session-level routing 是最接近传统 task offloading 的 LLM inferen
 从 CEC 角度看，上述工作共同说明，LLM request routing 不能简单沿用传统 task offloading 中“输入数据量 + CPU cycles + deadline”的建模方式。一方面，请求执行时间受到输出长度和 batch 状态影响，具有更强的不确定性；另一方面，请求质量取决于模型能力、prompt 语义和模型选择，而不是单纯取决于计算资源是否充足。因此，CEC 中的 request-level offloading 需要同时感知 semantic complexity、model capability、network condition 和 queue state。
 
 
-多用户和移动性会进一步放大这一复杂性。用户位置变化会改变接入边缘、链路质量、候选服务节点和区域请求热点；请求执行过程中可能发生 handover，多轮会话的 context 或 KV cache 也可能留在旧 edge。因此，request/session routing 不能只根据当前时隙的队列和链路状态做短视选择，而需要同时考虑未来位置变化、会话连续性、状态位置和模型可用性。未来可以进一步研究 mobility-aware session routing，使请求路径选择同时感知用户移动趋势、后续多轮会话、模型缓存位置和 context/KV 可复用性。
+多用户和移动性会进一步放大这一复杂性。用户位置变化会改变请求入口、链路质量、候选服务节点和区域请求热点；请求执行过程中可能发生 handover，多轮会话的 context 或 KV cache 也可能留在原服务节点。因此，request/session routing 不能只根据当前时隙的队列和链路状态做短视选择，而需要同时考虑未来位置变化、会话连续性、状态位置和模型可用性。未来可以进一步研究 mobility-aware session routing，使请求路径选择同时感知用户移动趋势、后续多轮会话、模型缓存位置和 context/KV 可复用性。
 
 
 
@@ -117,7 +117,7 @@ Request/session-level routing 是最接近传统 task offloading 的 LLM inferen
 这一类问题与传统 stage-level offloading 或 splittable-request offloading 不同。Stage-level offloading 关注 prefill、decode、verification、diffusion steps 等底层执行阶段如何分布到不同计算节点；而 multi-agent workflow orchestration 关注的是语义层和任务层的协作结构，例如是否需要 planner、solver、critic、verifier、researcher、programmer 等角色，是否采用 Chain-of-Thought、Self-Consistency、LLM Debate、chain topology 或 complete graph 等协作模式，以及每个 agent 背后调用哪个 LLM 或 SLM。换言之，这里的决策对象不是 token、模型层或推理阶段，而是一个 request 的 problem-solving workflow。
 
 
-这一类问题的核心矛盾是：多 agent 协作可以提升复杂任务的推理能力、鲁棒性和可解释性，但也会带来额外模型调用成本、通信开销、上下文传输开销和调度复杂度。对于 CEC 系统而言，agent 背后的模型、工具、数据库、memory 和 verifier 可能分布在用户设备、边缘服务器、区域云和中心云上。因此，multi-agent workflow orchestration 不仅是算法层的协作模式选择问题，也是计算、通信、状态和隐私的联合编排问题。表~\ref{tab:workflow-orchestration} 列出了相关代表性工作。
+这一类问题的核心矛盾是：多 agent 协作可以提升复杂任务的推理能力、鲁棒性和可解释性，但也会带来额外模型调用成本、通信开销、上下文传输开销和调度复杂度。对于 CEC 系统而言，agent 背后的模型、工具、数据库、memory 和 verifier 可能分布在用户设备、不同边缘服务器和外部服务上。因此，multi-agent workflow orchestration 不仅是算法层的协作模式选择问题，也是计算、通信、状态和隐私的联合编排问题。表~\ref{tab:workflow-orchestration} 列出了相关代表性工作。
 
 
 \begin{table}[!htbp]
@@ -148,10 +148,10 @@ Request/session-level routing 是最接近传统 task offloading 的 LLM inferen
 从 LLM serving 角度看，RouteLLM 可以被视为 multi-agent routing 的基础形式：它只在强模型和弱模型之间做 query-level routing，尚未涉及 agent 数量、角色分配或协作拓扑。MasRouter 则进一步把 routing 扩展到 multi-agent system configuration，即根据 query 决定采用哪种协作模式、需要多少个 agent、每个 agent 扮演什么角色，以及每个角色调用哪个底层 LLM。Conductor 更进一步，不再只在预定义配置集合中选择，而是训练一个控制器用自然语言生成 workflow，包括任务拆解、模型调用和上下文访问控制。AFLOW则是将workflow表示为代码形式，通过搜索方法，实时根据当前任务执行情况自适应生成新的workflow。
 
 
-从 CEC 角度看，multi-agent workflow orchestration 需要被进一步物理化。现有 multi-agent orchestration 工作大多默认所有 worker LLM 都可以通过 API 调用，较少考虑模型、工具和 memory 的实际部署位置。但在 CEC 系统中，不同 agent 可能对应不同物理节点：本地设备上的 SLM 可以承担隐私敏感的初步理解任务，近端 edge 上的 LLM 可以承担低时延交互任务，区域边缘或云端的大模型可以承担复杂推理和 verification 任务，外部工具或数据库 agent 也可能位于不同网络位置。因此，agent workflow 的拓扑会直接影响端到端时延、带宽消耗、隐私风险和状态迁移成本。
+从 CEC 角度看，multi-agent workflow orchestration 需要被进一步物理化。现有 multi-agent orchestration 工作大多默认所有 worker LLM 都可以通过 API 调用，较少考虑模型、工具和 memory 的实际部署位置。但在 CEC 系统中，不同 agent 可能对应不同物理节点：本地设备上的 SLM 可以承担隐私敏感的初步理解任务，邻近边缘节点上的 LLM 可以承担低时延交互任务，能力更强的协作节点可以承担复杂推理和 verification，外部工具或数据库 agent 也可能位于不同网络位置。因此，agent workflow 的拓扑会直接影响端到端时延、带宽消耗、隐私风险和状态迁移成本。
 
 
-多用户移动性进一步使 multi-agent workflow orchestration 变得更复杂。用户移动会改变可访问的 edge agents、工具服务和 memory 节点；workflow 中间状态可能在多个 agent 之间传递，如果用户在执行过程中发生 handover，后续 agent 是否继续在旧 edge 执行、是否迁移到新 edge、是否远程访问旧 context，都会影响服务质量。虽然 DT-MADTO \cite{chen2024mobility} 并不是 LLM agent workflow 工作，但其对 DAG 依赖关系、中间数据流和移动预测的建模，为 CEC 中的 multi-agent workflow offloading 提供了可借鉴思路。未来可以进一步研究 mobility-aware agent workflow orchestration，在 request 到达时联合决定协作模式、agent 位置、模型选择、上下文可见性和中间状态传输路径。
+多用户移动性进一步使 multi-agent workflow orchestration 变得更复杂。用户移动会改变可访问的 agent、工具服务和 memory 节点；workflow 中间状态可能在多个 agent 之间传递，如果用户在执行过程中发生 handover，后续 agent 是否继续在原节点执行、是否迁移到新的协作节点、是否远程访问原有 context，都会影响服务质量。虽然 DT-MADTO \cite{chen2024mobility} 并不是 LLM agent workflow 工作，但其对 DAG 依赖关系、中间数据流和移动预测的建模，为 CEC 中的 multi-agent workflow offloading 提供了可借鉴思路。未来可以进一步研究 mobility-aware agent workflow orchestration，在 request 到达时联合决定协作模式、agent 位置、模型选择、上下文可见性和中间状态传输路径。
 
 
 
@@ -199,7 +199,7 @@ LLM inference 与普通计算任务的另一个关键区别在于运行时状态
 在 CEC 中，context/KV/runtime state offloading 需要进一步考虑边缘节点之间的异构资源和网络差异。对于多轮会话，如果每轮请求都重新 prefill 长上下文，会产生大量重复计算；如果跨节点远程访问 KV cache，则会引入额外 RTT 和带宽开销；如果主动迁移 context 或 KV，则可能占用边缘链路和存储资源。因此，系统需要在远程访问、状态迁移、状态压缩、状态丢弃和重新计算之间进行选择。
 
 
-多用户移动性使这一问题更加突出。用户移动后，计算路径可以重新选择，但 long context、KV cache、agent memory 或 session state 可能仍保留在旧 edge。此时系统需要在四种选择之间权衡：迁移状态到新 edge、远程访问旧状态、重新计算状态，或丢弃部分状态并降低上下文质量。不同选择会影响后续 decode latency、生成质量、带宽消耗和隐私边界。CA-AIGC-Migration \cite{wang2026context} 已经开始从 context migration 的角度研究这一问题，但对 KV cache placement、remote KV access、prefix cache sharing 和 agent memory migration 的移动 CEC 场景研究仍然不足。未来可以进一步研究 mobility-aware KV and context management，将用户轨迹预测、session continuation probability、KV reuse probability、edge storage pressure 和链路状态联合纳入决策。
+多用户移动性使这一问题更加突出。用户移动后，计算路径可以重新选择，但 long context、KV cache、agent memory 或 session state 可能仍保留在原服务节点。此时系统需要在四种选择之间权衡：迁移状态到新的服务节点、远程访问原有状态、重新计算状态，或丢弃部分状态并降低上下文质量。不同选择会影响后续 decode latency、生成质量、带宽消耗和隐私边界。CA-AIGC-Migration \cite{wang2026context} 已经开始从 context migration 的角度研究这一问题，但对 KV cache placement、remote KV access、prefix cache sharing 和 agent memory migration 的移动 CEC 场景研究仍然不足。未来可以进一步研究 mobility-aware KV and context management，将用户轨迹预测、session continuation probability、KV reuse probability、edge storage pressure 和链路状态联合纳入决策。
 
 
 
@@ -209,12 +209,14 @@ LLM inference 与普通计算任务的另一个关键区别在于运行时状态
 
 
 \phantomsection
-\subsection*{6.4 面向用户移动性的长期会话感知 LLM 请求卸载方案}
-\addcontentsline{toc}{subsection}{6.4 面向用户移动性的长期会话感知 LLM 请求卸载方案}
+\subsection*{6.4 面向华为验证环境的方案建议}
+\addcontentsline{toc}{subsection}{6.4 面向华为验证环境的方案建议}
 
-前文 6.1--6.3 分别从 request/session routing、multi-model/multi-agent workflow orchestration 和 context/KV/runtime state management 三条线梳理了 CEC 中 LLM inference task offloading 的相关工作。可以看到，现有方法已经开始关注请求级路由、模型协作和 KV/cache 管理，但它们通常只覆盖其中一个局部问题：或侧重当前 request 的时延与资源选择，或侧重静态服务集群中的 KV 复用，较少把用户移动、输出长度不确定性、session 状态演化和 block-level KV 管理放入同一在线闭环。本节面向三节点 CEC 推理环境，讨论如何在用户入口动态变化、节点负载异构和 KV 状态分布变化的条件下，联合决定每轮 request 的计算节点和 KV 获取方式，并通过后台 KV 管理降低后续状态恢复成本。
+前文 6.1--6.3 分别从request/\allowbreak session routing、multi-model/\allowbreak multi-agent workflow orchestration 和 context/\allowbreak KV/\allowbreak runtime state management三个角度，梳理了 CEC 中 LLM inference task offloading 的相关工作。总体来看，现有研究已经开始关注请求级路由、模型选择、工作流编排和 KV/context 管理，但在多基站 CEC 场景下，用户移动性、输出长度不确定性和多轮 session state 的联合作用仍未被充分建模。对于 LLM request 而言，调度动作不仅决定当前请求在哪个节点执行，也会决定最新 KV cache 增长在哪里、后续请求能否复用历史状态，以及用户移动后是否需要同步、重算或远程访问状态。
 
-为验证该方案，本节配套进行了三组模拟与微基准实验。第一组策略收益实验在 Qwen2-VL-7B-Instruct 工作负载、5 个随机种子和 8/16/24/36/48 并发配置下比较就近路由、单请求 Greedy 和 Greedy+KV manager：相对 Greedy，启用 block-level KV 管理与 proactive placement 后，平均 E2E latency 降低 \(1.0\%\)--\(7.8\%\)，平均 TTFT 降低 \(1.6\%\)--\(10.7\%\)，平均排队时间降低 \(37.0\%\)--\(66.0\%\)；在 48 并发下，SLA violation ratio 从 \(13.5\%\) 降至 \(8.3\%\)。第二组信息管理同步成本实验显示，在 150\% 目标负载、约 28.08 RPS 下，CEC network/state info manager 加上合并后的 proactive KV 更新总生成控制流量约为 \(6.00\) Mbps，物理链路承载约为 \(3.88\) Mbps，每次状态快照拉取的 P99 网络时延约为 \(0.10\) ms；即使外推到 \(10{,}000\) RPS，总控制流量约为 \(106.88\) Mbps，仅占 25 Gbps 链路的 \(0.43\%\)。第三组 inference 耗时实验显示，Dueling Double DQN 路由模型在 NumPy float32 CPU 单线程实现下，输入维度为 92、动作数为 9，单次 forward 平均耗时 \(9.70\) \(\mu\mathrm{s}\)、P99 为 \(12.50\) \(\mu\mathrm{s}\)；数据面 LLM 计算模拟中，A800T-A2 上 CodeLlama34B 的 prefill(1024 tokens) 约为 \(58.93\) ms、decode(128 tokens, batch 8) 约为 \(1177.44\) ms，Qwen2-VL-7B-Instruct 分别约为 \(13.49\) ms 和 \(287.25\) ms。因此，本节方案的控制面计算和状态同步开销相对 LLM 数据面推理耗时较小，主要收益来自更合理的长期路由和 KV 状态准备。
+基于上述问题，本节给出一个\textbf{面向用户移动性的长期会话感知卸载方案}。该方案以“计算节点 + KV 获取方式”作为联合动作，在单请求层面枚举 reuse、sync 和 recompute 等可行方式，在跨请求层面通过长期状态价值评估当前动作对后续 KV 分布和服务成本的影响，并通过 KV manager 在请求间隙执行后台增量预放置。系统采用中心化 Router/agent 进行任务卸载决策，中心状态管理模块持续同步节点负载、链路状态、显存余量和版本化 KV 目录，使中心化 Router 能直接基于最新全局状态完成过滤和决策。
+
+本节最后通过三类实验给出当前实现的初步结果。端到端模拟表明，在 \(1.5\times\) 并发下，单请求穷举与完整 KV manager 相比同并发就近执行，将 CodeLlama34B 和 Qwen2-VL 的平均 E2E latency 分别降低 44.89\% 和 26.02\%；若按承载能力口径，与基础并发下的就近执行相比，平均 E2E latency 分别降低 19.65\% 和 23.37\%。中心状态同步实验表明，在三节点高频状态更新配置下，\(1.5\times\) 并发产生约 3.01 Mbps 的节点间状态上报流量，最高单链路约 1.60 Mbps，占 100 Gbps 链路约 0.0016\%。\changed{三节点原型路由网络的 inference 微基准表明，两层 128 hidden units 的 Dueling Double DQN 在 Apple M4 CPU 单线程 NumPy 实现下单次前向 P99 为 0.016 ms。}需要说明的是，本轮端到端实验验证的是单请求穷举与完整 KV manager 的组合效果，长期 Dueling Double DQN 的跨请求增量收益仍需在后续对照实验中单独验证。
 
 \subsubsection*{6.4.1 问题背景与挑战}
 \addcontentsline{toc}{subsubsection}{6.4.1 问题背景与挑战}
@@ -248,24 +250,28 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 在此基础上，本文采用“状态预测--显式可行性过滤--长期请求路由--后台增量 KV 预放置”的双时间尺度框架。在线 Router 在请求到达时选择计算节点与 KV 获取方式；KV manager 在请求完成后利用后台带宽逐步扩展候选节点上的连续 KV prefix。二者通过分布式 block directory 共享 KV 位置和版本状态，后台放置形成的新状态在下一次请求到达时由 Router 直接观测和利用。具体包括以下三个模块：
 \begin{itemize}
     \item \textbf{不确定性感知的状态预测。} 入口转移模型以 Markov 矩阵描述请求在节点间的转移概率；output length predictor 根据 prompt、上下文长度、任务类型和会话历史预测输出长度分布；session continuation predictor 根据当前请求序号、session 持续时间、历史请求间隔和上下文增长情况估计剩余活跃度。三类信息分别描述未来入口、KV 增量以及后台预放置可被后续请求利用的机会。
-    \item \textbf{约束感知的长期路由决策。} 调度器将“计算节点 + KV 获取方式”作为联合动作，把请求路由与 KV reuse、sync、recompute 选择放入同一固定动作空间。随后，系统根据 E2E SLA、显存余量、节点可用性和 KV 版本一致性构造可行动作集合，将明显违反服务约束或状态约束的动作提前屏蔽；Dueling Double DQN 对固定动作全集输出长期成本估计，但只在未被 mask 的候选中比较和选择动作，使策略在保证当前请求可服务的前提下，进一步选择对后续 session 状态复用更有利的执行位置和 KV 获取方式。
+    \item \changed{\textbf{约束感知的长期路由决策。} 对于包含 \(N\) 个计算节点的部署，调度器将“计算节点 + KV 获取方式”作为联合动作，构造包含 \(3N\) 个动作的固定离散动作空间。系统根据 E2E SLA、显存余量、节点可用性和 KV 版本一致性生成 action mask，将违反服务约束或状态约束的动作提前屏蔽；Dueling Double DQN 一次输出全部 \(3N\) 个动作的长期成本估计，并只在未被 mask 的动作中进行比较和选择。}
     \item \textbf{概率与活跃度感知的 KV 管理。} KV manager 维护版本化 block directory，将 Router 选择的 reuse、sync 和 recompute 落实为 block 级查询与缺失状态恢复；请求完成后，KV manager 再根据入口转移概率、session 剩余活跃度和后台资源余量，按比例向候选节点复制缺失的连续 KV blocks，以降低后续请求的按需 KV 同步量。
 \end{itemize}
 
 \subsubsection*{6.4.3 系统场景与状态同步框架}
 \addcontentsline{toc}{subsubsection}{6.4.3 系统场景与状态同步框架}
 
-本项目包含三个部署相同模型的推理节点，每个节点既是请求入口，也是候选计算节点；两条链路为 100 Gbps，另一条为 25 Gbps。对于一个 LLM session，实际 request 数量在在线服务时通常未知。系统在用户移动和输出长度未知的条件下，联合选择计算节点与 KV 获取方式，并在满足 E2E latency SLA 和显存约束的前提下最小化长期成本。
+\begin{changehighlight}
+本文面向多基站协同的边缘推理场景：每个基站部署边缘服务器，边缘服务器承载大模型推理实例，并通过边缘网络互联。一次 Router 训练与部署周期内，参与协同的计算节点集合记为 \(\mathcal N\)，受监测物理链路集合记为 \(\mathcal E\)，节点数 \(N=|\mathcal N|\) 和链路数 \(E=|\mathcal E|\) 保持固定；运行过程中，节点负载、可用显存、链路状态以及节点是否可用可以动态变化，其中暂时不可用的节点通过 action mask 排除。用户在基站覆盖区域之间移动时，后续 request 的入口会发生变化，而同一 session 的历史 KV cache 可能仍保留在先前的计算节点。对于一个 LLM session，实际 request 数量和每次输出长度在在线服务时通常未知。
+\end{changehighlight}
 
-为了支撑分布式路由，系统设置中心状态管理模块，统一保存 Router 决策所需的三类运行信息：
+在该场景下，当前 request 的执行位置与 KV 获取方式不仅决定本次请求的转发、排队和状态恢复开销，还会改变后续请求可利用的 KV 分布。随着候选节点增加，联合动作数量和跨请求状态组合迅速增长，难以通过固定规则完整刻画。因此，本文采用 Dueling Double DQN 估计“候选计算节点 + KV 获取方式”联合动作的长期成本，并结合 E2E latency SLA、显存、节点可用性和 KV 一致性约束筛选可行动作。中心化 Router 最终输出目标计算节点；对于具有历史上下文的 request，同时输出 reuse、sync 或 recompute 三种 KV 获取方式之一。具体实验拓扑和链路参数在 6.4.8 中给出。
+
+为了支撑中心化路由，系统设置中心状态管理模块，统一保存 Router 决策所需的三类运行信息：
 \begin{itemize}
-    \item \textbf{节点状态：}各推理节点分别上报当前运行请求在 prefill、recompute 和 decode 三个阶段的剩余工作量，以及等待请求按照最晚开始时间余量（slack）分桶后的三阶段工作量；同时上报可用于 KV cache 的显存比例和最近 200 个已完成请求的 P99 TTFT，样本不足 200 个时使用已有样本。
+    \item \textbf{节点状态：}各推理节点周期性上报 prefill、recompute 和 decode 的待处理工作量、可用于 KV cache 的显存比例，以及节点和模型是否可用。
     \item \textbf{链路状态：}网络监测模块周期性上报每条物理链路的可用带宽、RTT 和可用性。
     \item \textbf{KV 状态：}请求生成新 KV 或后台放置完成后，KV manager 上报当前 session 已经完整保存的连续 KV block 区间、版本和所在节点。只有完整传输并通过版本检查的 KV blocks 才写入中心目录。
 \end{itemize}
-各上报方只发送自身负责的状态或变化量，中心状态管理模块汇总后形成 Router 所需的全局状态。每个 request 到达后，入口节点从中心状态管理模块拉取一次当前 session 的状态信息，供 Router 构造输入并检查候选动作是否可执行。
+各上报方只发送自身负责的状态或变化量，中心状态管理模块汇总后形成中心化 Router 所需的全局状态。每个 request 到达入口节点后，入口节点将 session 标识、当前入口、请求规模和 SLA 等路由特征发送给中心化 Router；中心化 Router 读取本地维护的全局状态快照，构造输入并检查候选动作是否可执行，随后返回计算节点与 KV 获取方式。
 
-中心状态管理会引入节点与链路状态上报、KV 目录更新以及逐请求状态查询等通信。6.4.8 对上述通信过程进行模拟，并进一步给出不同负载和节点规模下的带宽占用结果。
+中心状态管理会引入节点与链路状态上报以及 KV 目录更新等通信。6.4.8 对上述通信过程进行模拟，并进一步给出不同负载和节点规模下的带宽占用结果。
 
 \textbf{主要符号。}
 \begingroup
@@ -281,7 +287,8 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 符号 & 含义 \\
 \midrule
 \endhead
-\(k,K,\mathcal N\) & 当前请求编号、实际但在线未知的 session 请求总数和候选节点集合 \\
+\changed{\(k,K\)} & \changed{当前请求编号和实际但在线未知的 session 请求总数} \\
+\changed{\(\mathcal N,N,\mathcal E,E\)} & \changed{部署节点集合及其节点数、受监测物理链路集合及其链路数} \\
 \(i,j,n,s\) & 入口节点、目标/计算节点、一般节点和 KV 同步源节点索引 \\
 \(U_k,J_k,\Delta\tau_k\) & 当前入口、所选计算节点和相邻请求间隔 \\
 \(P_{ij}^{(k)}\) & 第 \(k\) 个请求后从节点 \(i\) 到节点 \(j\) 的入口转移概率 \\
@@ -313,7 +320,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \(s_k,s_{k+1}^{a,y,u'},s_{k+1}^{\mathrm{obs}}\) & 当前系统状态、模型化下一状态和观测下一状态 \\
 \(\mathbf L_k,\mathbf M_k,\mathbf W_k\) & 系统状态中的负载、显存和链路状态向量 \\
 \(\pi,\gamma,\mathcal Q^*\) & 路由策略、折扣因子和最优状态--动作价值 \\
-\(\mathcal Q_\theta,\mathcal Q_{\bar\theta}\) & Dueling Double DQN 的在线网络和目标网络 \\
+\changed{\(\mathbf o_k,d_{\mathrm{in}}(N,E),\mathcal Q_\theta,\mathcal Q_{\bar\theta},V_\theta,A_\theta\)} & \changed{DQN 输入向量及其维度、在线网络、目标网络、状态价值分支和动作优势分支} \\
 \(a_k^{\mathrm{enum}},a_k^*,a_{k+1}^{\mathrm{sel}}\) & 单请求穷举动作、在线执行动作和下一状态动作选择 \\
 \(V_{k+1},z_k\) & 目标网络估值和 Bellman 训练目标 \\
 \bottomrule
@@ -323,7 +330,7 @@ CEC 任务卸载通常面向普通计算任务：系统根据输入数据量、�
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/ch6_mobility_offloading_workflow.pdf}
-\caption{\textbf{单个请求到达后的长期成本感知卸载决策流程。}Request 被拆分为用户信息、prompt 信息和 SLA 信息：用户信息进入 mobility predictor 生成未来入口分布，prompt 信息进入 output length predictor 估计 decode 长度，中心状态管理模块与 KV context manager 分别提供节点负载、链路带宽、剩余显存以及 KV block 位置/版本等运行状态。State builder 将移动预测、长度预测、SLA、系统遥测和 KV 状态汇聚为 feature bundle；action enumerator 枚举“计算节点 + KV 获取方式”候选，per-action estimator 对每个候选动作估计请求传输、KV 同步/重算、prefill、decode 和显存占用。E2E SLA filter 与 Memory/KV filter 先处理时延、显存和 KV 可用性等硬约束，得到 feasible actions 作为 Dueling Double DQN 的 action mask；Dueling Double DQN router 对固定动作全集输出长期成本估计，并通过 action mask 只在可行动作中比较和输出 final action。环境执行后的实际 E2E 时延、输出长度、KV 增量、传输量和显存变化写入 replay buffer，用于回传更新预测器、估计器和路由策略。}
+\caption{\textbf{单个请求到达后的长期成本感知卸载决策流程。}Request 被拆分为用户信息、prompt 信息和 SLA 信息：用户信息进入 mobility predictor 生成未来入口分布，prompt 信息进入 output length predictor 估计 decode 长度，中心状态管理模块与 KV context manager 分别提供节点负载、链路带宽、剩余显存以及 KV block 位置/版本等运行状态。State builder 将移动预测、长度预测、SLA、系统遥测和 KV 状态汇聚为 feature bundle；action enumerator 枚举“计算节点 + KV 获取方式”候选，per-action estimator 对每个候选动作估计请求传输、KV 同步/重算、prefill、decode 和显存占用。E2E SLA filter 与 Memory/KV filter 先处理时延、显存和 KV 可用性等硬约束，得到 feasible actions 作为 Dueling Double DQN 的 action mask；\changed{Dueling Double DQN router 一次输出固定 \(3N\) 个动作的长期成本估计，并通过 action mask 只在可行动作中比较和输出 final action。}环境执行后的实际 E2E 时延、输出长度、KV 增量、传输量和显存变化写入 replay buffer，用于回传更新预测器、估计器和路由策略。}
 \label{fig:ch6-mobility-offloading-workflow}
 \end{figure}
 
@@ -528,7 +535,9 @@ H(s_k,a_k,y,u',\Delta\mathcal B_k(a_k,y),
 \]
 入口变化既影响当前转发成本，也通过 \(P_{U_ku'}^{(k)}\) 影响未来价值；输出长度不仅影响当前 decode 和显存，还通过 \(\Delta\mathcal B_k(a_k,Y_k)\) 改变后续 KV 规模；后台增量放置则通过 \(\Phi_k^{\mathrm{place}}\) 改变候选节点的连续 prefix，使 Router 在后续请求中重新比较转发、reuse、sync 和 recompute。这延续了 QoS-LLM-Router 的长期 QoS 优化 \cite{yang2025quality} 和 MGCO 的非短视移动卸载思想 \cite{ghosh2025mgco}，并将 CA-AIGC-Migration 的移动 context 管理 \cite{wang2026context} 细化到版本化 KV blocks。
 
-上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；但是一般场景中同一 session 的 request 数量 \(K\) 不确定，且存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。其中，Double DQN 使用在线网络选择动作、目标网络评价动作，Dueling 结构则分别估计状态价值和各动作的相对优势。由于本文动作空间由候选计算节点和三类 KV 获取方式构成，规模固定且较小，该网络对所有固定动作输出 Q 值；在执行 \(\arg\min\) 或构造下一状态目标时，将 \(a\notin\mathcal A_k^F(s_k)\) 的 Q 值置为 \(+\infty\)，使不可行动作不参与选择。
+\begin{changehighlight}
+上式定义了希望逼近的 \(\mathcal Q^*\)。对短 session、离散状态且已知真实轨迹的小规模实验，可用有限时域动态规划或搜索得到离线 oracle；但是一般场景中同一 session 的 request 数量 \(K\) 不确定，且存在动作序列和状态爆炸，因此采用 Dueling Double DQN 近似求解。其中，Double DQN 使用在线网络选择动作、目标网络评价动作，Dueling 结构分别估计状态价值和各动作的相对优势。对于部署时确定的 \(N\) 个计算节点，每个节点对应 reuse、sync 和 recompute 三种 KV 获取方式，因此网络一次输出 \(3N\) 个 Q 值。在执行 \(\arg\min\) 或构造下一状态目标时，将 \(a\notin\mathcal A_k^F(s_k)\) 的 Q 值置为 \(+\infty\)，使不可行动作不参与选择。
+\end{changehighlight}
 
 Replay buffer 中记录的是执行后的实际转移 \(s_{k+1}^{\mathrm{obs}}\)，其中已经包含本轮真实 \(Y_k\)、KV 增量、后台 placement 完成量、显存变化和下一入口。Dueling Double DQN 在该观测下一状态上先用在线网络选择动作，再用目标网络评价：
 \[
@@ -546,44 +555,47 @@ z_k
 \]
 即 replay 训练目标等于“观测输出长度下的即时成本 + 折扣后的观测下一状态价值”。模型化 roll-out 版本按照 Bellman 式对输出长度 \(y\) 和下一入口 \(u'\) 共同取期望，并计算对应的 \(\bar c_k(s_k,a_k,y)\) 与下一状态价值。在线动作则为 \(a_k^*=\arg\min_{a\in\mathcal A_k^F(s_k)}\mathcal Q_\theta(s_k,a)\)。若模型异常则回退至可行动作中的单请求穷举方案；若集合为空，则排队、降级或拒绝。
 
+\begin{changehighlight}
 \noindent\textbf{Dueling Double DQN 的输入、网络结构与动作输出。}
-上述长期成本模型给出了 Dueling Double DQN 需要学习的状态--动作价值及其训练目标。工程实现中，状态构建模块（State Builder）将状态 \(s_k\) 转换为固定长度的数值向量，并为每个输出动作生成一位可用标记。在当前三节点、同构模型部署下，输入向量记为 \(\mathbf o_k\in\mathrm R^{92}\)，其维度划分为
+上述长期成本模型给出了 Dueling Double DQN 需要学习的状态--动作价值及其训练目标。对于包含 \(N\) 个计算节点和 \(E\) 条受监测物理链路的部署，State Builder 将状态 \(s_k\) 转换为输入向量 \(\mathbf o_k\in\mathrm R^{d_{\mathrm{in}}(N,E)}\)，其维度为
 \[
-92
+d_{\mathrm{in}}(N,E)
 =
-19_{\mathrm{request}}
+(N+16)_{\mathrm{request}}
 +1_{\mathrm{phase}}
-+3\times17_{\mathrm{node}}
-+3\times3_{\mathrm{link}}
-+3\times4_{\mathrm{KV}}.
++(9N+3E)_{\mathrm{central}}
+=10N+3E+17.
 \]
 具体输入包括：
 \begin{itemize}
-    \item \textbf{请求与预测信息（19 维）：}当前入口节点的 one-hot 编码 3 维；输入 token 数、历史上下文长度、请求字节数和 SLA 共 4 维；8 个输出长度区间的概率 8 维；session 在未来 1、2、4、8 轮继续的概率 4 维。
-    \item \textbf{实验阶段（1 维）：}区分测试前半段的静止阶段和后半段的移动阶段。
-    \item \textbf{节点运行状态（51 维）：}每个节点包含当前运行请求的三阶段剩余工作量 3 维、等待队列的四档 slack 分桶三阶段工作量 \(4\times3=12\) 维、可用 KV 显存比例 1 维和近期 P99 TTFT 1 维，共 17 维。
-    \item \textbf{链路状态（9 维）：}每条物理链路包含可用带宽、RTT 和可用性 3 维。
-    \item \textbf{当前 session 的 KV 状态（12 维）：}每个节点包含完整且版本一致的 KV 标志、连续 prefix 比例、剩余同步时间和缺失历史后缀重算时间 4 维。
+    \item \textbf{请求与预测信息（\(N+16\) 维）。} 当前入口节点的 one-hot 编码为 \(N\) 维；输入 token 数、历史上下文长度、请求字节数和 SLA 共 4 维；输出长度分布使用 8 个区间概率表示；session 在未来 1、2、4、8 轮继续的概率占 4 维。
+    \item \textbf{请求阶段（1 维）。} 表示当前请求所处的静止或移动阶段。
+    \item \textbf{中心状态信息（\(9N+3E\) 维）。} 每个计算节点包含 5 个负载、显存和可用性字段，以及 4 个当前 session 的 KV 状态字段，共 \(9N\) 维；每条受监测物理链路包含可用带宽、RTT 和可用性 3 个字段，共 \(3E\) 维。
 \end{itemize}
 
-\textbf{Slack 分桶。}调度器根据请求的 SLA 和无排队条件下的预计首 token 时延，得到等待请求 \(r\) 的最晚开始时刻 \(t_r^{\mathrm{latest\ start}}\)，并定义其在 Router 决策时刻的最晚开始时间余量为
-\[
-\ell_r=t_r^{\mathrm{latest\ start}}-t_k^{\mathrm{decision}}.
-\]
-系统使用 \(\ell_r\leq0\) ms、\(0<\ell_r\leq50\) ms、\(50<\ell_r\leq200\) ms 和 \(\ell_r>200\) ms 四档。每个桶分别累加其中请求尚未完成的 prefill、recompute 和 decode 时间。当前运行请求不可抢占，因此其三阶段剩余工作量单独编码。该表示既保留节点总工作量，也区分已经超过最晚开始时间、即将超时和相对宽松的等待请求。
-
-\textbf{输入编码。}状态构建模块将全部字段转换为 float32，并按照字段含义进行归一化：
+\textbf{输入编码。} State Builder 将全部字段转换为 float32，并按照字段含义归一化：
 \begin{itemize}
     \item \textbf{概率、比例和布尔信息：}概率与比例保持在 \([0,1]\) 区间，布尔信息使用 0 或 1 表示。
-    \item \textbf{请求规模和阶段工作量：}token 数、数据量、运行请求的剩余工作量和各 slack 桶中的等待工作量采用对数归一化。
+    \item \textbf{请求规模和待处理工作量：}token 数、数据量和各阶段待处理工作量采用对数归一化。
     \item \textbf{带宽和显存：}按照系统配置的带宽或显存上限归一化。
-    \item \textbf{时延信息：}RTT、近期 P99 TTFT 和预计恢复时间等时延字段按照当前请求的 SLA 归一化。
+    \item \textbf{时延信息：}RTT、预计恢复时间等时延字段按照当前请求的 SLA 归一化。
 \end{itemize}
-最终输入包含 92 个 float32，共占 \(92\times4=368\) B。系统为不同模型分别配置 Router，各模型均采用上述固定维度输入。
 
-Dueling Double DQN 使用两层全连接网络提取状态特征，每层包含 128 个神经元，并通过价值分支和优势分支输出 9 个 Q 值。这 9 个输出分别表示在三个候选节点上采用 reuse、sync 或 recompute 的预计长期成本。
+\textbf{网络结构与动作输出。}
+\begin{itemize}
+    \item \textbf{共享状态编码。} 共享全连接网络从 \(\mathbf o_k\) 中提取状态特征，供价值分支和优势分支共同使用。
+    \item \textbf{Dueling 输出。} 价值分支输出一个状态价值 \(V_\theta(s_k)\)，优势分支一次输出固定动作空间中 \(3N\) 个动作的优势 \(A_\theta(s_k,a)\)。将动作记为 \(a_1,\ldots,a_{3N}\)，则
+    \[
+    Q_\theta(s_k,a_\ell)
+    =
+    V_\theta(s_k)+A_\theta(s_k,a_\ell)
+    -\frac{1}{3N}\sum_{r=1}^{3N}A_\theta(s_k,a_r).
+    \]
+    \item \textbf{动作过滤与选择。} 一次网络前向输出 \(3N\) 个 Q 值，分别对应在各计算节点上采用 reuse、sync 或 recompute 的长期成本。系统为这些输出生成 action mask；节点暂时不可用、模型不可用或 KV 获取条件不满足时，将相应动作的 Q 值置为 \(+\infty\)，最终只在可行动作中选择 Q 值最小者。
+\end{itemize}
+\end{changehighlight}
 
-每个请求到达后，Router 先从中心状态管理模块查询当前系统状态，再运行 Dueling Double DQN 选择执行节点和 KV 获取方式。状态查询和模型推理均发生在请求正式转发或执行之前，其耗时需要计入请求 E2E latency；具体测量结果见 6.4.8。
+每个请求到达后，入口节点将路由特征交给中心化 Router；Router 读取中心状态管理模块维护的全局状态快照，再运行 Dueling Double DQN 选择执行节点和 KV 获取方式。该过程的请求关键路径开销由路由特征传递、状态编码、预测器执行和路由模型前向计算组成，其中路由模型前向计算的测量结果见 6.4.8。
 
 \subsubsection*{6.4.7 分布式 KV 管理与后台增量预放置}
 \addcontentsline{toc}{subsubsection}{6.4.7 分布式 KV 管理与后台增量预放置}
@@ -637,11 +649,11 @@ B_{i,j}^{\mathrm{bg}}(t).
 \subsubsection*{6.4.8 实验设置、端到端结果与系统开销}
 \addcontentsline{toc}{subsubsection}{6.4.8 实验设置、端到端结果与系统开销}
 
-本小节围绕三个问题展开评估：第一，单请求穷举与 KV manager 相比就近执行能否降低请求时延和 SLA 违约率；第二，中心状态上报与逐请求查询会产生多大的通信开销；第三，Dueling Double DQN 的单次前向计算是否会显著增加请求路由时间。实验首先统一说明模拟环境、工作负载、对比策略和统计口径，随后依次给出端到端性能、中心状态通信开销和 DQN 前向计算时间。
+本小节围绕三个问题展开评估：第一，单请求穷举与 KV manager 相比就近执行能否降低请求时延和 SLA 违约率；第二，中心状态同步会产生多大的通信开销；第三，Dueling Double DQN 的单次前向计算是否会显著增加请求路由时间。实验首先统一说明模拟环境、工作负载、对比策略和统计口径，随后依次给出端到端性能、中心状态上报开销和 DQN 前向计算时间。
 
 \medskip
 \noindent\textbf{1. 评价范围。}
-本轮端到端模拟采用单请求穷举和完整 KV manager，尚未实现 6.4.6 中的长期状态价值估计，也未训练 Dueling Double DQN。因此，端到端结果用于建立未利用跨请求长期收益时的性能基线；长期路由相对单请求穷举的增量收益不在本轮评价范围内。Dueling Double DQN 仅进行网络前向计算微基准，用于估计模型接入 Router 后的单次计算开销。
+本轮端到端模拟采用单请求穷举和完整 KV manager，尚未实现 6.4.6 中的长期状态价值估计，也未训练 Dueling Double DQN。因此，端到端结果用于建立未利用跨请求长期收益时的性能基线；长期路由相对单请求穷举的增量收益不在本轮评价范围内。\changed{Dueling Double DQN 仅在三节点原型配置下进行网络前向计算微基准，用于估计 9 个动作参与比较时模型接入 Router 后的单次计算开销。}
 
 \medskip
 \noindent\textbf{2. 实验设置。}
@@ -757,38 +769,36 @@ Qwen2-VL-7B
 这些结果表明，单请求穷举与完整 KV manager 已能显著降低当前请求的排队和状态恢复开销，但尚不能说明跨请求长期状态价值的收益。后者需要在相同工作负载和 KV manager 配置下，进一步比较单请求穷举与训练后的长期 Router。
 
 \medskip
-\noindent\textbf{4. 中心状态上报与查询开销。}
-中心状态同步包含两类通信：推理节点、网络监测模块和 KV manager 向中心状态管理模块上报状态；每个请求到达后，Router 向中心状态管理模块查询一次当前系统状态。以下先计算状态上报的带宽占用，再计算逐请求查询的带宽占用，最后汇总当前三节点系统的状态通信流量并分析规模扩展趋势。
+\noindent\textbf{4. 中心状态上报开销。}
+在中心化调度架构中，完整强化学习状态由中心状态管理模块维护，并由中心化 Router 在控制平面内读取。状态同步通信主要来自推理节点、网络监测模块和 KV manager 向中心状态管理模块上报状态；入口节点只向 Router 提交 session 标识、当前入口、请求规模和 SLA 等请求级路由特征。以下先计算状态上报的带宽占用，再说明中心化 Router 使用的状态字段，并分析节点规模扩展趋势。
 
 \textbf{4.1 状态上报机制与带宽占用。}
-推理节点和网络监测模块分别周期性上报节点状态和链路状态；请求执行或后台 KV 放置完成后，KV manager 将同一节点、同一 session 新增的连续 KV block 合并为一条区间更新。表~\ref{tab:control-plane-message-size} 给出三类上报消息的字段组成与传输大小。数值字段采用 float32，布尔字段采用 uint8；每条消息另计入 128 B 的 RPC 和传输协议开销。
+推理节点和网络监测模块分别周期性上报节点状态和链路状态；请求执行或后台 KV 放置完成后，KV manager 将同一节点、同一 session 新增的连续 KV block 合并为一条区间更新。表~\ref{tab:control-plane-message-size} 给出三类上报消息的内容与传输大小。每条消息均计入 128 B 的 RPC、传输协议和数据对齐开销。
 
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{中心状态上报消息的字段组成与传输大小}
+\caption{中心状态上报消息的内容、触发方式与传输大小}
 \label{tab:control-plane-message-size}
-\begin{tabular}{@{}p{0.14\textwidth}p{0.28\textwidth}p{0.19\textwidth}rrr@{}}
+\begin{tabular}{@{}p{0.15\textwidth}p{0.37\textwidth}p{0.18\textwidth}rr@{}}
 \toprule
-来源 & 状态字段 & 标识与对齐 & Payload & 协议开销 & 传输大小 \\
+来源 & 上报内容 & 触发方式 & 消息内容 & 传输大小 \\
 \midrule
 推理节点
-& 17 个 float32：\(17\times4=68\) B
-& 24 B 标识与时间戳，4 B 对齐
-& 96 B & 128 B & 224 B \\
+& Prefill、recompute 和 decode 的待处理工作量，可用 KV 显存比例，以及节点可用性
+& 每 1 ms
+& 48 B & 176 B \\
 网络监测模块
-& 2 个 float32 和 1 个 uint8：\(2\times4+1=9\) B
-& 20 B 标识与时间戳，3 B 对齐
-& 32 B & 128 B & 160 B \\
+& 可用带宽、RTT 和链路可用性
+& 每 10 ms
+& 32 B & 160 B \\
 KV manager
-& 76 B 定长 KV 区间更新记录
-& 4 B 对齐
-& 80 B & 128 B & 208 B \\
+& Session、KV 版本、节点、连续 block 区间和对应字节数
+& 请求执行或后台放置完成后
+& 80 B & 208 B \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-推理节点和网络监测模块分别每 1 ms 和 10 ms 上报一次。请求执行或后台 KV 放置完成后，KV manager 上报一条合并后的连续 KV 区间更新。节点上报中的 24 B 标识信息由 node ID、model ID、消息序号和采样时间组成。链路上报中的 20 B 标识信息由源/目的 node ID、消息序号和采样时间组成。KV 区间更新记录使用定长编码：session ID 8 B、model ID 4 B、node ID 4 B、KV 版本 8 B、block 起止编号 8 B、区间字节数 8 B、消息序号 8 B、生成时间 8 B、prefix hash 16 B 和状态码 4 B，共 76 B。三类 payload 均按 16 B 边界对齐，因此其对齐后大小分别为 96 B、32 B 和 80 B；每条消息再计入 128 B 的 RPC 和传输协议开销。
 
 实验时长为 60 s，包含 3 个推理节点和 3 条受监测物理链路。因此，每条轨迹固定产生 180,000 条节点状态消息和 18,000 条链路状态消息。KV 区间更新数依据请求轨迹估算：每个请求对应一条执行更新；对于移动阶段内尚未结束的 session，两个候选节点各计一条合并后的后台预放置更新。该方法用于估算 KV 状态上报量，不模拟后台任务队列的执行顺序。实验将中心状态管理模块部署在节点 B，表~\ref{tab:control-plane-upload-results} 给出 5 个随机种子上的平均消息数，以及实际经过节点间物理链路的上报数据量。
 
@@ -800,9 +810,9 @@ KV manager
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 负载
-& 节点上报数
-& 链路上报数
-& KV 更新数
+& 平均节点上报数
+& 平均链路上报数
+& 平均 KV 更新数
 & 60 s 数据量
 & 平均带宽 \\
 &
@@ -813,205 +823,118 @@ KV manager
 & (Mbps) \\
 \midrule
 基础并发
-& 180,000 & 18,000 & 2,277.6 & 28.162 & 3.755 \\
+& 180,000 & 18,000 & 2,277.6 & 22.402 & 2.987 \\
 \(1.5\times\) 并发
-& 180,000 & 18,000 & 3,475.4 & 28.336 & 3.778 \\
+& 180,000 & 18,000 & 3,475.4 & 22.576 & 3.010 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{4.2 逐请求状态查询机制与带宽占用。}
-每个请求到达后，入口 Router 向中心状态管理模块发送包含请求和 session 标识的查询。中心状态管理模块返回三类信息：
-\begin{itemize}
-    \item \textbf{节点运行状态，每节点 17 个字段：}当前运行请求在 prefill、recompute 和 decode 三个阶段的剩余工作量 3 个字段；等待请求在 \(\ell\leq0\) ms、\(0<\ell\leq50\) ms、\(50<\ell\leq200\) ms 和 \(\ell>200\) ms 四档 slack 中的三阶段工作量 12 个字段；可用 KV 显存比例和近期 P99 TTFT 各 1 个字段。
-    \item \textbf{当前 session 的 KV 状态，每节点 4 个字段：}是否具有完整且版本一致的 KV、连续 prefix 比例、剩余同步时间，以及缺失历史后缀的重算时间。
-    \item \textbf{网络状态，每条链路 3 个字段：}可用带宽、RTT 和链路可用标志。
-\end{itemize}
-
-因此，系统包含 \(N\) 个节点和 \(E\) 条受监测物理链路时，中心状态响应的字段总数为
+\textbf{4.2 中心状态字段与输入维度。}
+设系统包含 \(N\) 个节点和 \(E\) 条受监测物理链路，中心状态管理模块为 Router 维护的全局状态包含每节点 5 个运行状态字段、每节点 4 个当前 session 的 KV 状态字段，以及每条链路 3 个网络状态字段，总维度为
 \[
-d_{\mathrm{central}}(N,E)
-=
-N\underbrace{(17+4)}_{\mbox{\scriptsize 每节点的运行状态与 KV 状态}}
-+E\underbrace{\times3}_{\mbox{\scriptsize 每条链路的网络状态}}
-=21N+3E.
+d_{\mathrm{central}}(N,E)=9N+3E.
 \]
-其中，每个节点的 17 个运行状态均为 float32；4 个 KV 状态包含 3 个 float32 和 1 个 uint8；每条链路的 3 个状态包含 2 个 float32 和 1 个 uint8。若按照 \(\mathrm{float32}=4\) B、\(\mathrm{uint8}=1\) B 紧凑存储，中心状态的数据量为
-\[
-\begin{array}{rcl}
-B_{\mathrm{compact}}(N,E)
-&=&
-N\bigl[17\times4+(3\times4+1)\bigr]
-+E(2\times4+1)\\
-&=&81N+9E\ \mathrm{B}.
-\end{array}
-\]
-在当前三节点、三链路系统中，字段总数为 \(3\times21+3\times3=72\)，紧凑数据量为 \(81\times3+9\times3=270\) B。表~\ref{tab:central-agent-metadata} 展开列出该计算过程。
+在当前三节点、三链路系统中，中心状态管理模块维护 36 个中心状态字段。表~\ref{tab:central-agent-metadata} 按信息类别列出字段含义、数据类型和原始大小。
 
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{中心状态管理模块返回的状态字段（3 个节点、3 条链路）}
+\caption{中心化 Router 使用的中心状态字段（3 个节点、3 条链路）}
 \label{tab:central-agent-metadata}
-\begin{tabular}{@{}p{0.17\textwidth}p{0.42\textwidth}p{0.22\textwidth}r@{}}
+\begin{tabular}{@{}p{0.18\textwidth}p{0.45\textwidth}p{0.20\textwidth}r@{}}
 \toprule
-信息类别 & 当前三节点系统中的字段 & 数据量计算 & 紧凑大小 \\
+信息类别 & 字段含义 & 字段数量与类型 & 原始大小 \\
 \midrule
 节点运行状态
-& 每个节点包含 3 个运行中阶段工作量、\(4\times3=12\) 个等待队列分桶工作量、1 个可用 KV 显存比例和 1 个近期 P99 TTFT，共 \(3\times17=51\) 个 float32
-& \(51\times4\) B
-& 204 B \\
+& 每个节点的 prefill、recompute 和 decode 待处理工作量，可用 KV 显存比例，以及节点可用性
+& 12 个 float32，3 个 uint8
+& 51 B \\
 当前 session 的 KV 状态
-& 每个节点包含 1 个完整 KV 标志、1 个连续 prefix 比例和 2 个剩余恢复时间，共 9 个 float32 和 3 个 uint8
-& \(9\times4+3\times1\) B
+& 每个节点是否具有完整且版本一致的 KV、连续 prefix 比例、剩余同步时间和缺失历史后缀重算时间
+& 9 个 float32，3 个 uint8
 & 39 B \\
 网络状态
-& 每条链路包含 1 个可用带宽、1 个 RTT 和 1 个链路可用标志，共 6 个 float32 和 3 个 uint8
-& \(6\times4+3\times1\) B
+& 每条物理链路的可用带宽、RTT 和可用性
+& 6 个 float32，3 个 uint8
 & 27 B \\
 \midrule
 合计
-& 66 个 float32 和 6 个 uint8
-& \(66\times4+6\times1\) B
-& 270 B \\
+& 当前三节点系统维护的全部中心状态
+& 36 个字段
+& 117 B \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-其中，4 个 KV 状态字段是中心状态管理模块根据 block directory 生成的当前 session 摘要，状态响应不传输完整的 block directory。表中的 270 B 表示按原始数据类型紧凑存储时的字段大小；中心状态管理模块发送响应时，为了直接构造神经网络输入，将 72 个字段统一编码为 float32，因此状态向量大小为
-\[
-B_{\mathrm{state}}
-=
-72\times4
-=288\ \mathrm{B}.
-\]
-这些字段与 6.4.6 定义的 20 个请求及阶段特征拼接，构成 Dueling Double DQN 的 92 维输入。
+每节点 9 个字段由 5 个节点运行状态字段和 4 个当前 session 的 KV 状态字段组成。后 4 个字段由中心状态管理模块根据 KV 目录以及节点、链路状态生成。中心化 Router 在控制平面内直接读取并编码这 36 个字段；若统一编码为 float32，中心状态部分占 144 B。\changed{本轮实验将这些字段与 19 个请求及预测字段、1 个实验阶段字段拼接，构成 Dueling Double DQN 的 56 维输入。}
 
-状态查询的 48 B 消息内容包括 request ID 8 B、session ID 8 B、model ID 4 B、入口 node ID 4 B、请求时间 8 B、所需快照版本 8 B、消息格式版本 4 B 和标志位 4 B。状态响应除 288 B 状态向量外，还包含 48 B 元数据，具体为 request ID 8 B、session ID 8 B、快照版本 8 B、生成时间 8 B、节点数 4 B、链路数 4 B、消息格式版本 4 B 和标志位 4 B。每条消息再计入 128 B 的 RPC 和传输协议开销。因此，查询、响应和一次完整拉取的数据量分别为
-\[
-\begin{array}{rcl}
-B_{\mathrm{query}}
-&=&48+128=176\ \mathrm{B},\\
-B_{\mathrm{response}}
-&=&288+48+128=464\ \mathrm{B},\\
-B_{\mathrm{pull}}
-&=&176+464=640\ \mathrm{B}.
-\end{array}
-\]
-表~\ref{tab:control-plane-query-results} 使用模拟轨迹中的实际请求数，统计基础并发和 \(1.5\times\) 并发下的查询带宽。节点 B 上的本地查询不经过节点间物理链路，因此表中数据量只统计入口节点与中心状态管理模块之间实际传输的查询和响应。
+\textbf{4.3 当前三节点系统的总体状态上报带宽占用。}
+表~\ref{tab:control-plane-overhead} 给出两种负载下的实际节点间状态上报流量及最高单链路带宽。
 
 \begin{table}[H]
 \centering
 \small
-\caption{60 s 模拟中的逐请求状态查询开销}
-\label{tab:control-plane-query-results}
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-负载
-& 平均请求率
-& 60 s 请求数
-& 60 s 数据量
-& 平均带宽 \\
-& (req/s) & & (MB) & (Mbps) \\
-\midrule
-基础并发
-& 18.65 & 1,118.8 & 0.514 & 0.069 \\
-\(1.5\times\) 并发
-& 28.08 & 1,685.0 & 0.795 & 0.106 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{4.3 当前三节点系统的总体状态通信带宽占用。}
-表~\ref{tab:control-plane-overhead} 将状态上报和逐请求查询合并，给出两种负载下的实际节点间状态通信流量及最高单链路带宽。
-
-\begin{table}[H]
-\centering
-\small
-\caption{当前三节点系统的中心状态通信开销}
+\caption{当前三节点系统的中心状态上报通信开销}
 \label{tab:control-plane-overhead}
-\begin{tabular}{@{}lrrrrr@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
 负载
 & 状态上报
-& 状态查询
-& 状态通信合计
 & 最高单链路
 & 最高单链路占比 \\
-& (Mbps) & (Mbps) & (Mbps) & (Mbps) & (\%) \\
+& (Mbps) & (Mbps) & (\%) \\
 \midrule
 基础并发
-& 3.755 & 0.069 & 3.824 & 1.964 & 0.0020 \\
+& 2.987 & 1.575 & 0.0016 \\
 \(1.5\times\) 并发
-& 3.778 & 0.106 & 3.884 & 1.989 & 0.0020 \\
+& 3.010 & 1.596 & 0.0016 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-状态上报是当前状态通信流量的主要来源：三个节点按照 1 ms 周期合计每秒产生 3,000 条节点状态消息，而基础并发和 \(1.5\times\) 并发下平均每秒分别产生 18.65 和 28.08 次状态查询。即使采用每节点每秒 1,000 次的高频状态更新，\(1.5\times\) 并发下的节点间状态通信流量仍约为 3.88 Mbps；最高单链路约为 1.99 Mbps，占对应 100 Gbps 链路的约 0.0020\%。逐请求查询约占其中 0.106 Mbps，其带宽开销随请求率线性增长。
+三个节点按照 1 ms 周期合计每秒产生 3,000 条节点状态消息，构成中心状态同步流量的主体。即使采用每节点每秒 1,000 次的高频状态更新，\(1.5\times\) 并发下的节点间状态上报流量仍约为 3.01 Mbps，最高单链路约为 1.60 Mbps，占对应 100 Gbps 链路的约 0.0016\%。
 
-\textbf{4.4 请求率与节点规模扩展。}
-请求率扩展估算固定当前三节点状态维度，并假设每次查询和响应均经过节点间链路。由于一次完整查询传输 640 B，请求率为 \(R\) 时的查询流量上限为
-\[
-B_{\mathrm{query}}^{\max}(R)
-=8R\times640.
-\]
-表~\ref{tab:control-plane-rps-scale} 给出不同请求率下的估算结果。
+\textbf{4.4 节点规模扩展。}
+节点数量增加时，即使不考虑请求完成后触发的 KV 目录更新，仅节点负载、显存余量、节点可用性、链路带宽和 RTT 等定期状态上报也会随系统规模增加。表~\ref{tab:control-plane-node-scale} 使用全连接拓扑 \(E=N(N-1)/2\) 估算不同节点规模下的节点与链路定期状态上报流量。该表只用于观察固定状态上报随节点数增加的趋势；为使结果不依赖中心状态管理模块的具体部署位置，表中假设这些定期上报均经过节点间链路。表中结果不包含随请求完成和后台 KV placement 变化而触发的 KV 区间更新。
 
 \begin{table}[H]
 \centering
 \small
-\caption{三节点系统在不同请求率下的逐请求查询流量上限}
-\label{tab:control-plane-rps-scale}
+\caption{节点数量增加时的节点与链路定期状态上报开销估算}
+\label{tab:control-plane-node-scale}
 \begin{tabular}{@{}rrr@{}}
 \toprule
-请求率 & 单次查询数据量 & 查询流量上限 \\
-(req/s) & (B) & (Mbps) \\
+节点数 \(N\) & 链路数 \(E\) & 定期状态上报 \\
+ & & (Mbps) \\
 \midrule
-10 & 640 & 0.051 \\
-100 & 640 & 0.512 \\
-1,000 & 640 & 5.120 \\
-10,000 & 640 & 51.200 \\
+3 & 3 & 4.608 \\
+10 & 45 & 19.840 \\
+25 & 300 & 73.600 \\
+50 & 1225 & 227.200 \\
+100 & 4950 & 774.400 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-节点数量增加时，节点状态、链路状态和单次查询响应均会增大。加入 128 B 协议开销和 48 B 查询关联信息后，状态响应大小近似为
-\[
-S_R(N,E)
-=128+48+4d_{\mathrm{central}}(N,E).
-\]
-表~\ref{tab:control-plane-node-scale} 固定 \(R=28.08\) req/s，并使用全连接拓扑 \(E=N(N-1)/2\) 估算节点和链路周期上报以及逐请求查询产生的状态通信流量。为使扩展结果不依赖中心节点的具体位置，表中按所有周期上报和查询均经过节点间链路计算带宽需求上限；周期上报结果不包含随具体 KV 放置过程变化的 KV 区间更新。
-
-\begin{table}[H]
-\centering
-\small
-\caption{节点数量增加时的中心状态通信开销估算}
-\label{tab:control-plane-node-scale}
-\begin{tabular}{@{}rrrrr@{}}
-\toprule
-节点数 \(N\) & 链路数 \(E\) & 返回字段数 & 周期上报 & 逐请求查询 \\
- & & & (Mbps) & (Mbps) \\
-\midrule
-3 & 3 & 72 & 5.760 & 0.144 \\
-10 & 45 & 345 & 23.680 & 0.389 \\
-25 & 300 & 1425 & 83.200 & 1.360 \\
-50 & 1225 & 4725 & 246.400 & 4.325 \\
-100 & 4950 & 16950 & 812.800 & 15.311 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-在稀疏拓扑中，若 \(E=O(N)\)，状态字段数和通信量随节点数近似线性增长；若中心状态管理模块维护全连接拓扑中的全部链路状态，则 \(E=O(N^2)\)，链路状态上报量和状态响应大小将随节点数呈二次增长。当前 Dueling Double DQN 的 92 维输入按照三节点场景固定，节点规模扩展时需要相应调整状态编码方式。
+在表~\ref{tab:control-plane-node-scale} 中，三节点三链路的 4.608 Mbps 来自 \(3\times1000\times176\mathrm{B}\) 的节点定期状态上报和 \(3\times100\times160\mathrm{B}\) 的链路定期状态上报全部跨节点传输后的带宽；表~\ref{tab:control-plane-overhead} 中的 3.010 Mbps 则是在中心状态管理模块部署于节点 B 时，加入实际 KV 区间更新并按实际经过物理链路的数据量统计得到。因此，表~\ref{tab:control-plane-node-scale} 不是完整控制面状态同步开销，也不是其上限，而是单独估算节点和链路固定状态上报随规模增长的部分。在稀疏拓扑中，若 \(E=O(N)\)，状态字段数和通信量随节点数近似线性增长；若中心状态管理模块维护全连接拓扑中的全部链路状态，则 \(E=O(N^2)\)，链路状态上报量将随节点数呈二次增长。\changed{三节点原型的 56 维输入和 9 维动作输出由本轮实验拓扑确定；部署到其他固定节点规模时，需要相应调整状态编码和动作输出层，并重新训练 Router。}
 
 \medskip
 \noindent\textbf{5. 在线路由决策开销。}
-每个请求正式转发或执行之前，Router 需要先完成一次中心状态查询，再运行 Dueling Double DQN 选择动作。状态查询的网络时间已在前述中心状态实验中统计；本处进一步测量 DQN 的单次前向计算时间。测试网络采用 92 维输入、两层 128 单元共享 MLP、一维价值分支和九维优势分支，共包含 29,706 个 float32 参数。微基准使用 Apple M4 CPU 上的单线程 NumPy 实现，预热 2,000 次后连续测量 20,000 次。表~\ref{tab:dqn-forward-overhead} 给出结果。
+\begin{changehighlight}
+每个请求正式转发或执行之前，中心化 Router 基于请求特征和中心状态快照运行 Dueling Double DQN 选择动作。本轮模拟采用三个计算节点，路由模型的具体配置如下：
+\begin{itemize}
+    \item \textbf{模型输入。} 将 \(N=3\)、\(E=3\) 代入 6.4.6 的输入维度公式，得到 19 个请求与预测字段、1 个实验阶段字段和表~\ref{tab:central-agent-metadata} 所列的 36 个中心状态字段，共 56 维。
+    \item \textbf{动作输出。} 三个计算节点分别对应 reuse、sync 和 recompute，优势分支输出 9 个动作优势，网络据此得到 9 个 Q 值。
+    \item \textbf{网络参数与测量设置。} 共享 MLP 包含两层 128 单元全连接层和一维价值分支，共 25,098 个 float32 参数；使用 Apple M4 CPU 单线程 NumPy，预热 2,000 次后测量 20,000 次。
+\end{itemize}
+表~\ref{tab:dqn-forward-overhead} 给出该配置的单次前向计算时间。
+\end{changehighlight}
 
 \begin{table}[H]
 \centering
 \small
-\caption{Dueling Double DQN 单次前向计算时间}
+\caption{\changed{三节点原型 Dueling Double DQN 的单次前向计算时间}}
 \label{tab:dqn-forward-overhead}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -1019,22 +942,16 @@ S_R(N,E)
  & & (ms) & (ms) & (ms) \\
 \midrule
 float32 CPU，单线程
-& 29,706 & 0.010 & 0.010 & 0.013 \\
+& 25,098 & 0.010 & 0.012 & 0.016 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-已测得的逐请求开销为：
-\begin{itemize}
-    \item \textbf{状态查询：}查询消息网络传输时间的 P99 约为 0.100 ms。
-    \item \textbf{Dueling Double DQN 前向计算：}当前网络单次计算的 P99 为 0.013 ms。
-    \item \textbf{保守合计：}将上述两项的 P99 直接相加约为 0.113 ms，用于给出已测部分的保守估计。
-\end{itemize}
-上述 0.113 ms 为独立开销测量，尚未加入前述端到端结果表。完整实现还需要测量中心状态管理模块处理查询、拼接 92 维输入，以及运行输出长度预测器和 session continuation predictor 的时间；这些耗时与状态查询、DQN 前向计算共同计入请求 E2E latency。
+\changed{三节点原型 Dueling Double DQN 前向计算的 P99 为 0.016 ms。}该结果为独立微基准，尚未加入前述端到端结果表。完整实现还需要测量中心化 Router 的状态编码、输出长度预测器和 session continuation predictor 的执行时间；这些耗时与 DQN 前向计算共同计入请求 E2E latency。
 
 \medskip
 \noindent\textbf{6. 本轮结论与实验边界。}
-本轮实验验证了单请求穷举与完整 KV manager 的组合效果，并分别估算了中心状态通信和 Dueling Double DQN 前向计算的开销。在当前三节点场景中，高频状态上报产生的跨节点流量相对链路容量较小，逐请求查询与 DQN 前向计算的已测 P99 合计约为 0.113 ms。端到端性能表尚未计入这部分在线路由决策开销，也未实现长期 Dueling Double DQN；后续实验需要补充完整在线决策时延、单请求穷举与长期 Router 的对照，以及 residual sync 与后台预放置的消融。
+本轮实验验证了单请求穷举与完整 KV manager 的组合效果，并分别估算了中心状态同步和 Dueling Double DQN 前向计算的开销。在当前三节点中心化 agent 场景中，高频状态上报产生的跨节点流量相对链路容量较小，\changed{三节点原型 DQN 前向计算的已测 P99 为 0.016 ms。}端到端性能表尚未计入完整在线决策开销，也未实现长期 Dueling Double DQN；后续实验需要补充状态编码、预测器执行与长期 Router 的完整在线时延，单请求穷举与长期 Router 的对照，以及 residual sync 与后台预放置的消融。
 
 \phantomsection
 \subsection*{6.5 小结}
@@ -1048,6 +965,6 @@ float32 CPU，单线程
 
 KV manager 将 KV 获取动作落实为 block directory 查询、连续 prefix 检查和缺失 blocks 恢复，并在请求完成后依据入口转移概率、session continuation predictor 输出和后台资源余量动态调整增量复制比例。初步模拟结果表明，在 \(1.5\times\) 并发下，单请求穷举与完整 KV manager 相对同并发就近执行，将 CodeLlama34B 和 Qwen2-VL 的平均 E2E latency 分别降低 44.89\% 和 26.02\%。若按照项目承载能力口径，与基础并发下的就近执行比较，两类模型的平均 E2E latency 分别降低 19.65\% 和 23.37\%。上述结果反映单请求穷举与完整 KV manager 的组合效果；路由、block-level residual sync 和后台增量预放置的独立贡献仍需通过消融实验区分。
 
-中心状态通信估算表明，在当前三节点高频状态更新配置下，\(1.5\times\) 并发产生约 3.88 Mbps 节点间状态通信流量，最高单链路约为 1.99 Mbps。独立测得的逐请求状态查询与 Dueling Double DQN 前向计算 P99 合计约为 0.113 ms；该在线路由决策开销尚未计入上述端到端结果。
+中心状态通信估算表明，在当前三节点高频状态更新配置下，\(1.5\times\) 并发产生约 3.01 Mbps 节点间状态上报流量，最高单链路约为 1.60 Mbps。中心化 Router 读取中心状态管理模块维护的全局状态，并结合入口节点提交的请求级路由特征进行决策；\changed{三节点原型 Dueling Double DQN 的前向计算 P99 为 0.016 ms。}
 
 当前模拟建立了单请求穷举与完整 KV manager 组合下的性能基线；长期状态价值的收益将在相同工作负载和 KV manager 配置下，通过单请求穷举与长期路由器的独立对照实验进一步验证。后续还需研究请求执行期间 handover、多 session 的全局 placement 资源分配和 prefill/decode 分离，由此逐步将 CEC 中的 LLM inference offloading 从单次执行位置选择扩展为面向连续 session 和版本化运行时状态的长期协同优化。
