@@ -41,15 +41,21 @@ class ModelSpec:
     head_dim: int = 128
     parameters: float = 70.0e9
     dtype_bytes: int = 2
+    kv_dtype_bytes: float = 2.0
     block_tokens: int = 16
 
     @cached_property
-    def kv_bytes_per_token(self) -> int:
-        """Keys and values for every layer of one token."""
-        return self.layers * 2 * self.kv_heads * self.head_dim * self.dtype_bytes
+    def kv_bytes_per_token(self) -> float:
+        """Keys and values for every layer of one token.
+
+        Kept separate from the weight dtype because KV quantisation is an
+        independent choice, and it moves both recovery thresholds directly: it
+        is the only term that divides the network and host bandwidths.
+        """
+        return self.layers * 2 * self.kv_heads * self.head_dim * self.kv_dtype_bytes
 
     @cached_property
-    def block_bytes(self) -> int:
+    def block_bytes(self) -> float:
         return self.block_tokens * self.kv_bytes_per_token
 
     @cached_property
@@ -201,6 +207,27 @@ class ResourceModel:
     def resource_of_method(self) -> dict[str, str]:
         """Which serial resource each recovery method occupies."""
         return {"transfer": "link", "restore": "host", "recompute": "compute"}
+
+    def thresholds(self, budget_s: float) -> dict[str, float]:
+        """Context lengths at which each recovery path stops meeting a deadline.
+
+        Below `rebuild_tokens` every path is affordable and KV placement cannot
+        change a TTFT outcome. Between `rebuild_tokens` and `move_tokens` the KV
+        only has to exist somewhere, because fetching it on demand still fits,
+        so the lever is retention. Above `move_tokens` no on-demand path fits
+        and the KV has to already be in local HBM, which is the only regime
+        where preparing it in advance is the mechanism that helps.
+
+        The two are not always in that order. On a link slow enough that
+        `move_tokens` falls below `rebuild_tokens`, fetching is slower than
+        rebuilding, remote copies stop being useful and the middle band
+        disappears.
+        """
+        return {
+            "rebuild_tokens": budget_s * self.recompute_blocks_s * self.model.block_tokens,
+            "move_tokens": budget_s * self.transfer_blocks_s * self.model.block_tokens,
+            "restore_tokens": budget_s * self.restore_blocks_s * self.model.block_tokens,
+        }
 
     def describe(self) -> dict[str, float]:
         return {
