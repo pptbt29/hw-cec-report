@@ -46,6 +46,7 @@ class Config:
     queue_uncertainty_scale: float = 0.8
     shared_uncertainty_scale: float = 0.5
     reprepare_cost_weight: float = 1.0
+    displacement_cost_weight: float = 1.0
     value_based_eviction: bool = True
     block_batch: int = 4
     high_watermark: float = 0.92
@@ -217,6 +218,7 @@ class PlanCandidate:
     return_probability: float
     plan: PreparationPlan
     expected_gain: float
+    displacement_cost: float
     normalized_cost: float
     net_value: float
     score: float
@@ -331,6 +333,7 @@ class Simulator:
         self.output_estimate = cfg.assumed_output_blocks
         self._forecast_cache: dict[int, dict[int, float]] | None = None
         self._prediction_cache: dict[int, Prediction] | None = None
+        self._price_cache: dict[int, float] = {}
         self._pool = sorted(workload.session_start)
         live = cfg.concurrent_sessions if cfg.concurrent_sessions > 0 else len(self._pool)
         self._admitted = 0
@@ -372,6 +375,7 @@ class Simulator:
     def _invalidate(self) -> None:
         self._forecast_cache = None
         self._prediction_cache = None
+        self._price_cache = {}
 
     def _predictions(self) -> dict[int, Prediction]:
         """Recompute every idle session's next-turn prediction for this tick.
@@ -723,25 +727,27 @@ class Simulator:
                 if plan is None or not plan.segments:
                     continue
                 after = self._cluster_probability(state, prediction, (node.nid, plan.target_prefix))
+                added = plan.target_prefix - availability.local_hbm
                 gain = prediction.return_probability * max(0.0, after - before)
-                hbm_cost = (plan.target_prefix - availability.local_hbm) * time_left / max(
+                displacement = self.cfg.displacement_cost_weight * self._displacement_cost(node.nid, added)
+                hbm_cost = added * time_left / max(
                     1.0, node.capacity * self.cfg.preparation_horizon_s
                 )
-                raw.append((state, prediction, node, plan, gain, hbm_cost))
+                raw.append((state, prediction, node, plan, gain, displacement, hbm_cost))
         if not raw:
             return []
         demand = {
             method: sum(
                 plan.blocks(method)
                 / max(1.0, self.cfg.background_rates[method] * max(self.cfg.step_s, prediction.predicted_arrival - self.now))
-                for _, prediction, _, plan, _, _ in raw
+                for _, prediction, _, plan, _, _, _ in raw
             )
             for method in self.cfg.background_rates
         }
         hbm_pressure = sum(node.committed for node in self.nodes) / max(1, sum(node.capacity for node in self.nodes))
         prices = {method: 1.0 + max(0.0, demand[method] - 1.0) ** 2 for method in demand}
         candidates: list[PlanCandidate] = []
-        for state, prediction, node, plan, gain, hbm_cost in raw:
+        for state, prediction, node, plan, gain, displacement, hbm_cost in raw:
             resource_cost = hbm_cost * (1.0 + 3.0 * max(0.0, hbm_pressure - self.cfg.low_watermark))
             for method in self.cfg.background_rates:
                 denominator = self.cfg.background_rates[method] * self.cfg.preparation_horizon_s
@@ -750,8 +756,8 @@ class Simulator:
                 net = 1.0 - 0.01 * resource_cost
                 score = 1.0 / max(resource_cost, 1e-9)
             else:
-                net = gain - self.cfg.resource_penalty * resource_cost
-                score = net / max(resource_cost, 1e-9)
+                net = gain - displacement - self.cfg.resource_penalty * resource_cost
+                score = net / max(resource_cost + displacement, 1e-9)
             slack = prediction.predicted_arrival - self.now - plan.seconds
             if net > 0:
                 candidates.append(
@@ -762,6 +768,7 @@ class Simulator:
                         prediction.return_probability,
                         plan,
                         gain,
+                        displacement,
                         resource_cost,
                         net,
                         score,
@@ -817,6 +824,50 @@ class Simulator:
                 f"dispatch sid={candidate.sid} n={candidate.nid} {segment.method}[{current},{end}) "
                 f"target={candidate.plan.target_prefix} net={candidate.net_value:.4f}"
             )
+
+    def _displacement_price(self, nid: int) -> float:
+        """Marginal expected cost per HBM block of freeing space on this node.
+
+        A preparation that does not fit in free capacity is paid for by
+        demoting some other session's prefix, and `_ensure_capacity` will pick
+        the cheapest victim available at that moment. Charging the preparation
+        the victim's own eviction score is what makes the two sides one
+        decision: without it the candidate sees what it gains and not what it
+        displaces, so preparation performs an unpriced transfer of HBM.
+
+        The price is the cheapest victim's score, evaluated once per tick per
+        node. It ignores that the requesting session is itself protected from
+        eviction; taking the minimum over the remaining sessions makes that
+        omission immaterial in all but degenerate cases.
+        """
+        cached = self._price_cache.get(nid)
+        if cached is not None:
+            return cached
+        node = self.nodes[nid]
+        victims = [
+            sid for sid, replica in node.replicas.items()
+            if replica.hbm_prefix > 0 and self.sessions[sid].active_node != nid
+        ]
+        price = min((self._eviction_score(sid, nid) for sid in victims), default=0.0)
+        self._price_cache[nid] = price
+        return price
+
+    def _displacement_cost(self, nid: int, blocks: int) -> float:
+        """Expected cost of the demotions this preparation would force.
+
+        Reclamation is triggered at the high watermark, not at full capacity,
+        so the headroom that matters is the distance to that watermark. Only
+        the blocks that must be freed to keep this preparation under the
+        trigger are charged; the extra depth of the drop to the low watermark
+        is hysteresis and would occur on the next trigger regardless of which
+        action pulled it.
+        """
+        node = self.nodes[nid]
+        trigger = int(node.capacity * self.cfg.high_watermark)
+        deficit = node.committed + blocks - trigger
+        if deficit <= 0:
+            return 0.0
+        return self._displacement_price(nid) * deficit
 
     def _available_capacity(self, nid: int, protected_sid: int) -> int:
         node = self.nodes[nid]

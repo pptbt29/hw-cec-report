@@ -44,7 +44,8 @@ def render(simulator: Simulator, clear: bool = True) -> None:
         actions = "+".join(f"{segment.method}:{segment.blocks}" for segment in candidate.plan.segments)
         print(
             f"s{candidate.sid}->n{candidate.nid} target={candidate.plan.target_prefix} "
-            f"actions={actions} gain={candidate.expected_gain:.4f} net={candidate.net_value:.4f} slack={candidate.slack_s:.2f}"
+            f"actions={actions} gain={candidate.expected_gain:.4f} displace={candidate.displacement_cost:.4f} "
+            f"net={candidate.net_value:.4f} slack={candidate.slack_s:.2f}"
         )
     if not simulator.last_candidates:
         print("-")
