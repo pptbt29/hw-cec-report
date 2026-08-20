@@ -54,23 +54,32 @@ class PreparationPlan:
         return sum(segment.blocks for segment in self.segments if segment.method == method)
 
 
+def _methods_for(right: int, availability: PrefixAvailability) -> tuple[str, ...]:
+    if right <= availability.local_host:
+        return ("recompute", "restore", "transfer") if right <= availability.remote_hbm else ("recompute", "restore")
+    return ("recompute", "transfer") if right <= availability.remote_hbm else ("recompute",)
+
+
 def _regions(start: int, end: int, availability: PrefixAvailability) -> list[tuple[int, int, tuple[str, ...]]]:
     if not 0 <= start <= end:
         raise ValueError(f"invalid prefix interval [{start}, {end})")
+    host, remote = availability.local_host, availability.remote_hbm
+    inner_host = start < host < end
+    inner_remote = start < remote < end
+    if not inner_host and not inner_remote:
+        if start == end:
+            return []
+        return [(start, end, _methods_for(end, availability))]
     boundaries = {start, end}
-    for boundary in (availability.local_host, availability.remote_hbm):
-        if start < boundary < end:
-            boundaries.add(boundary)
+    if inner_host:
+        boundaries.add(host)
+    if inner_remote:
+        boundaries.add(remote)
     ordered = sorted(boundaries)
-    regions: list[tuple[int, int, tuple[str, ...]]] = []
-    for left, right in zip(ordered, ordered[1:]):
-        methods = ["recompute"]
-        if right <= availability.local_host:
-            methods.append("restore")
-        if right <= availability.remote_hbm:
-            methods.append("transfer")
-        regions.append((left, right, tuple(methods)))
-    return regions
+    return [
+        (left, right, _methods_for(right, availability))
+        for left, right in zip(ordered, ordered[1:])
+    ]
 
 
 def _compress(segments: list[WorkSegment]) -> tuple[WorkSegment, ...]:
@@ -93,10 +102,17 @@ def fastest_recovery(
     foreground_rates: dict[str, float],
 ) -> RecoveryPlan:
     """Return the fastest strict-source recovery of [start_prefix, context)."""
+    regions = _regions(start_prefix, context_blocks, availability)
+    if not regions:
+        return RecoveryPlan((), 0.0)
+    if len(regions) == 1:
+        left, right, methods = regions[0]
+        method = max(methods, key=foreground_rates.__getitem__)
+        return RecoveryPlan((WorkSegment(method, left, right),), (right - left) / foreground_rates[method])
     segments: list[WorkSegment] = []
     seconds = 0.0
-    for left, right, methods in _regions(start_prefix, context_blocks, availability):
-        method = max(methods, key=lambda name: foreground_rates[name])
+    for left, right, methods in regions:
+        method = max(methods, key=foreground_rates.__getitem__)
         segments.append(WorkSegment(method, left, right))
         seconds += (right - left) / foreground_rates[method]
     return RecoveryPlan(_compress(segments), seconds)
@@ -149,32 +165,50 @@ def minimum_slo_preparation(
     background_rates: dict[str, float],
     method_costs: dict[str, float],
 ) -> PreparationPlan | None:
-    """Find the minimum prepared prefix that crosses the hard TTFT boundary."""
+    """Find the minimum prepared prefix that crosses the hard TTFT boundary.
+
+    Residual recovery time is non-increasing in the target prefix: raising the
+    target both shortens the interval left to recover and can only widen the
+    set of sources available for what remains. Feasibility is therefore
+    monotone in the target and the smallest feasible one is found by bisection.
+    The cheapest timely plan is likewise non-decreasing in duration, so if the
+    smallest feasible target cannot be built within the time limit no larger
+    target can either.
+    """
     current = fastest_recovery(availability.local_hbm, context_blocks, availability, foreground_rates)
-    if queue_s + prompt_s + current.seconds <= slo_s + 1e-9:
+    budget = slo_s + 1e-9 - queue_s - prompt_s
+    if current.seconds <= budget:
         return None
-    if queue_s + prompt_s > slo_s + 1e-9:
+    if budget < 0:
         return None
-    for target in range(availability.local_hbm + 1, context_blocks + 1):
+    low, high = availability.local_hbm + 1, context_blocks
+    if low > high:
+        return None
+
+    def residual_seconds(target: int) -> float:
         hypothetical = PrefixAvailability(target, max(target, availability.local_host), availability.remote_hbm)
-        residual = fastest_recovery(target, context_blocks, hypothetical, foreground_rates)
-        if queue_s + prompt_s + residual.seconds > slo_s + 1e-9:
-            continue
-        plan = cheapest_preparation(
-            availability.local_hbm,
-            target,
-            availability,
-            time_limit_s,
-            background_rates,
-            method_costs,
-        )
-        if plan is not None:
-            return plan
-    return None
+        return fastest_recovery(target, context_blocks, hypothetical, foreground_rates).seconds
+
+    if residual_seconds(high) > budget:
+        return None
+    while low < high:
+        middle = (low + high) // 2
+        if residual_seconds(middle) <= budget:
+            high = middle
+        else:
+            low = middle + 1
+    return cheapest_preparation(
+        availability.local_hbm,
+        low,
+        availability,
+        time_limit_s,
+        background_rates,
+        method_costs,
+    )
 
 
 def success_probability(ttft_s: float, slo_s: float, uncertainty_s: float) -> float:
-    z = (ttft_s - slo_s) / max(uncertainty_s, 1e-9)
+    z = (ttft_s - slo_s) / (uncertainty_s if uncertainty_s > 1e-9 else 1e-9)
     if z >= 35:
         return 0.0
     if z <= -35:
@@ -185,7 +219,11 @@ def success_probability(ttft_s: float, slo_s: float, uncertainty_s: float) -> fl
 def at_least_one_success(probabilities: list[float]) -> float:
     failure = 1.0
     for probability in probabilities:
-        failure *= 1.0 - min(1.0, max(0.0, probability))
+        if probability <= 0.0:
+            continue
+        if probability >= 1.0:
+            return 1.0
+        failure *= 1.0 - probability
     return 1.0 - failure
 
 
@@ -224,13 +262,18 @@ def routable_probability(
         return at_least_one_success(
             [success_probability(ttft, slo_s, sigma) for ttft, sigma in zip(ttfts, node_uncertainties_s)]
         )
+    pairs = list(zip(ttfts, node_uncertainties_s))
     total = 0.0
     for offset, weight in SHARED_STRATA:
         shift = offset * shared_uncertainty_s
-        total += weight * at_least_one_success(
-            [
-                success_probability(ttft + shift, slo_s, sigma)
-                for ttft, sigma in zip(ttfts, node_uncertainties_s)
-            ]
-        )
+        failure = 1.0
+        for ttft, sigma in pairs:
+            probability = success_probability(ttft + shift, slo_s, sigma)
+            if probability <= 0.0:
+                continue
+            if probability >= 1.0:
+                failure = 0.0
+                break
+            failure *= 1.0 - probability
+        total += weight * (1.0 - failure)
     return total

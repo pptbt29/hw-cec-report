@@ -5,11 +5,13 @@ import math
 import random
 import statistics
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 
 from .planner import (
     PrefixAvailability,
     PreparationPlan,
+    RecoveryPlan,
     WorkSegment,
     at_least_one_success,
     cheapest_preparation,
@@ -64,7 +66,9 @@ class Config:
     min_return_probability: float = 0.05
     concurrent_sessions: int = 0
 
-    @property
+    # These are read on nearly every recovery computation, so they are built
+    # once per Config rather than on each access.
+    @cached_property
     def foreground_rates(self) -> dict[str, float]:
         return {
             "transfer": self.transfer_blocks_s,
@@ -72,7 +76,7 @@ class Config:
             "recompute": self.recompute_blocks_s,
         }
 
-    @property
+    @cached_property
     def background_rates(self) -> dict[str, float]:
         return {
             "transfer": self.transfer_blocks_s * self.background_transfer_fraction,
@@ -80,7 +84,7 @@ class Config:
             "recompute": self.recompute_blocks_s * self.background_compute_fraction,
         }
 
-    @property
+    @cached_property
     def method_costs(self) -> dict[str, float]:
         return {"restore": 0.65, "transfer": 1.0, "recompute": 1.35}
 
@@ -334,6 +338,8 @@ class Simulator:
         self._forecast_cache: dict[int, dict[int, float]] | None = None
         self._prediction_cache: dict[int, Prediction] | None = None
         self._price_cache: dict[int, float] = {}
+        self._probability_cache: dict[tuple, float] = {}
+        self._recovery_cache: dict[tuple[int, int, int, int], RecoveryPlan] = {}
         self._pool = sorted(workload.session_start)
         live = cfg.concurrent_sessions if cfg.concurrent_sessions > 0 else len(self._pool)
         self._admitted = 0
@@ -376,6 +382,7 @@ class Simulator:
         self._forecast_cache = None
         self._prediction_cache = None
         self._price_cache = {}
+        self._probability_cache = {}
 
     def _predictions(self) -> dict[int, Prediction]:
         """Recompute every idle session's next-turn prediction for this tick.
@@ -449,6 +456,25 @@ class Simulator:
         self._validate()
         return list(self.last_events)
 
+    def _recovery(self, start: int, context: int, host: int, remote: int) -> RecoveryPlan:
+        """Memoised `fastest_recovery`.
+
+        Foreground rates are fixed for a run, so the plan is a pure function of
+        the four prefix bounds. The same bounds recur constantly across nodes,
+        sessions and ticks, and the recovery planner is the single hottest
+        function in the control loop.
+        """
+        key = (start, context, host, remote)
+        plan = self._recovery_cache.get(key)
+        if plan is None:
+            plan = fastest_recovery(
+                start, context, PrefixAvailability(start, host, remote), self.cfg.foreground_rates
+            )
+            if len(self._recovery_cache) > 200_000:
+                self._recovery_cache.clear()
+            self._recovery_cache[key] = plan
+        return plan
+
     def _replica(self, nid: int, sid: int) -> KVReplica:
         return self.nodes[nid].replicas.get(sid, KVReplica())
 
@@ -490,21 +516,21 @@ class Simulator:
             return forecast
         projected = {node.nid: node.busy_until for node in self.nodes}
         decode_s = self.output_estimate / self.cfg.decode_blocks_s
+        count = len(self.nodes)
         for arrival, sid, prediction, state in self._pending_returns():
             forecast[sid] = dict(projected)
             prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
             best_nid, best_ttft, best_service = 0, math.inf, 0.0
-            for node in self.nodes:
-                availability = self._availability(sid, node.nid)
-                recovery = fastest_recovery(
-                    availability.local_hbm,
-                    state.context_blocks,
-                    availability,
-                    self.cfg.foreground_rates,
-                )
-                ttft = max(0.0, projected[node.nid] - arrival) + recovery.seconds + prompt
+            hbm, host = self._prefix_signature(sid)
+            for nid in range(count):
+                remote = 0
+                for other in range(count):
+                    if other != nid and hbm[other] > remote:
+                        remote = hbm[other]
+                recovery = self._recovery(hbm[nid], state.context_blocks, host[nid], remote)
+                ttft = max(0.0, projected[nid] - arrival) + recovery.seconds + prompt
                 if ttft < best_ttft:
-                    best_nid, best_ttft = node.nid, ttft
+                    best_nid, best_ttft = nid, ttft
                     best_service = recovery.seconds + prompt + decode_s
             projected[best_nid] = max(projected[best_nid], arrival) + prediction.return_probability * best_service
         self._forecast_cache = forecast
@@ -553,18 +579,60 @@ class Simulator:
         whenever the fluid queue is small, which is precisely the regime where
         the fluid queue is least trustworthy.
         """
+        sid = state.sid
+        hbm, host = self._prefix_signature(sid)
+        key = (sid, state.context_blocks, override, hbm, host)
+        cached = self._probability_cache.get(key)
+        if cached is not None:
+            return cached
+        context = state.context_blocks
+        arrival = prediction.predicted_arrival
+        prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
+        view = self._forecast().get(sid)
+        count = len(self.nodes)
         ttfts: list[float] = []
         queues: list[float] = []
-        for node in self.nodes:
-            hbm_override = override[1] if override and override[0] == node.nid else None
-            ttfts.append(self._predicted_ttft(state, prediction, node, hbm_override))
-            queues.append(self._predicted_queue(state, prediction, node))
-        mean_queue = sum(queues) / max(1, len(queues))
+        for nid in range(count):
+            remote = 0
+            for other in range(count):
+                if other != nid and hbm[other] > remote:
+                    remote = hbm[other]
+            local = override[1] if override is not None and override[0] == nid else hbm[nid]
+            recovery = self._recovery(local, context, host[nid], remote)
+            busy = self.nodes[nid].busy_until if view is None else view[nid]
+            queue = busy - arrival
+            if queue < 0.0:
+                queue = 0.0
+            queues.append(queue)
+            ttfts.append(queue + recovery.seconds + prompt)
+        mean_queue = sum(queues) / count
         shared = self.cfg.shared_uncertainty_s + self.cfg.shared_uncertainty_scale * mean_queue
         node_uncertainties = [
             self.cfg.queue_uncertainty_s + self.cfg.queue_uncertainty_scale * queue for queue in queues
         ]
-        return routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
+        value = routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
+        self._probability_cache[key] = value
+        return value
+
+    def _prefix_signature(self, sid: int) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """The part of cluster state this session's TTFT prediction depends on.
+
+        Only this session's own replicas enter its predicted TTFT, so using
+        them in the cache key makes the memo exact across the demotions that
+        happen inside a single reclamation round. The queue forecast is already
+        fixed for the tick.
+        """
+        hbm: list[int] = []
+        host: list[int] = []
+        for node in self.nodes:
+            replica = node.replicas.get(sid)
+            if replica is None:
+                hbm.append(0)
+                host.append(0)
+            else:
+                hbm.append(replica.hbm_prefix)
+                host.append(replica.host_prefix)
+        return tuple(hbm), tuple(host)
 
     def _complete_inflight(self, now: float) -> None:
         ready = [batch for batch in self.inflight if batch.complete_at <= now]
