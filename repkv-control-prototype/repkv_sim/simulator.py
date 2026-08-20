@@ -46,6 +46,7 @@ class Config:
     queue_uncertainty_scale: float = 0.8
     shared_uncertainty_scale: float = 0.5
     reprepare_cost_weight: float = 1.0
+    value_based_eviction: bool = True
     block_batch: int = 4
     high_watermark: float = 0.92
     low_watermark: float = 0.82
@@ -833,7 +834,7 @@ class Simulator:
                 if node.committed + extra <= target:
                     break
                 return False
-            if self.policy == "repkv":
+            if self.policy == "repkv" and self.cfg.value_based_eviction:
                 victim = min(candidates, key=lambda sid: self._eviction_score(sid, nid))
             else:
                 victim = min(candidates, key=lambda sid: node.replicas[sid].last_used)
