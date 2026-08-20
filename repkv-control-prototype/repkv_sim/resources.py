@@ -84,6 +84,7 @@ class HardwareSpec:
     host_capacity_bytes: float = 1.5 * 2**40
     decode_batch: int = 16
     decode_context_tokens: int = 30000
+    cache_reserve_fraction: float = 0.35
 
     @cached_property
     def effective_flops(self) -> float:
@@ -124,9 +125,16 @@ class ResourceModel:
         one: every sequence in the batch keeps its whole context resident, so a
         node cannot run more concurrent sequences than its HBM holds contexts.
         At long context this bound is what limits a node, not the batch setting.
+
+        `cache_reserve_fraction` withholds part of HBM from the running batch.
+        This is a deployment choice with first-order consequences: an engine
+        that sizes its batch to consume all of HBM leaves no room for the KV of
+        idle sessions, and then no placement policy can do anything, because
+        there is nowhere for a prepared or retained prefix to sit.
         """
         context_blocks = max(1, self.hardware.decode_context_tokens // self.model.block_tokens)
-        by_memory = max(1, self.hbm_blocks // context_blocks)
+        usable = self.hbm_blocks * (1.0 - self.hardware.cache_reserve_fraction)
+        by_memory = max(1, int(usable // context_blocks))
         return min(self.hardware.decode_batch, by_memory)
 
     @cached_property
