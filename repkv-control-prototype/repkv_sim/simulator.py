@@ -49,6 +49,7 @@ class Config:
     already_feasible_probability: float = 0.9
     unique_copy_persist: float = 0.5
     unique_copy_slack_fraction: float = 0.5
+    copy_persist_watermark: float = 0.5
     min_copy_persist: float = 0.15
     reprepare_cost_weight: float = 1.0
     spare_replica_factor: float = 0.01
@@ -807,7 +808,7 @@ class Simulator:
         copies are treated as certain. Above it, persistence falls toward
         `min_copy_persist` as the tier fills.
         """
-        low = self.cfg.low_watermark
+        low = self.cfg.copy_persist_watermark
         floor = self.cfg.min_copy_persist
         if fill <= low:
             return 1.0
@@ -873,6 +874,28 @@ class Simulator:
             if recovery.seconds > self.cfg.unique_copy_slack_fraction * max(1e-9, budget):
                 persist = min(persist, self.cfg.unique_copy_persist)
         return max(self.cfg.min_copy_persist, persist)
+
+    def _cluster_already_feasible(self, state: SessionState, prediction: Prediction, prompt_s: float) -> bool:
+        """True when some node already has a durable-enough path inside the SLO.
+
+        Per-node admission still tries to copy onto machines that cannot
+        restore or transfer in time. If one node already has a high-persist
+        path that fits, that extra copy is the empty action; preparing it
+        occupies the host or network link the foreground path still needs.
+        """
+        budget = self.cfg.ttft_slo_s + 1e-9 - prompt_s
+        hbm, host = self._prefix_signature(state.sid)
+        threshold = self.cfg.already_feasible_probability
+        for node in self.nodes:
+            persist = self._source_persist(node.nid, hbm, host, state.context_blocks, prompt_s)
+            if persist < threshold:
+                continue
+            remote = self._remote_prefix(node.nid, hbm, host)
+            recovery = self._recovery(hbm[node.nid], state.context_blocks, host[node.nid], remote)
+            queue = self._predicted_queue(state, prediction, node, z=0.0)
+            if recovery.seconds <= budget and queue <= budget:
+                return True
+        return False
 
     def _apply_prefix_override(
         self,
@@ -1243,7 +1266,15 @@ class Simulator:
             if prediction.return_probability < self.cfg.min_return_probability:
                 continue
             time_left = max(self.cfg.step_s, prediction.predicted_arrival - self.now)
+            prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
             before = self._cluster_probability(state, prediction)
+            if self.policy != "eager_full" and self._cluster_already_feasible(state, prediction, prompt):
+                for node in self.nodes:
+                    if self._availability(state.sid, node.nid).local_hbm >= state.context_blocks:
+                        continue
+                    self.metrics.prep_inspects += 1
+                    self.metrics.prep_skip_already_feasible += 1
+                continue
             for node in self.nodes:
                 availability = self._availability(state.sid, node.nid)
                 if availability.local_hbm >= state.context_blocks:

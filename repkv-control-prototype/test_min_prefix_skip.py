@@ -97,7 +97,7 @@ class SkipIsNotEviction(unittest.TestCase):
             sessions=16,
             concurrent_sessions=0,
             horizon_s=40.0,
-            ttft_slo_s=0.12,
+            ttft_slo_s=0.08,
             first_prompt_tokens=128,
             follow_prompt_tokens=128,
             output_tokens=64,
