@@ -44,7 +44,8 @@ def render(simulator: Simulator, clear: bool = True) -> None:
         actions = "+".join(f"{segment.method}:{segment.blocks}" for segment in candidate.plan.segments)
         print(
             f"s{candidate.sid}->n{candidate.nid} target={candidate.plan.target_prefix} "
-            f"actions={actions} gain={candidate.expected_gain:.4f} net={candidate.net_value:.4f} slack={candidate.slack_s:.2f}"
+            f"actions={actions} gain={candidate.expected_gain:.4f} displace={candidate.displacement_cost:.4f} "
+            f"net={candidate.net_value:.4f} slack={candidate.slack_s:.2f}"
         )
     if not simulator.last_candidates:
         print("-")
@@ -62,7 +63,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.no_ansi:
         BOLD = DIM = RESET = CLEAR = ""
-    cfg = Config(nodes=3, sessions=4, horizon_s=100.0, hbm_blocks=70)
+    cfg = Config(nodes=3, sessions=40, concurrent_sessions=6, horizon_s=100.0)
     simulator = Simulator(cfg, generate_workload(cfg, seed=7), "repkv", seed=7)
     if args.steps is not None:
         for _ in range(args.steps):
