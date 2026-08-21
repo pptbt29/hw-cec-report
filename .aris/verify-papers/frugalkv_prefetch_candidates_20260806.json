@@ -1,0 +1,62 @@
+[
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "cachedattention",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Cost-Efficient Large Language Model Serving for Multi-turn Conversations with CachedAttention"
+  },
+  {
+    "id": "cake",
+    "arxiv_id": "2410.03065",
+    "doi": null,
+    "title": "Compute or Load KV Cache? Why Not Both?"
+  },
+  {
+    "id": "hcache",
+    "arxiv_id": "2410.05004",
+    "doi": null,
+    "title": "Fast State Restoration in LLM Serving with HCache"
+  },
+  {
+    "id": "kvflow",
+    "arxiv_id": "2507.07400",
+    "doi": null,
+    "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows"
+  },
+  {
+    "id": "tokencake",
+    "arxiv_id": "2510.18586",
+    "doi": null,
+    "title": "Tokencake: A KV-Cache-centric Serving Framework for LLM-based Multi-Agent Applications"
+  },
+  {
+    "id": "pythia",
+    "arxiv_id": "2604.25899",
+    "doi": null,
+    "title": "Pythia: Toward Predictability-Driven Agent-Native LLM Serving"
+  },
+  {
+    "id": "pbkv",
+    "arxiv_id": "2605.06472",
+    "doi": null,
+    "title": "Efficient Serving for Dynamic Agent Workflows with Prediction-based KV-Cache Management"
+  },
+  {
+    "id": "cacheflow",
+    "arxiv_id": "2604.25080",
+    "doi": null,
+    "title": "CacheFlow: Efficient LLM Serving with 3D-Parallel KV Cache Restoration"
+  },
+  {
+    "id": "continuum",
+    "arxiv_id": "2511.02230",
+    "doi": null,
+    "title": "Continuum: A Predictive Control Plane for Agentic LLM Workflows"
+  }
+]

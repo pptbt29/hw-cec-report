@@ -1,0 +1,140 @@
+{
+  "verdict": "WARN",
+  "hallucination_rate": 0.0,
+  "pending_rate": 0.8571,
+  "warnings": [
+    "transient_failures_present"
+  ],
+  "papers": [
+    {
+      "id": "symphony",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2412.16434"
+      }
+    },
+    {
+      "id": "pythia",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.25899"
+      }
+    },
+    {
+      "id": "cake",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2410.03065"
+      }
+    },
+    {
+      "id": "moon cake",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "dualmap",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "randomization",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "kvflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2507.07400"
+      }
+    },
+    {
+      "id": "pbkv",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2605.06472"
+      }
+    },
+    {
+      "id": "orbitflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2601.10729"
+      }
+    },
+    {
+      "id": "robust_kv",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2607.16892"
+      }
+    },
+    {
+      "id": "prfaas",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.15039"
+      }
+    },
+    {
+      "id": "continuum",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "icdcs_edge_migration",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "resk",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "crossref_verify_pending",
+      "identifiers": {
+        "doi": "10.1109/jiot.2026.3709703"
+      }
+    }
+  ]
+}

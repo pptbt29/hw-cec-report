@@ -1,0 +1,108 @@
+{
+  "verdict": "WARN",
+  "hallucination_rate": 0.0,
+  "pending_rate": 0.8,
+  "warnings": [
+    "transient_failures_present"
+  ],
+  "papers": [
+    {
+      "id": "symphony",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2412.16434"
+      }
+    },
+    {
+      "id": "cachedattention",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "cake",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2410.03065"
+      }
+    },
+    {
+      "id": "hcache",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2410.05004"
+      }
+    },
+    {
+      "id": "kvflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2507.07400"
+      }
+    },
+    {
+      "id": "tokencake",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2510.18586"
+      }
+    },
+    {
+      "id": "pythia",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.25899"
+      }
+    },
+    {
+      "id": "pbkv",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2605.06472"
+      }
+    },
+    {
+      "id": "cacheflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.25080"
+      }
+    },
+    {
+      "id": "continuum",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2511.02230"
+      }
+    }
+  ]
+}

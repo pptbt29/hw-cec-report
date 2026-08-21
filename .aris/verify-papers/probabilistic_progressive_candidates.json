@@ -1,0 +1,38 @@
+[
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Improving Memory Management for LLM Inference Workloads"
+  },
+  {
+    "id": "kvflow",
+    "arxiv_id": "2507.07400",
+    "doi": null,
+    "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows"
+  },
+  {
+    "id": "hermes",
+    "arxiv_id": "2506.14851",
+    "doi": null,
+    "title": "Efficient Serving of LLM Applications with Probabilistic Demand Modeling"
+  },
+  {
+    "id": "scalesim",
+    "arxiv_id": "2601.21473",
+    "doi": null,
+    "title": "ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management"
+  },
+  {
+    "id": "pbkv",
+    "arxiv_id": "2605.06472",
+    "doi": null,
+    "title": "Efficient Serving for Dynamic Agent Workflows with Prediction-based KV-Cache Management"
+  },
+  {
+    "id": "predictive_service_placement",
+    "arxiv_id": "2006.09710",
+    "doi": null,
+    "title": "Leveraging the Power of Prediction: Predictive Service Placement for Latency-Sensitive Mobile Edge Computing"
+  }
+]

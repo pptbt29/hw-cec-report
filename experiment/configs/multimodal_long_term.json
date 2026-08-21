@@ -1,0 +1,219 @@
+{
+  "cluster": {
+    "num_nodes": 3,
+    "staleness_ms": 0.0,
+    "kv_capacity_bytes": null,
+    "activation_reserve_bytes": 64000000000.0,
+    "prefill_batch_size": 4,
+    "sla_slack_scheduling": true
+  },
+  "router": {
+    "gamma": 1.0,
+    "sla_margin_ms": 20.0,
+    "reject_intrinsically_infeasible": true,
+    "token_id_bytes": 4,
+    "request_overhead_bytes": 4096,
+    "response_overhead_bytes": 4096,
+    "visual_bytes_per_token": 8192
+  },
+  "kv_manager": {
+    "enabled": true,
+    "base_replication_factor": 2.0,
+    "max_replication_fraction": 0.5,
+    "background_bandwidth_fraction": 0.2,
+    "continuation_reference_turns": 4.0,
+    "min_window_ms": 1.0,
+    "max_window_ms": 5000.0
+  },
+  "policies": [
+    "nearest",
+    "greedy",
+    "greedy_kv",
+    "long_term",
+    "long_term_kv",
+    "oracle_prefetch",
+    "oracle_kv"
+  ],
+  "hardware": {
+    "name": "A800T-A2",
+    "num_devices": 8,
+    "peak_flops_per_device": 376000000000000.0,
+    "mem_bandwidth_per_device": 1600000000000.0,
+    "mem_capacity_per_device": 64000000000.0,
+    "compute_efficiency": 0.4,
+    "bandwidth_efficiency": 0.6,
+    "interconnect_bandwidth": 400000000000.0,
+    "fixed_overhead_ms": 0.2
+  },
+  "models": [
+    {
+      "name": "Qwen2-VL-7B-Instruct",
+      "model_type": "VLM",
+      "num_params": 7600000000.0,
+      "num_layers": 28,
+      "hidden_size": 3584,
+      "num_attention_heads": 28,
+      "num_kv_heads": 4,
+      "head_dim": 128,
+      "intermediate_size": 18944,
+      "vocab_size": 152064,
+      "dtype_bytes": 2,
+      "weight_bytes": null,
+      "vision_params": 675000000.0,
+      "patch_size": 14,
+      "spatial_merge": 2,
+      "tokens_per_image": null,
+      "default_output_dist": {
+        "kind": "lognormal",
+        "mean": 96.0,
+        "std": 48.0,
+        "minimum": 16,
+        "maximum": 384
+      },
+      "default_sla_ms": 1000.0,
+      "kv_block_size": 16
+    },
+    {
+      "name": "OpenVLA-7B",
+      "model_type": "VLA",
+      "num_params": 7500000000.0,
+      "num_layers": 32,
+      "hidden_size": 4096,
+      "num_attention_heads": 32,
+      "num_kv_heads": 32,
+      "head_dim": 128,
+      "intermediate_size": 11008,
+      "vocab_size": 32064,
+      "dtype_bytes": 2,
+      "weight_bytes": null,
+      "vision_params": 400000000.0,
+      "patch_size": 14,
+      "spatial_merge": 1,
+      "tokens_per_image": 256,
+      "default_output_dist": {
+        "kind": "fixed",
+        "mean": 7.0,
+        "std": 0.0,
+        "minimum": 7,
+        "maximum": 7
+      },
+      "default_sla_ms": 100.0,
+      "kv_block_size": 16
+    }
+  ],
+  "network": {
+    "links": [
+      {
+        "src": 0,
+        "dst": 1,
+        "bandwidth_bps": 100000000000.0,
+        "latency_ms": 0.05,
+        "name": "A-B-100G",
+        "link_efficiency": 0.9
+      },
+      {
+        "src": 1,
+        "dst": 2,
+        "bandwidth_bps": 100000000000.0,
+        "latency_ms": 0.05,
+        "name": "B-C-100G",
+        "link_efficiency": 0.9
+      },
+      {
+        "src": 0,
+        "dst": 2,
+        "bandwidth_bps": 25000000000.0,
+        "latency_ms": 0.2,
+        "name": "A-C-25G",
+        "link_efficiency": 0.9
+      }
+    ]
+  },
+  "workload": {
+    "duration_ms": 60000.0,
+    "session_start_spread_frac": 0.08,
+    "seed": 17,
+    "mobility_start_frac": 0.2,
+    "mobility_ratio": 0.7,
+    "mobility_granularity": "session",
+    "mobility_residency_turns": 8,
+    "groups": [
+      {
+        "model_name": "Qwen2-VL-7B-Instruct",
+        "name": "video-dialog",
+        "entry_mode": "counts",
+        "concurrency": 72,
+        "entry_concurrency": [
+          16,
+          24,
+          32
+        ],
+        "entry_ratios": null,
+        "sla_ms": 1000.0,
+        "arrival_rate": 0.8,
+        "prompt_dist": {
+          "kind": "lognormal",
+          "mean": 128,
+          "std": 64,
+          "minimum": 32,
+          "maximum": 512
+        },
+        "output_dist": {
+          "kind": "lognormal",
+          "mean": 96,
+          "std": 48,
+          "minimum": 16,
+          "maximum": 384
+        },
+        "turns_mean": 28.0,
+        "turns_min": 20,
+        "turns_max": 36,
+        "image_size": [
+          1280,
+          720
+        ],
+        "num_frames": 2,
+        "shared_prefix_tokens": 0,
+        "history_growth": 0.15
+      },
+      {
+        "model_name": "OpenVLA-7B",
+        "name": "control-loop",
+        "entry_mode": "counts",
+        "concurrency": 72,
+        "entry_concurrency": [
+          24,
+          24,
+          24
+        ],
+        "entry_ratios": null,
+        "sla_ms": 100.0,
+        "arrival_rate": 2.0,
+        "prompt_dist": {
+          "kind": "fixed",
+          "mean": 32,
+          "std": 0,
+          "minimum": 32,
+          "maximum": 32
+        },
+        "output_dist": {
+          "kind": "fixed",
+          "mean": 7,
+          "std": 0,
+          "minimum": 7,
+          "maximum": 7
+        },
+        "turns_mean": 48.0,
+        "turns_min": 36,
+        "turns_max": 60,
+        "image_size": [
+          224,
+          224
+        ],
+        "num_frames": 2,
+        "shared_prefix_tokens": 64,
+        "history_growth": 0.15
+      }
+    ]
+  }
+}

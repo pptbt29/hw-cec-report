@@ -1,0 +1,94 @@
+{
+  "verdict": "WARN",
+  "hallucination_rate": 0.0,
+  "pending_rate": 0.6667,
+  "warnings": [
+    "transient_failures_present"
+  ],
+  "papers": [
+    {
+      "id": "continuum",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2511.02230"
+      }
+    },
+    {
+      "id": "symphony",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2412.16434"
+      }
+    },
+    {
+      "id": "kvflow",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2507.07400"
+      }
+    },
+    {
+      "id": "pythia",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "arxiv_verify_pending",
+      "identifiers": {
+        "arxiv_id": "2604.25899"
+      }
+    },
+    {
+      "id": "randomization_joint",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "dualmap",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    },
+    {
+      "id": "cooptimizing_edge",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "crossref_verify_pending",
+      "identifiers": {
+        "doi": "10.1109/jiot.2026.3709703"
+      }
+    },
+    {
+      "id": "robust_kv",
+      "status": "verified",
+      "method": "arxiv",
+      "confidence": "high",
+      "reason": null,
+      "identifiers": {
+        "arxiv_id": "2607.16892"
+      }
+    },
+    {
+      "id": "geo_migration_icdcs",
+      "status": "verify_pending",
+      "method": null,
+      "confidence": null,
+      "reason": "s2_verify_pending",
+      "identifiers": {}
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving
+Preble: Efficient Distributed Prompt Scheduling for LLM Serving
+Llumnix: Dynamic Scheduling for Large Language Model Serving
+DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving
+SGLang: Efficient Execution of Structured Language Model Programs
+Sarathi-Serve: Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve
+Strata: Hierarchical Context Caching for Long Context Language Model Serving
+Libra: Taming the Distributed Serving of LLMs with Dynamic Rebalancing
+SYMPHONY: Efficient and Scalable Session Management for LLM Serving
+Bidaw: Streaming Stateful LLM Serving with Hierarchical KV Storage
+Co-optimizing Request Scheduling and KV Caching for Edge LLM Serving
+Edge Inference for Large Language Models With Pipeline Parallelism and Batching

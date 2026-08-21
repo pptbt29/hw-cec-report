@@ -1,0 +1,62 @@
+[
+  {
+    "id": "joint-batching-twc24",
+    "arxiv_id": "2307.14350",
+    "doi": "10.1109/TWC.2024.3404811",
+    "title": "Joint Batching and Scheduling for High-Throughput Multiuser Edge AI with Asynchronous Task Arrivals"
+  },
+  {
+    "id": "coopt-edge-kv-jiot26",
+    "arxiv_id": null,
+    "doi": "10.1109/JIOT.2026.3709703",
+    "title": "Co-optimizing Request Scheduling and KV Caching for Edge LLM Serving"
+  },
+  {
+    "id": "edge-pipeline-batching-tcom26",
+    "arxiv_id": null,
+    "doi": "10.1109/TCOMM.2026.3686718",
+    "title": "Edge Inference for Large Language Models With Pipeline Parallelism and Batching"
+  },
+  {
+    "id": "edge-offload-batch-fgcs25",
+    "arxiv_id": null,
+    "doi": "10.1016/j.future.2025.108030",
+    "title": "A task offloading and batch scheduling framework for Edge-assisted inference"
+  },
+  {
+    "id": "preble-iclr25",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Preble: Efficient Distributed Prompt Scheduling for LLM Serving"
+  },
+  {
+    "id": "mooncake-fast25",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Mooncake: Trading More Storage for Less Computation — A KVCache-centric Architecture for Serving LLM Chatbot"
+  },
+  {
+    "id": "strata-osdi26",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Strata: Hierarchical Context Caching for Long Context Language Model Serving"
+  },
+  {
+    "id": "libra-nsdi26",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Libra: Flexible Request Partitioning and Scheduling for Serving Unbalanced and Dynamic LLM Workloads"
+  },
+  {
+    "id": "lmetric-osdi26",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Simple Is Better: Multiplication May Be All You Need for LLM Request Scheduling"
+  },
+  {
+    "id": "edge-kv-migration-icdcs26",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Efficient KV Cache Migration for Geo-Distributed LLM Inference in Collaborative Edge Computing"
+  }
+]

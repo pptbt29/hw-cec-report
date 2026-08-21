@@ -1,0 +1,104 @@
+[
+  {
+    "id": "preble",
+    "arxiv_id": "2407.00023",
+    "doi": null,
+    "title": "Preble: Efficient Distributed Prompt Scheduling for LLM Serving"
+  },
+  {
+    "id": "cachedattention",
+    "arxiv_id": "2403.19708",
+    "doi": null,
+    "title": "Cost-Efficient Large Language Model Serving for Multi-turn Conversations with CachedAttention"
+  },
+  {
+    "id": "llumnix",
+    "arxiv_id": "2406.03243",
+    "doi": null,
+    "title": "Llumnix: Dynamic Scheduling for Large Language Model Serving"
+  },
+  {
+    "id": "memserve",
+    "arxiv_id": "2406.17565",
+    "doi": null,
+    "title": "MemServe: Context Caching for Disaggregated LLM Serving with Elastic Memory Pool"
+  },
+  {
+    "id": "mooncake",
+    "arxiv_id": "2407.00079",
+    "doi": null,
+    "title": "Mooncake: Trading More Storage for Less Computation -- A KVCache-centric Architecture for Serving LLM Chatbot"
+  },
+  {
+    "id": "cachegen",
+    "arxiv_id": null,
+    "doi": "10.1145/3651890.3672274",
+    "title": "CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving"
+  },
+  {
+    "id": "symphony",
+    "arxiv_id": "2412.16434",
+    "doi": null,
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "dualmap",
+    "arxiv_id": "2602.06502",
+    "doi": null,
+    "title": "DualMap: Enabling Both Cache Affinity and Load Balancing for Distributed LLM Serving"
+  },
+  {
+    "id": "kvrouting",
+    "arxiv_id": "2601.18999",
+    "doi": null,
+    "title": "Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"
+  },
+  {
+    "id": "edge_handover",
+    "arxiv_id": "2603.28018",
+    "doi": null,
+    "title": "Low-Latency Edge LLM Handover via Joint KV Cache Transfer and Token Prefill"
+  },
+  {
+    "id": "agentservesim",
+    "arxiv_id": "2606.09613",
+    "doi": null,
+    "title": "AGENTSERVESIM: A Hardware-aware Simulator for Multi-Turn LLM Agent Serving"
+  },
+  {
+    "id": "continuum",
+    "arxiv_id": "2511.02230",
+    "doi": null,
+    "title": "Continuum: Efficient and Robust Multi-Turn LLM Agent Scheduling with KV Cache Time-to-Live"
+  },
+  {
+    "id": "agserve",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "Transcending Cost-Quality Tradeoff in Agent Serving via Session-Awareness"
+  },
+  {
+    "id": "banaserve",
+    "arxiv_id": "2510.13223",
+    "doi": null,
+    "title": "BanaServe: Unified KV Cache and Dynamic Module Migration for Balancing Disaggregated LLM Serving in AI Infrastructure"
+  },
+  {
+    "id": "lmcache",
+    "arxiv_id": "2510.09665",
+    "doi": null,
+    "title": "LMCache: An Efficient KV Cache Layer for Enterprise-Scale LLM Inference"
+  },
+  {
+    "id": "robust_kv",
+    "arxiv_id": "2607.16892",
+    "doi": null,
+    "title": "Robust KV Cache Management for LLM Serving under Output Token Length Uncertainty"
+  },
+  {
+    "id": "kvcache_wild",
+    "arxiv_id": null,
+    "doi": null,
+    "title": "KVCache Cache in the Wild: Characterizing and Optimizing KVCache Cache at a Large Cloud Provider"
+  }
+]

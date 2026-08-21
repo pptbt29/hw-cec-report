@@ -1,0 +1,74 @@
+[
+  {
+    "id": "symphony",
+    "title": "SYMPHONY: Enabling Compute-Memory Disaggregation in LLM Serving Systems"
+  },
+  {
+    "id": "kvflow",
+    "arxiv_id": "2507.07400",
+    "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows"
+  },
+  {
+    "id": "mooncake",
+    "arxiv_id": "2407.00079",
+    "title": "Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving"
+  },
+  {
+    "id": "llumnix",
+    "arxiv_id": "2406.03243",
+    "title": "Llumnix: Dynamic Scheduling for Large Language Model Serving"
+  },
+  {
+    "id": "cachegen",
+    "arxiv_id": "2310.07240",
+    "doi": "10.1145/3651890.3672274",
+    "title": "CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving"
+  },
+  {
+    "id": "infercept",
+    "arxiv_id": "2402.01869",
+    "title": "InferCept: Efficient Intercept Support for Augmented Large Language Model Inference"
+  },
+  {
+    "id": "superinfer",
+    "title": "SuperInfer: SLO-Aware KV Cache Management for GPU-CPU LLM Serving Systems"
+  },
+  {
+    "id": "apt_serve",
+    "arxiv_id": "2504.07494",
+    "doi": "10.1145/3725394",
+    "title": "Apt-Serve: Adaptive Request Scheduling on Hybrid Cache for Scalable LLM Inference Serving"
+  },
+  {
+    "id": "adaptive_kv_caching",
+    "doi": "10.1145/3767295.3803570",
+    "title": "High Throughput and Low Latency LLM Serving via Adaptive KV Caching"
+  },
+  {
+    "id": "resk",
+    "doi": "10.1109/JIOT.2026.3709703",
+    "title": "Co-optimizing Request Scheduling and KV Caching for Edge LLM Serving"
+  },
+  {
+    "id": "joint_cache_routing",
+    "title": "Randomization Boosts KV Caching, Learning Balances Query Load: A Joint Perspective"
+  },
+  {
+    "id": "dualmap",
+    "title": "DualMap: SLO-Aware Inference Serving with Dual-Instance KV Cache Mapping"
+  },
+  {
+    "id": "cec_kv_migration",
+    "title": "Efficient KV Cache Migration for Geo-Distributed LLM Inference in Collaborative Edge Computing"
+  },
+  {
+    "id": "pythia",
+    "arxiv_id": "2604.25899",
+    "title": "Pythia: Exploiting Workflow Predictability for Efficient Agent-Native LLM Serving"
+  },
+  {
+    "id": "pbkv",
+    "arxiv_id": "2605.06472",
+    "title": "Efficient Serving for Dynamic Agent Workflows with Prediction-based KV-Cache Management"
+  }
+]
