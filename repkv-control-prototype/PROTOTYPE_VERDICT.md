@@ -1,19 +1,51 @@
-# Prototype Verdict
+# 原型验证结论
 
-## Question answered
+## 验证问题
 
-Can the original RepKV control path be represented without future-information leakage, invalid partial KV sources, softening an impossible SLO into a nominally useful plan, or exceeding HBM while background work is in flight?
+RepKV 控制过程能否在不读取真实未来、不使用无效部分 KV 来源、不把硬 SLO 不可行计划包装成有效计划，并且不在后台工作执行期间突破 HBM 容量的条件下运行？
 
-## Current answer
+## 当前结论
 
-Yes at the control-model level. The prototype can construct a complete minimum-prefix plan, execute it progressively, re-evaluate it every control interval, expose the resulting state to a router, and reclaim HBM using the same expected SLO-loss signal. Runtime invariants held in the default three-seed smoke run and in a tighter-SLO pressure trace that exercised transfer, recomputation, demotion, two prepared routing options, and batch completion.
+在控制模型层面可以。当前原型能够构造完整的最小前缀计划，按 batch 渐进执行，在每个控制周期重新评估状态，向 router 暴露有效前缀和剩余恢复时间，并使用同一个预期 SLO 损失信号回收 HBM。
 
-The initial three-seed run produced only a modest RepKV trend: SLO attainment was `0.9502` for RepKV, `0.9422` for on-demand recovery, and `0.9327` for eager full preparation. These values are a smoke result, not paper evidence. They show that the state machine runs and that eager copying can lose under HBM pressure; they do not establish statistical significance or hardware benefit.
+默认 5 seed run 和更紧的 SLO 压力 trace 均未触发运行时不变量错误。压力 trace 实际经过了远端传输、精确重算、HBM 降级、为一个 session 准备两个候选节点和 batch 完成等状态。
 
-## Decision retained
+不变量在默认配置之外并非总是成立：在 2 节点、长 context 的配置下会触发 `node capacity exceeded` 断言，且该现象在完全不做准备的 `on_demand` 上同样出现，属于容量预留逻辑本身的缺陷。
 
-The algorithm should operate on strict valid prefixes and admit only complete hard-SLO-feasible plans. A complete plan may contain contiguous local-restore, remote-transfer, and exact-recompute ranges, while execution remains batch-progressive. Preparation and eviction should share a cluster-level expected SLO-success signal so that creating a second viable routing option has value even when one node is already viable.
+## 当前数值
 
-## Still outside the prototype
+默认配置（4 节点、48 session、180 blocks/节点、seeds 1–5）的 seed 宏平均结果：
 
-Absolute performance, foreground/background interference, actual Ascend KV layout compatibility, block-table mutation, asynchronous transport, host-pinned allocation, failures, and multi-server correctness remain unimplemented. Those require a measured runtime data plane rather than additional simulator detail.
+| 策略 | SLO attainment | goodput (req/s) | P99 TTFT (s) | 准备 blocks（5 seed 均值） |
+|---|---:|---:|---:|---:|
+| `on_demand` | 0.9343 | 0.5708 | 3.10 | 0 |
+| `eager_full` | 0.9330 | 0.5692 | 2.77 | 2922 |
+| `repkv` | 0.9518 | 0.5817 | 2.82 | 53 |
+
+这些数值只说明状态机能够运行，并显示完整预准备会因 HBM 压力产生负收益。它们不能证明统计显著性、硬件收益或论文主张。
+
+必须注意准备量的绝对值：`repkv` 在 240 秒、4 个节点上一共只准备 53 个 block，而 `eager_full` 是 2922 个。因此 `repkv` 与 `on_demand` 之间的 attainment 差异主要来自回收策略（预期 SLO 损失分数与 LRU 的差别），而不是来自请求到达前的 KV 准备。任何把这一差距表述为"主动准备的收益"的说法都不成立。
+
+## 准备动作为什么很少发生
+
+按预测返回时刻估计排队之后，控制器已经能够生成准备动作；在此之前默认配置下的准备量为 0，即预放置模块完全空转。当前剩余的限制有三层：
+
+1. **workload 没有排队压力。** 默认配置下节点利用率很低，绝大多数空闲 session 在预测返回时刻本来就有充裕的 TTFT 余量，准备的边际收益接近 0。
+2. **排队预测是偏低估计。** 单点预测器对已经错过预测时刻的 session 不再给出到达时间，这类 session 占空闲 session 的 65%，当前不计入排队预测。
+3. **准备与回收在时间上脱耦。** 在 4 节点 96 session 配置下，71% 的 SLO 失败请求在到达前 18 秒内曾经在某个节点持有完整 HBM 前缀。失败路径是"前缀驻留 → 被回收 → 到达时付完整 restore"，而准备窗口内前缀仍然驻留，看不出需要准备；等到前缀被回收，session 往往已经过了预测返回时刻，不再进入准备队列。
+
+第 3 点是当前与 idea 最实质的偏离：idea 要求准备和回收由同一个目标决定，当前实现只共享打分公式，不共享时间轴。
+
+## 保留的设计判断
+
+控制器应以严格连续有效前缀为基本状态，并且只接纳能够满足硬 SLO 的完整计划。完整计划可以包含连续的本地恢复、远端传输和精确重算区间，但数据面仍按小 batch 渐进执行。准备和回收应共用集群级预期 SLO 成功概率。
+
+准备决策必须使用预测返回时刻的排队估计，而不是当前 `busy_until`：后者看不到"KV 所在节点在请求到达前变忙"这一风险，会使整个预放置模块失去目标。
+
+集群可路由概率不能把各节点成功事件当作独立事件。当一个 session 的前缀在所有节点都缺失时，各节点恢复的是同一段历史，误差是共同的；完全独立假设会把四个位于 SLO 边界的节点合成为 0.94 的成功概率，系统性低估准备价值。当前实现把预测误差分为共同项和节点独立项两部分。
+
+## 未验证部分
+
+原型没有验证绝对性能、前后台资源竞争、Ascend KV 布局兼容性、block table 修改、异步传输、host pinned memory、故障恢复和多服务器正确性。这些问题必须由真实 serving runtime 和实测数据面回答，继续增加模拟器细节不能替代硬件验证。
+
+同样没有验证的是准备机制本身是否有效：在当前 workload 下准备量太小，无法支撑任何关于预放置收益的结论。
