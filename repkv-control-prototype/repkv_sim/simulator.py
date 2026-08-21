@@ -801,10 +801,30 @@ class Simulator:
         queue = self._predicted_queue(state, prediction, node)
         return (queue if queue > recovery.seconds else recovery.seconds) + prompt
 
+    def _live_fill(self, node: Node, tier: str) -> float:
+        """Occupancy of copies that still have a next turn.
+
+        Finished scripts leave KV behind until LRU drops them. Counting those
+        leftovers would make persistence fall on an idle DRAM tier and cause
+        the controller to pin copies that affinity would have served.
+        """
+        used = 0
+        for sid, replica in node.replicas.items():
+            state = self.sessions.get(sid)
+            if state is None:
+                continue
+            if state.completed_turn < 0:
+                continue
+            if self.workload.script(sid, state.completed_turn + 1) is None and state.active_until <= self.now:
+                continue
+            used += replica.hbm_prefix if tier == "hbm" else replica.host_prefix
+        capacity = node.capacity if tier == "hbm" else node.host_capacity
+        return used / max(1, capacity)
+
     def _fill_persist(self, fill: float) -> float:
         """Probability a copy survives until arrival, from current occupancy.
 
-        Below the low watermark there is no eviction pressure, so volatile
+        Below the persist watermark there is no eviction pressure, so volatile
         copies are treated as certain. Above it, persistence falls toward
         `min_copy_persist` as the tier fills.
         """
@@ -826,9 +846,9 @@ class Simulator:
             if reachable < best:
                 continue
             if hbm[node.nid] >= host[node.nid]:
-                fill = node.committed / max(1, node.capacity)
+                fill = self._live_fill(node, "hbm")
             else:
-                fill = node.host_used / max(1, node.host_capacity)
+                fill = self._live_fill(node, "host")
             peer = self._fill_persist(fill)
             if reachable > best or peer < persist:
                 best = reachable
@@ -863,7 +883,7 @@ class Simulator:
         if host[nid] > local_hbm:
             volatile = True
             node = self.nodes[nid]
-            persist = min(persist, self._fill_persist(node.host_used / max(1, node.host_capacity)))
+            persist = min(persist, self._fill_persist(self._live_fill(node, "host")))
         if remote > (host[nid] if host[nid] > local_hbm else local_hbm):
             volatile = True
             persist = min(persist, self._peer_persist(nid, hbm, host))
