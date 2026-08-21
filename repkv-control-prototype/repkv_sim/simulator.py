@@ -48,6 +48,7 @@ class Config:
     ttft_residual_z: float = 1.0
     already_feasible_probability: float = 0.9
     unique_copy_persist: float = 0.5
+    unique_copy_slack_fraction: float = 0.5
     min_copy_persist: float = 0.15
     reprepare_cost_weight: float = 1.0
     spare_replica_factor: float = 0.01
@@ -839,29 +840,38 @@ class Simulator:
         hbm: tuple[int, ...],
         host: tuple[int, ...],
         context: int,
+        prompt_s: float = 0.0,
     ) -> float:
         """Probability host/remote copies used by this node are still there.
 
         Local HBM is reserved on this node, so a fully pinned prefix is
         certain. Host and remote copies are not reserved; occupancy and
         uniqueness decide how much the controller may rely on them.
+
+        A unique volatile copy is only discounted when its recovery already
+        consumes a large fraction of the SLO budget. A restore that finishes
+        in a few tens of milliseconds against a 0.6 s budget should remain
+        a no-op; uniqueness then does not justify occupying the host link.
         """
         local_hbm = hbm[nid]
         if local_hbm >= context:
             return 1.0
         persist = 1.0
         volatile = False
+        remote = self._remote_prefix(nid, hbm, host)
         if host[nid] > local_hbm:
             volatile = True
             node = self.nodes[nid]
             persist = min(persist, self._fill_persist(node.host_used / max(1, node.host_capacity)))
-        remote = self._remote_prefix(nid, hbm, host)
         if remote > (host[nid] if host[nid] > local_hbm else local_hbm):
             volatile = True
             persist = min(persist, self._peer_persist(nid, hbm, host))
         covering = sum(1 for index in range(len(hbm)) if (hbm[index] if hbm[index] > host[index] else host[index]) >= context)
         if volatile and covering <= 1:
-            persist = min(persist, self.cfg.unique_copy_persist)
+            recovery = self._recovery(local_hbm, context, host[nid], remote)
+            budget = self.cfg.ttft_slo_s - prompt_s
+            if recovery.seconds > self.cfg.unique_copy_slack_fraction * max(1e-9, budget):
+                persist = min(persist, self.cfg.unique_copy_persist)
         return max(self.cfg.min_copy_persist, persist)
 
     def _apply_prefix_override(
@@ -944,7 +954,7 @@ class Simulator:
             # device serves other requests, so the two overlap rather than add.
             volatile_ttft = (queue if queue > recovery.seconds else recovery.seconds) + prompt
             durable_ttft = (queue if queue > durable.seconds else durable.seconds) + prompt
-            persist = self._source_persist(nid, hbm, host, context)
+            persist = self._source_persist(nid, hbm, host, context, prompt)
             volatile_ttfts.append(volatile_ttft)
             durable_ttfts.append(durable_ttft)
             persists.append(persist)
@@ -1164,19 +1174,15 @@ class Simulator:
                     node.until["compute"] - self.now,
                 )
                 err_q = actual_queue - fluid_queue
-                close = abs(self.now - prediction.predicted_arrival) <= max(5.0, 5.0 * self.cfg.step_s)
-                if close:
-                    self._queue_residual.update(fluid_queue, actual_queue)
-                    self.metrics.queue_residual_sum += err_q
-                    self.metrics.queue_residual_n += 1
+                self._queue_residual.update(fluid_queue, actual_queue)
+                self.metrics.queue_residual_sum += err_q
+                self.metrics.queue_residual_n += 1
                 recovery_s = sum(
                     segment.blocks / self.cfg.foreground_rates[segment.method]
                     for segment in recovery_segments
                 )
                 prompt_hat = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
                 raw_ttft = (fluid_queue if fluid_queue > recovery_s else recovery_s) + prompt_hat
-                if not close:
-                    raw_ttft = None
         node.active_reservations[turn.sid] = final_context
         replica = node.replicas.get(turn.sid)
         if replica:
@@ -1257,7 +1263,7 @@ class Simulator:
                     reason = "ok" if plan is not None and plan.segments else "no_timely_plan"
                 else:
                     hbm, host = self._prefix_signature(state.sid)
-                    persist = self._source_persist(node.nid, hbm, host, state.context_blocks)
+                    persist = self._source_persist(node.nid, hbm, host, state.context_blocks, prompt)
                     plan, reason = decide_minimum_slo_preparation(
                         state.context_blocks,
                         availability,
