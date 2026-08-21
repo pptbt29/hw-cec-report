@@ -1108,6 +1108,8 @@ class Simulator:
                 denominator = self.cfg.background_rates[method] * self.cfg.preparation_horizon_s
                 resource_cost += prices[method] * plan.blocks(method) / max(1.0, denominator)
             if self.policy == "eager_full":
+                # Always-prepare probe: not a dominance-safe controller.
+                # No-op has value 0; this surrogate is almost always positive.
                 net = 1.0 - 0.01 * resource_cost
                 score = 1.0 / max(resource_cost, 1e-9)
             else:

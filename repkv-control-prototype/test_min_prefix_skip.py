@@ -119,6 +119,9 @@ class SkipIsNotEviction(unittest.TestCase):
         self.assertEqual(repkv_own, [])
         self.assertGreater(repkv.metrics.prep_skip_already_feasible, 0)
         self.assertTrue(eager_own)
+        # Full-prefix admission ignores SLO gain, so it prepares even when
+        # a local restore already meets the deadline. A covering controller
+        # would take the no-op that `repkv` took here.
         self.assertGreater(eager.metrics.prep_accepted, 0)
         self.assertEqual(eager.metrics.prep_skip_already_feasible, 0)
 
