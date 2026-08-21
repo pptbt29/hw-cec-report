@@ -403,7 +403,12 @@ class ResidualTracker:
     def adjust(self, predicted: float, z: float = 0.0) -> float:
         if self.count < 2:
             return max(0.0, predicted)
-        return max(0.0, predicted + self.mean + z * self.std())
+        # The fluid point estimate is a lower bound in expectation. A negative
+        # residual usually means the request arrived earlier than the median
+        # wait used to evaluate the queue, not that the fluid model is high.
+        # Only underestimation is written back into the point estimate.
+        bias = self.mean if self.mean > 0.0 else 0.0
+        return max(0.0, predicted + bias + z * self.std())
 
 
 SESSION_CLASSES = (
@@ -1158,15 +1163,20 @@ class Simulator:
                     node.slot_free_at(self.now) - self.now,
                     node.until["compute"] - self.now,
                 )
-                self._queue_residual.update(fluid_queue, actual_queue)
-                self.metrics.queue_residual_sum += actual_queue - fluid_queue
-                self.metrics.queue_residual_n += 1
+                err_q = actual_queue - fluid_queue
+                close = abs(self.now - prediction.predicted_arrival) <= max(5.0, 5.0 * self.cfg.step_s)
+                if close:
+                    self._queue_residual.update(fluid_queue, actual_queue)
+                    self.metrics.queue_residual_sum += err_q
+                    self.metrics.queue_residual_n += 1
                 recovery_s = sum(
                     segment.blocks / self.cfg.foreground_rates[segment.method]
                     for segment in recovery_segments
                 )
                 prompt_hat = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
                 raw_ttft = (fluid_queue if fluid_queue > recovery_s else recovery_s) + prompt_hat
+                if not close:
+                    raw_ttft = None
         node.active_reservations[turn.sid] = final_context
         replica = node.replicas.get(turn.sid)
         if replica:

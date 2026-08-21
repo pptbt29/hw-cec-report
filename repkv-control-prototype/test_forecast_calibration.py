@@ -16,10 +16,12 @@ class ResidualTrackerAdjusts(unittest.TestCase):
         self.assertGreater(adjusted, 0.35)
         self.assertGreater(tracker.mean, 0.3)
 
-    def test_adjust_never_goes_negative(self) -> None:
+    def test_negative_residual_does_not_lower_the_estimate(self) -> None:
         tracker = ResidualTracker(alpha=0.5, prior_std=0.1)
-        tracker.update(1.0, 0.0)
-        self.assertEqual(tracker.adjust(0.0, z=1.0), 0.0)
+        for _ in range(8):
+            tracker.update(0.6, 0.1)
+        self.assertLess(tracker.mean, 0.0)
+        self.assertGreaterEqual(tracker.adjust(0.6, z=0.0), 0.6)
 
     def test_cold_start_leaves_the_fluid_estimate(self) -> None:
         tracker = ResidualTracker(alpha=0.05, prior_std=0.25)
