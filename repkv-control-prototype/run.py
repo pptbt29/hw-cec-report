@@ -10,27 +10,33 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from repkv_sim import Config, HardwareSpec, ResourceModel, aggregate, run_experiment
+from repkv_sim import Config, HardwareSpec, ModelSpec, ResourceModel, aggregate, run_experiment
 
 GiB = 2**30
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the causal RepKV control-plane prototype.")
+    parser.add_argument(
+        "--profile",
+        choices=("dc", "edge"),
+        default="dc",
+        help="dc: 70B/100GbE/32K; edge: 7B/1GbE/1500 (PROTOTYPE_VERDICT §6)",
+    )
     parser.add_argument("--seeds", default="1,2,3,4,5")
-    parser.add_argument("--nodes", type=int, default=4)
-    parser.add_argument("--sessions", type=int, default=2000, help="size of the session script pool")
+    parser.add_argument("--nodes", type=int, default=None)
+    parser.add_argument("--sessions", type=int, default=None, help="size of the session script pool")
     parser.add_argument(
         "--concurrent-sessions",
         type=int,
-        default=90,
+        default=None,
         help="live sessions held by replenishment; 0 starts the whole pool at once",
     )
     parser.add_argument("--horizon", type=float, default=900.0)
     parser.add_argument("--ttft-slo", type=float, default=3.0)
-    parser.add_argument("--context-tokens", type=int, default=32000)
-    parser.add_argument("--host-gib", type=float, default=256.0, help="DRAM tier given to KV per node")
-    parser.add_argument("--network-gbytes", type=float, default=12.5, help="inter-node bandwidth")
+    parser.add_argument("--context-tokens", type=int, default=None)
+    parser.add_argument("--host-gib", type=float, default=None, help="DRAM tier given to KV per node")
+    parser.add_argument("--network-gbytes", type=float, default=None, help="inter-node bandwidth")
     parser.add_argument(
         "--hbm-blocks",
         type=int,
@@ -53,36 +59,82 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _profile_defaults(profile: str) -> dict[str, float | int]:
+    if profile == "edge":
+        return {
+            "nodes": 4,
+            "sessions": 2000,
+            "concurrent_sessions": 82,
+            "context_tokens": 1500,
+            "host_gib": 32.0,
+            "network_gbytes": 0.125,
+            "follow_prompt_tokens": 300,
+        }
+    return {
+        "nodes": 4,
+        "sessions": 2000,
+        "concurrent_sessions": 90,
+        "context_tokens": 32000,
+        "host_gib": 256.0,
+        "network_gbytes": 12.5,
+        "follow_prompt_tokens": 3000,
+    }
+
+
 def main() -> None:
     args = parse_args()
-    resources = ResourceModel(
-        hardware=HardwareSpec(
-            decode_context_tokens=args.context_tokens,
-            host_capacity_bytes=args.host_gib * GiB,
-            network_bytes_s=args.network_gbytes * 1e9,
-        )
+    defaults = _profile_defaults(args.profile)
+    nodes = defaults["nodes"] if args.nodes is None else args.nodes
+    sessions = defaults["sessions"] if args.sessions is None else args.sessions
+    concurrent = (
+        defaults["concurrent_sessions"] if args.concurrent_sessions is None else args.concurrent_sessions
     )
+    context_tokens = defaults["context_tokens"] if args.context_tokens is None else args.context_tokens
+    host_gib = defaults["host_gib"] if args.host_gib is None else args.host_gib
+    network_gbytes = defaults["network_gbytes"] if args.network_gbytes is None else args.network_gbytes
+    follow_prompt_tokens = int(defaults["follow_prompt_tokens"])
+    if args.profile == "edge":
+        model = ModelSpec(layers=32, kv_heads=8, head_dim=128, parameters=7.0e9)
+        hardware = HardwareSpec(
+            devices=1,
+            device_flops=2.0e13,
+            achieved_utilisation=0.35,
+            hbm_capacity_bytes=24 * GiB,
+            network_bytes_s=network_gbytes * 1e9,
+            host_capacity_bytes=host_gib * GiB,
+            decode_batch=8,
+            decode_context_tokens=context_tokens,
+        )
+    else:
+        model = ModelSpec()
+        hardware = HardwareSpec(
+            decode_context_tokens=context_tokens,
+            host_capacity_bytes=host_gib * GiB,
+            network_bytes_s=network_gbytes * 1e9,
+        )
+    resources = ResourceModel(model=model, hardware=hardware)
     cfg = Config(
-        nodes=args.nodes,
-        sessions=args.sessions,
-        concurrent_sessions=args.concurrent_sessions,
+        nodes=int(nodes),
+        sessions=int(sessions),
+        concurrent_sessions=int(concurrent),
         horizon_s=args.horizon,
         ttft_slo_s=args.ttft_slo,
         resources=resources,
         hbm_blocks_override=args.hbm_blocks,
         think_scale=args.think_scale,
-        first_prompt_tokens=args.context_tokens,
+        first_prompt_tokens=int(context_tokens),
+        follow_prompt_tokens=follow_prompt_tokens,
         min_return_probability=args.min_return_probability,
         value_based_eviction=not args.lru_eviction,
     )
     block_tokens = cfg.block_tokens
-    blocks = args.context_tokens / block_tokens
+    blocks = context_tokens / block_tokens
     budget = args.ttft_slo - cfg.follow_prompt_tokens / (resources.prefill_blocks_s * block_tokens)
     rebuild = blocks / resources.recompute_blocks_s
     fetch = blocks / resources.transfer_blocks_s
     restore = blocks / resources.restore_blocks_s
     cut = resources.thresholds(budget)
-    context = args.context_tokens
+    context = int(context_tokens)
     if context <= cut["c1_tokens"]:
         zone = "both remote actions"
     elif context <= cut["c2_tokens"]:
@@ -124,6 +176,9 @@ def main() -> None:
         "foreground_transfer_blocks",
         "deferred_admissions",
         "exhausted_replenishments",
+        "ttft_residual_mean_s",
+        "ttft_residual_mae_s",
+        "queue_residual_mean_s",
     )
     widths = {
         column: max(

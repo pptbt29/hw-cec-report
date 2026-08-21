@@ -74,7 +74,11 @@ class EvictionValuesGlobalCopies(unittest.TestCase):
         del self.sim.nodes[1].replicas[self.sid]
         self.sim._invalidate()
         unique = self.sim._eviction_score(self.sid, 0)
-        self.assertAlmostEqual(with_peer_dram, unique, places=4)
+        # Peer DRAM still misses the hard SLO, so it must not flip this HBM
+        # copy into a spare replica. Soft success probability can move the
+        # score slightly through the sigmoid tail; the two must stay in the
+        # same band.
+        self.assertAlmostEqual(with_peer_dram, unique, places=3)
 
 
 if __name__ == "__main__":

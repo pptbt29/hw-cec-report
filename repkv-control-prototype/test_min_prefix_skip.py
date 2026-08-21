@@ -41,6 +41,25 @@ class MinimumSloVetoes(unittest.TestCase):
         self.assertEqual(full.target_prefix, 40)
         self.assertTrue(full.segments)
 
+    def test_prepares_when_host_copy_is_not_durable(self) -> None:
+        availability = PrefixAvailability(local_hbm=0, local_host=40, remote_hbm=0)
+        plan, reason = decide_minimum_slo_preparation(
+            context_blocks=40,
+            availability=availability,
+            queue_s=0.0,
+            prompt_s=0.1,
+            slo_s=1.0,
+            time_limit_s=30.0,
+            foreground_rates=self.fg,
+            background_rates=self.bg,
+            method_costs=self.costs,
+            copy_persist=0.3,
+            already_feasible_probability=0.9,
+        )
+        self.assertEqual(reason, "ok")
+        self.assertIsNotNone(plan)
+        self.assertGreater(plan.target_prefix, 0)
+
     def test_skips_when_remote_transfer_already_meets_slo(self) -> None:
         plan, reason = self._decide(PrefixAvailability(0, 0, 40))
         self.assertEqual(reason, "already_feasible")
@@ -78,7 +97,7 @@ class SkipIsNotEviction(unittest.TestCase):
             sessions=16,
             concurrent_sessions=0,
             horizon_s=40.0,
-            ttft_slo_s=1.0,
+            ttft_slo_s=0.12,
             first_prompt_tokens=128,
             follow_prompt_tokens=128,
             output_tokens=64,
@@ -107,23 +126,33 @@ class SkipIsNotEviction(unittest.TestCase):
         )
         sim._invalidate()
         restore = self.context / sim.cfg.foreground_rates["restore"]
+        recompute = self.context / sim.cfg.foreground_rates["recompute"]
         prompt = sim._prediction(self.sid).predicted_prompt_blocks / sim.cfg.prefill_blocks_s
         self.assertLess(restore + prompt, sim.cfg.ttft_slo_s)
+        self.assertGreater(recompute + prompt, sim.cfg.ttft_slo_s)
         return sim
 
-    def test_repkv_refuses_home_restore_eager_still_copies(self) -> None:
+    def test_unique_host_copy_is_prepared_eager_still_copies(self) -> None:
         repkv = self._idle("repkv")
         eager = self._idle("eager_full")
         repkv_own = [candidate for candidate in repkv._collect_candidates() if candidate.sid == self.sid]
         eager_own = [candidate for candidate in eager._collect_candidates() if candidate.sid == self.sid]
-        self.assertEqual(repkv_own, [])
-        self.assertGreater(repkv.metrics.prep_skip_already_feasible, 0)
+        self.assertTrue(repkv_own)
+        self.assertGreater(repkv.metrics.prep_accepted, 0)
         self.assertTrue(eager_own)
-        # Full-prefix admission ignores SLO gain, so it prepares even when
-        # a local restore already meets the deadline. A covering controller
-        # would take the no-op that `repkv` took here.
         self.assertGreater(eager.metrics.prep_accepted, 0)
         self.assertEqual(eager.metrics.prep_skip_already_feasible, 0)
+
+    def test_redundant_host_copies_still_skip(self) -> None:
+        repkv = self._idle("repkv")
+        context = self.context
+        repkv.nodes[1].replicas[self.sid] = KVReplica(
+            hbm_prefix=0, host_prefix=context, last_used=0.0
+        )
+        repkv._invalidate()
+        own = [candidate for candidate in repkv._collect_candidates() if candidate.sid == self.sid]
+        self.assertEqual(own, [])
+        self.assertGreater(repkv.metrics.prep_skip_already_feasible, 0)
 
 
 if __name__ == "__main__":

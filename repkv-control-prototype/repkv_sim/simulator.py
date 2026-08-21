@@ -44,6 +44,11 @@ class Config:
     shared_uncertainty_s: float = 0.45
     queue_uncertainty_scale: float = 0.8
     shared_uncertainty_scale: float = 0.5
+    residual_alpha: float = 0.05
+    ttft_residual_z: float = 1.0
+    already_feasible_probability: float = 0.9
+    unique_copy_persist: float = 0.5
+    min_copy_persist: float = 0.15
     reprepare_cost_weight: float = 1.0
     spare_replica_factor: float = 0.01
     displacement_cost_weight: float = 1.0
@@ -345,6 +350,11 @@ class Metrics:
     prep_skip_nonpositive: int = 0
     prep_target_blocks: int = 0
     prep_context_blocks: int = 0
+    ttft_residual_sum: float = 0.0
+    ttft_residual_abs_sum: float = 0.0
+    ttft_residual_n: int = 0
+    queue_residual_sum: float = 0.0
+    queue_residual_n: int = 0
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -356,6 +366,44 @@ def percentile(values: list[float], q: float) -> float:
     if lower == upper:
         return ordered[lower]
     return ordered[lower] * (upper - position) + ordered[upper] * (position - lower)
+
+
+@dataclass
+class ResidualTracker:
+    """Online mean and spread of (actual - predicted) seconds.
+
+    The fluid queue is a lower bound in expectation, so the mean residual is
+    typically positive. Control decisions add this mean, and optionally a
+    multiple of the spread, to the fluid point estimate. The tracker is
+    updated from realized arrivals and never reads the future.
+    """
+
+    alpha: float = 0.05
+    prior_std: float = 0.25
+    count: int = 0
+    mean: float = 0.0
+    m2: float = 0.0
+
+    def update(self, predicted: float, actual: float) -> None:
+        err = actual - predicted
+        self.count += 1
+        if self.count == 1:
+            self.mean = err
+            self.m2 = 0.0
+            return
+        delta = err - self.mean
+        self.mean += self.alpha * delta
+        self.m2 = (1.0 - self.alpha) * (self.m2 + self.alpha * delta * delta)
+
+    def std(self) -> float:
+        if self.count < 2:
+            return self.prior_std
+        return math.sqrt(max(0.0, self.m2))
+
+    def adjust(self, predicted: float, z: float = 0.0) -> float:
+        if self.count < 2:
+            return max(0.0, predicted)
+        return max(0.0, predicted + self.mean + z * self.std())
 
 
 SESSION_CLASSES = (
@@ -457,6 +505,8 @@ class Simulator:
         self._price_cache: dict[int, float] = {}
         self._probability_cache: dict[tuple, tuple[float, tuple[float, ...]]] = {}
         self._recovery_cache: dict[tuple[int, int, int, int], RecoveryPlan] = {}
+        self._queue_residual = ResidualTracker(alpha=cfg.residual_alpha, prior_std=cfg.queue_uncertainty_s)
+        self._ttft_residual = ResidualTracker(alpha=cfg.residual_alpha, prior_std=cfg.shared_uncertainty_s)
         self._pool = sorted(workload.session_start)
         live = cfg.concurrent_sessions if cfg.concurrent_sessions > 0 else len(self._pool)
         self._admitted = 0
@@ -569,6 +619,11 @@ class Simulator:
             "overlapping_turns": self.metrics.overlapping_turns,
             "exhausted_replenishments": self.metrics.exhausted_replenishments,
             "deferred_admissions": self.metrics.deferred_admissions,
+            "ttft_residual_mean_s": self.metrics.ttft_residual_sum / max(1, self.metrics.ttft_residual_n),
+            "ttft_residual_mae_s": self.metrics.ttft_residual_abs_sum / max(1, self.metrics.ttft_residual_n),
+            "queue_residual_mean_s": self.metrics.queue_residual_sum / max(1, self.metrics.queue_residual_n),
+            "queue_residual_std_s": self._queue_residual.std(),
+            "ttft_residual_std_s": self._ttft_residual.std(),
         }
         return summary, self.request_rows
 
@@ -707,8 +762,19 @@ class Simulator:
             return self.nodes[nid].busy_until
         return view[nid]
 
-    def _predicted_queue(self, state: SessionState, prediction: Prediction, node: Node) -> float:
-        return max(0.0, self._projected_busy_until(state.sid, node.nid) - prediction.predicted_arrival)
+    def _fluid_queue(self, sid: int, predicted_arrival: float, nid: int) -> float:
+        return max(0.0, self._projected_busy_until(sid, nid) - predicted_arrival)
+
+    def _predicted_queue(
+        self,
+        state: SessionState,
+        prediction: Prediction,
+        node: Node,
+        z: float | None = None,
+    ) -> float:
+        fluid = self._fluid_queue(state.sid, prediction.predicted_arrival, node.nid)
+        margin = self.cfg.ttft_residual_z if z is None else z
+        return self._queue_residual.adjust(fluid, margin)
 
     def _predicted_ttft(
         self,
@@ -727,6 +793,71 @@ class Simulator:
         prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
         queue = self._predicted_queue(state, prediction, node)
         return (queue if queue > recovery.seconds else recovery.seconds) + prompt
+
+    def _fill_persist(self, fill: float) -> float:
+        """Probability a copy survives until arrival, from current occupancy.
+
+        Below the low watermark there is no eviction pressure, so volatile
+        copies are treated as certain. Above it, persistence falls toward
+        `min_copy_persist` as the tier fills.
+        """
+        low = self.cfg.low_watermark
+        floor = self.cfg.min_copy_persist
+        if fill <= low:
+            return 1.0
+        t = (fill - low) / max(1e-9, 1.0 - low)
+        return max(floor, 1.0 - t * (1.0 - floor))
+
+    def _peer_persist(self, nid: int, hbm: tuple[int, ...], host: tuple[int, ...]) -> float:
+        """Persistence of the longest peer copy this node would transfer from."""
+        best = 0
+        persist = 1.0
+        for node in self.nodes:
+            if node.nid == nid:
+                continue
+            reachable = hbm[node.nid] if hbm[node.nid] > host[node.nid] else host[node.nid]
+            if reachable < best:
+                continue
+            if hbm[node.nid] >= host[node.nid]:
+                fill = node.committed / max(1, node.capacity)
+            else:
+                fill = node.host_used / max(1, node.host_capacity)
+            peer = self._fill_persist(fill)
+            if reachable > best or peer < persist:
+                best = reachable
+                persist = peer
+        return persist
+
+    def _source_persist(
+        self,
+        nid: int,
+        hbm: tuple[int, ...],
+        host: tuple[int, ...],
+        context: int,
+    ) -> float:
+        """Probability host/remote copies used by this node are still there.
+
+        Local HBM is reserved on this node, so a fully pinned prefix is
+        certain. Host and remote copies are not reserved; occupancy and
+        uniqueness decide how much the controller may rely on them.
+        """
+        local_hbm = hbm[nid]
+        if local_hbm >= context:
+            return 1.0
+        persist = 1.0
+        volatile = False
+        if host[nid] > local_hbm:
+            volatile = True
+            node = self.nodes[nid]
+            persist = min(persist, self._fill_persist(node.host_used / max(1, node.host_capacity)))
+        remote = self._remote_prefix(nid, hbm, host)
+        if remote > (host[nid] if host[nid] > local_hbm else local_hbm):
+            volatile = True
+            persist = min(persist, self._peer_persist(nid, hbm, host))
+        covering = sum(1 for index in range(len(hbm)) if (hbm[index] if hbm[index] > host[index] else host[index]) >= context)
+        if volatile and covering <= 1:
+            persist = min(persist, self.cfg.unique_copy_persist)
+        return max(self.cfg.min_copy_persist, persist)
 
     def _apply_prefix_override(
         self,
@@ -770,10 +901,16 @@ class Simulator:
         projected queue. With constant uncertainty the estimate stays near one
         whenever the fluid queue is small, which is precisely the regime where
         the fluid queue is least trustworthy.
+
+        Fluid queues are then shifted by the online residual of (actual minus
+        predicted) seconds. Each node mixes a volatile TTFT (host and remote
+        copies) with a durable TTFT (local HBM only) using `_source_persist`.
         """
         sid = state.sid
         hbm, host = self._apply_prefix_override(*self._prefix_signature(sid), override)
-        key = (sid, state.context_blocks, hbm, host)
+        fills = tuple((node.committed, node.host_used) for node in self.nodes)
+        residual = (round(self._queue_residual.mean, 4), round(self._queue_residual.std(), 4))
+        key = (sid, state.context_blocks, hbm, host, fills, residual)
         cached = self._probability_cache.get(key)
         if cached is not None:
             return cached
@@ -782,26 +919,48 @@ class Simulator:
         prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
         view = self._forecast().get(sid)
         count = len(self.nodes)
-        ttfts: list[float] = []
+        volatile_ttfts: list[float] = []
+        durable_ttfts: list[float] = []
+        mixed_ttfts: list[float] = []
+        persists: list[float] = []
         queues: list[float] = []
+        z = self.cfg.ttft_residual_z
         for nid in range(count):
             remote = self._remote_prefix(nid, hbm, host)
             recovery = self._recovery(hbm[nid], context, host[nid], remote)
+            durable = self._recovery(hbm[nid], context, hbm[nid], hbm[nid])
             busy = self.nodes[nid].busy_until if view is None else view[nid]
-            queue = busy - arrival
-            if queue < 0.0:
-                queue = 0.0
+            fluid = busy - arrival
+            if fluid < 0.0:
+                fluid = 0.0
+            queue = self._queue_residual.adjust(fluid, z)
             queues.append(queue)
             # Recovery that uses the link or the host path runs while the
             # device serves other requests, so the two overlap rather than add.
-            ttfts.append((queue if queue > recovery.seconds else recovery.seconds) + prompt)
+            volatile_ttft = (queue if queue > recovery.seconds else recovery.seconds) + prompt
+            durable_ttft = (queue if queue > durable.seconds else durable.seconds) + prompt
+            persist = self._source_persist(nid, hbm, host, context)
+            volatile_ttfts.append(volatile_ttft)
+            durable_ttfts.append(durable_ttft)
+            persists.append(persist)
+            mixed_ttfts.append(persist * volatile_ttft + (1.0 - persist) * durable_ttft)
         mean_queue = sum(queues) / count
+        measured = self._ttft_residual.std() if self._ttft_residual.count >= 2 else 0.0
         shared = self.cfg.shared_uncertainty_s + self.cfg.shared_uncertainty_scale * mean_queue
+        shared = max(shared, measured)
         node_uncertainties = [
-            self.cfg.queue_uncertainty_s + self.cfg.queue_uncertainty_scale * queue for queue in queues
+            max(self.cfg.queue_uncertainty_s + self.cfg.queue_uncertainty_scale * queue, measured)
+            for queue in queues
         ]
-        value = routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
-        result = (value, tuple(ttfts))
+        value = routable_probability(
+            volatile_ttfts,
+            self.cfg.ttft_slo_s,
+            shared,
+            node_uncertainties,
+            durable_ttfts=durable_ttfts,
+            persists=persists,
+        )
+        result = (value, tuple(mixed_ttfts))
         self._probability_cache[key] = result
         return result
 
@@ -989,6 +1148,25 @@ class Simulator:
         if not self._ensure_capacity(nid, extra, turn.sid):
             raise RuntimeError("capacity precheck and eviction disagree")
         node = self.nodes[nid]
+        raw_ttft: float | None = None
+        if turn.index > 0:
+            prediction = self._prediction(turn.sid)
+            if prediction is not None:
+                fluid_queue = self._fluid_queue(turn.sid, prediction.predicted_arrival, nid)
+                actual_queue = max(
+                    0.0,
+                    node.slot_free_at(self.now) - self.now,
+                    node.until["compute"] - self.now,
+                )
+                self._queue_residual.update(fluid_queue, actual_queue)
+                self.metrics.queue_residual_sum += actual_queue - fluid_queue
+                self.metrics.queue_residual_n += 1
+                recovery_s = sum(
+                    segment.blocks / self.cfg.foreground_rates[segment.method]
+                    for segment in recovery_segments
+                )
+                prompt_hat = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
+                raw_ttft = (fluid_queue if fluid_queue > recovery_s else recovery_s) + prompt_hat
         node.active_reservations[turn.sid] = final_context
         replica = node.replicas.get(turn.sid)
         if replica:
@@ -999,6 +1177,12 @@ class Simulator:
         for segment in recovery_segments:
             self.metrics.demand[segment.method] += segment.blocks
         service_ttft = self._service_ttft(node, recovery_segments, prompt_s, commit=True)
+        if raw_ttft is not None:
+            self._ttft_residual.update(raw_ttft, service_ttft)
+            err = service_ttft - raw_ttft
+            self.metrics.ttft_residual_sum += err
+            self.metrics.ttft_residual_abs_sum += abs(err)
+            self.metrics.ttft_residual_n += 1
         ttft = service_ttft + (self.now - arrived)
         decode_s = turn.output_blocks / self.cfg.decode_blocks_s
         completion = self.now + service_ttft + decode_s
@@ -1048,7 +1232,7 @@ class Simulator:
                 availability = self._availability(state.sid, node.nid)
                 if availability.local_hbm >= state.context_blocks:
                     continue
-                queue = max(0.0, self._projected_busy_until(state.sid, node.nid) - prediction.predicted_arrival)
+                queue = self._predicted_queue(state, prediction, node, z=0.0)
                 prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
                 self.metrics.prep_inspects += 1
                 if self.policy == "eager_full":
@@ -1062,6 +1246,8 @@ class Simulator:
                     )
                     reason = "ok" if plan is not None and plan.segments else "no_timely_plan"
                 else:
+                    hbm, host = self._prefix_signature(state.sid)
+                    persist = self._source_persist(node.nid, hbm, host, state.context_blocks)
                     plan, reason = decide_minimum_slo_preparation(
                         state.context_blocks,
                         availability,
@@ -1072,6 +1258,8 @@ class Simulator:
                         self.cfg.foreground_rates,
                         self.cfg.background_rates,
                         self.cfg.method_costs,
+                        persist,
+                        self.cfg.already_feasible_probability,
                     )
                 if plan is None or not plan.segments:
                     if reason == "already_feasible":
@@ -1466,6 +1654,9 @@ def aggregate(summaries: list[dict[str, float | int | str]]) -> list[dict[str, f
         "prep_target_fraction",
         "deferred_admissions",
         "exhausted_replenishments",
+        "ttft_residual_mean_s",
+        "ttft_residual_mae_s",
+        "queue_residual_mean_s",
     )
     rows: list[dict[str, float | str]] = []
     for policy in POLICIES:

@@ -161,6 +161,34 @@ def cheapest_preparation(
     return PreparationPlan(target_prefix, best[2], best[1], best[0])
 
 
+def pinned_availability(local_hbm: int) -> PrefixAvailability:
+    """Sources that are still there if DRAM and peer copies vanish.
+
+    Only local HBM is reserved by this node. A host restore or a remote
+    transfer may disappear before the request arrives, so a durable TTFT
+    path cannot count on them.
+    """
+    return PrefixAvailability(local_hbm, local_hbm, local_hbm)
+
+
+def layout_success_probability(
+    volatile_s: float,
+    durable_s: float,
+    budget_s: float,
+    copy_persist: float,
+) -> float:
+    """Chance the current layout still meets the recovery budget at arrival.
+
+    Volatile recovery uses host and remote copies; durable recovery uses only
+    local HBM and recomputes the rest. `copy_persist` is the probability those
+    volatile copies are still reachable when the request lands.
+    """
+    persist = min(1.0, max(0.0, copy_persist))
+    volatile_ok = 1.0 if volatile_s <= budget_s else 0.0
+    durable_ok = 1.0 if durable_s <= budget_s else 0.0
+    return persist * volatile_ok + (1.0 - persist) * durable_ok
+
+
 def decide_minimum_slo_preparation(
     context_blocks: int,
     availability: PrefixAvailability,
@@ -171,6 +199,8 @@ def decide_minimum_slo_preparation(
     foreground_rates: dict[str, float],
     background_rates: dict[str, float],
     method_costs: dict[str, float],
+    copy_persist: float = 1.0,
+    already_feasible_probability: float = 1.0,
 ) -> tuple[PreparationPlan | None, str]:
     """Return the minimum SLO plan and why a plan is absent.
 
@@ -184,34 +214,47 @@ def decide_minimum_slo_preparation(
 
     Two vetoes refuse work before bisection. `queue_exceeds_budget` means the
     predicted device queue already overruns the deadline, so a local prefix
-    would not help. `already_feasible` means the current layout is predicted to
-    recover in time, so the planner intentionally does nothing. Full-prefix
-    preparation does not apply either veto.
+    would not help. `already_feasible` means the current layout is likely
+    enough to recover in time that preparing has no SLO work left. Likelihood
+    mixes a volatile path (host and remote copies) with a durable path (local
+    HBM only) using `copy_persist`. Full-prefix preparation does not apply
+    either veto.
     """
-    current = fastest_recovery(availability.local_hbm, context_blocks, availability, foreground_rates)
     # Recovery overlaps with the device queue rather than adding to it: a
     # restore or a transfer proceeds while the device serves other requests.
     # The two therefore have to fit under the deadline separately.
     budget = slo_s + 1e-9 - prompt_s
     if queue_s > budget:
         return None, "queue_exceeds_budget"
-    if current.seconds <= budget:
-        return None, "already_feasible"
-    low, high = availability.local_hbm + 1, context_blocks
-    if low > high:
-        return None, "already_feasible"
 
-    def residual_seconds(target: int) -> float:
-        # Preparing into HBM does not put the interval on the host tier, so the
-        # sources available for what remains are the real ones.
+    def volatile_seconds(target: int) -> float:
         hypothetical = PrefixAvailability(target, availability.local_host, availability.remote_hbm)
         return fastest_recovery(target, context_blocks, hypothetical, foreground_rates).seconds
 
-    if residual_seconds(high) > budget:
+    def durable_seconds(target: int) -> float:
+        return fastest_recovery(
+            target, context_blocks, pinned_availability(target), foreground_rates
+        ).seconds
+
+    def success_at(target: int) -> float:
+        return layout_success_probability(
+            volatile_seconds(target),
+            durable_seconds(target),
+            budget,
+            copy_persist,
+        )
+
+    current = availability.local_hbm
+    if success_at(current) >= already_feasible_probability - 1e-12:
+        return None, "already_feasible"
+    low, high = current + 1, context_blocks
+    if low > high:
+        return None, "already_feasible"
+    if success_at(high) < already_feasible_probability - 1e-12:
         return None, "cannot_cross_slo"
     while low < high:
         middle = (low + high) // 2
-        if residual_seconds(middle) <= budget:
+        if success_at(middle) >= already_feasible_probability - 1e-12:
             high = middle
         else:
             low = middle + 1
@@ -238,6 +281,8 @@ def minimum_slo_preparation(
     foreground_rates: dict[str, float],
     background_rates: dict[str, float],
     method_costs: dict[str, float],
+    copy_persist: float = 1.0,
+    already_feasible_probability: float = 1.0,
 ) -> PreparationPlan | None:
     """Find the minimum prepared prefix that crosses the hard TTFT boundary."""
     plan, _reason = decide_minimum_slo_preparation(
@@ -250,6 +295,8 @@ def minimum_slo_preparation(
         foreground_rates,
         background_rates,
         method_costs,
+        copy_persist,
+        already_feasible_probability,
     )
     return plan
 
@@ -289,6 +336,8 @@ def routable_probability(
     slo_s: float,
     shared_uncertainty_s: float,
     node_uncertainties_s: list[float],
+    durable_ttfts: list[float] | None = None,
+    persists: list[float] | None = None,
 ) -> float:
     """Probability that at least one node meets the SLO under correlated error.
 
@@ -302,20 +351,40 @@ def routable_probability(
     Node uncertainty is passed per node because queue error is not uniform
     across the cluster: a node with a long projected backlog carries more
     absolute error than an idle one.
+
+    When `durable_ttfts` and `persists` are set, each node mixes a volatile
+    path (current host and remote copies) with a durable path (local HBM
+    only). `persists[n]` is the probability the volatile copies are still
+    reachable at arrival.
     """
     if len(ttfts) != len(node_uncertainties_s):
         raise ValueError("ttfts and node_uncertainties_s must have equal length")
+    if durable_ttfts is None:
+        durable_ttfts = ttfts
+    if persists is None:
+        persists = [1.0] * len(ttfts)
+    if len(durable_ttfts) != len(ttfts) or len(persists) != len(ttfts):
+        raise ValueError("durable_ttfts and persists must match ttfts")
+
+    def node_probability(volatile: float, durable: float, persist: float, sigma: float, shift: float) -> float:
+        held = min(1.0, max(0.0, persist))
+        volatile_p = success_probability(volatile + shift, slo_s, sigma)
+        if held >= 1.0:
+            return volatile_p
+        durable_p = success_probability(durable + shift, slo_s, sigma)
+        return held * volatile_p + (1.0 - held) * durable_p
+
+    triples = list(zip(ttfts, durable_ttfts, persists, node_uncertainties_s))
     if shared_uncertainty_s <= 0:
         return at_least_one_success(
-            [success_probability(ttft, slo_s, sigma) for ttft, sigma in zip(ttfts, node_uncertainties_s)]
+            [node_probability(volatile, durable, persist, sigma, 0.0) for volatile, durable, persist, sigma in triples]
         )
-    pairs = list(zip(ttfts, node_uncertainties_s))
     total = 0.0
     for offset, weight in SHARED_STRATA:
         shift = offset * shared_uncertainty_s
         failure = 1.0
-        for ttft, sigma in pairs:
-            probability = success_probability(ttft + shift, slo_s, sigma)
+        for volatile, durable, persist, sigma in triples:
+            probability = node_probability(volatile, durable, persist, sigma, shift)
             if probability <= 0.0:
                 continue
             if probability >= 1.0:
