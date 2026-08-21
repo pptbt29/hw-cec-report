@@ -549,6 +549,7 @@ class Simulator:
             "cancelled_batches": self.metrics.cancelled_batches,
             "overlapping_turns": self.metrics.overlapping_turns,
             "exhausted_replenishments": self.metrics.exhausted_replenishments,
+            "deferred_admissions": self.metrics.deferred_admissions,
         }
         return summary, self.request_rows
 
@@ -667,10 +668,7 @@ class Simulator:
             best_nid, best_ttft, best_service = 0, math.inf, 0.0
             hbm, host = self._prefix_signature(sid)
             for nid in range(count):
-                remote = 0
-                for other in range(count):
-                    if other != nid and hbm[other] > remote:
-                        remote = hbm[other]
+                remote = self._remote_prefix(nid, hbm, host)
                 recovery = self._recovery(hbm[nid], state.context_blocks, host[nid], remote)
                 queue = max(0.0, view[nid] - arrival)
                 ttft = max(queue, recovery.seconds) + prompt
@@ -708,7 +706,8 @@ class Simulator:
             self.cfg.foreground_rates,
         )
         prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
-        return self._predicted_queue(state, prediction, node) + recovery.seconds + prompt
+        queue = self._predicted_queue(state, prediction, node)
+        return (queue if queue > recovery.seconds else recovery.seconds) + prompt
 
     def _cluster_probability(
         self,
@@ -741,10 +740,7 @@ class Simulator:
         ttfts: list[float] = []
         queues: list[float] = []
         for nid in range(count):
-            remote = 0
-            for other in range(count):
-                if other != nid and hbm[other] > remote:
-                    remote = hbm[other]
+            remote = self._remote_prefix(nid, hbm, host)
             local = override[1] if override is not None and override[0] == nid else hbm[nid]
             recovery = self._recovery(local, context, host[nid], remote)
             busy = self.nodes[nid].busy_until if view is None else view[nid]
@@ -763,6 +759,27 @@ class Simulator:
         value = routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
         self._probability_cache[key] = value
         return value
+
+    def _remote_prefix(
+        self, nid: int, hbm: tuple[int, ...], host: tuple[int, ...]
+    ) -> int:
+        """Longest peer prefix reachable by transfer, including a peer's DRAM.
+
+        A demotion writes the prefix to the host tier, so after HBM is shortened
+        the remaining copy is often only on DRAM. The router already treats that
+        copy as a transfer source; the forecast and the cluster probability have
+        to see the same bound, otherwise they would treat a fetchable prefix as
+        missing and overstate both the value of retaining HBM and the need to
+        prepare a local copy.
+        """
+        remote = 0
+        for other, prefix in enumerate(hbm):
+            if other == nid:
+                continue
+            reachable = prefix if prefix > host[other] else host[other]
+            if reachable > remote:
+                remote = reachable
+        return remote
 
     def _prefix_signature(self, sid: int) -> tuple[tuple[int, ...], tuple[int, ...]]:
         """The part of cluster state this session's TTFT prediction depends on.
@@ -1346,12 +1363,15 @@ def aggregate(summaries: list[dict[str, float | int | str]]) -> list[dict[str, f
         "requests",
         "slo_goodput_rps",
         "slo_attainment",
+        "continuation_attainment",
         "p99_ttft_s",
         "transfer_blocks_per_success",
         "restore_blocks_per_success",
         "recompute_blocks_per_success",
         "hbm_block_seconds_per_success",
         "unused_preparation_ratio",
+        "deferred_admissions",
+        "exhausted_replenishments",
     )
     rows: list[dict[str, float | str]] = []
     for policy in POLICIES:

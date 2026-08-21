@@ -2,8 +2,9 @@
 
 Every rate the control loop uses is derived here from a model shape and a
 hardware sheet instead of being stated directly in blocks per second. The
-purpose is not absolute fidelity: the numbers below are a mock-up of a 7B-class
-dense decoder on one 910B-class device and are not measured. The purpose is
+purpose is not absolute fidelity: the numbers below are a mock-up of a
+70B-class grouped-query decoder served as an 8-device tensor-parallel replica
+on 910B-class accelerators, and they are not measured. The purpose is
 that the *ratios* between recompute, remote transfer, host restore, prefill and
 decode follow from bytes and FLOPs rather than from three hand-picked
 constants, because those ratios are what every preparation and reclamation
@@ -31,9 +32,9 @@ from functools import cached_property
 class ModelSpec:
     """Shape of the served model and of one KV block.
 
-    Defaults describe a 7B-class dense decoder with grouped-query attention in
-    bfloat16, served as a single replica. `block_tokens` is the KV paging
-    granularity, matching the block size a paged-attention runtime would use.
+    Defaults describe a 70B-class decoder with grouped-query attention in
+    bfloat16. `block_tokens` is the KV paging granularity, matching the block
+    size a paged-attention runtime would use.
     """
 
     layers: int = 80
@@ -74,10 +75,10 @@ class ModelSpec:
 class HardwareSpec:
     """Per-node device and interconnect capacities.
 
-    Defaults are a mock-up of one 910B-class accelerator: peak bfloat16 dense
-    throughput with a separate achieved-utilisation factor, HBM bandwidth and
-    capacity, one 100 GbE port for inter-node KV movement, and a PCIe 4.0 x16
-    path to host DRAM.
+    Defaults are a mock-up of an 8-device tensor-parallel group of 910B-class
+    accelerators: peak bfloat16 dense throughput with a separate
+    achieved-utilisation factor, HBM bandwidth and capacity, one 100 GbE port
+    for inter-node KV movement, and a PCIe 4.0 x16 path to host DRAM.
     """
 
     devices: int = 8
