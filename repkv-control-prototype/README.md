@@ -6,7 +6,7 @@
 
 本原型检验以下控制逻辑是否自洽：在下一轮请求只能概率预测、多个 session 共享 HBM、跨节点带宽、本地恢复带宽和后台计算资源的条件下，控制器能否只准备使一个候选节点达到 TTFT SLO 所需的最小有效 KV 前缀，从而以有限资源增加可路由节点。
 
-实验报告给出两个由物理参数决定的门槛，并在门槛两侧分开测量预放置与 SLO 感知回收。详见 [PROTOTYPE_VERDICT.md](PROTOTYPE_VERDICT.md)。
+实验报告给出两个由物理参数决定的门槛，并在门槛两侧分开测量预放置与 SLO 感知回收。全部实验的对照表、关键结论和两个手段的适用条件见 [EXPERIMENT_SUMMARY.md](EXPERIMENT_SUMMARY.md)；逐格数字与实现细节见 [PROTOTYPE_VERDICT.md](PROTOTYPE_VERDICT.md)。
 
 ## 已实现机制
 
