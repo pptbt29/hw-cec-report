@@ -84,6 +84,7 @@ decode 每序列速率由一次 step 的读取量给出：一次 step 读一遍�
 | `shared_uncertainty_scale` | 0.5 | 共同误差随各节点预测排队均值增长的系数 |
 | `queue_uncertainty_scale` | 0.8 | 独立误差随该节点预测排队增长的系数 |
 | `reprepare_cost_weight` | 1.0 | 回收分数中重建代价项的权重；0 表示关闭 |
+| `spare_replica_factor` | 0.01 | 另一节点仍能满足预测 SLO 时，降级地板的折扣；1 表示不折扣 |
 | `displacement_cost_weight` | 1.0 | 准备为它挤掉的降级付费的权重；0 表示关闭 |
 | `value_based_eviction` | True | 回收受害者按价值排序；False 退回 LRU，用于消融 |
 | `first_prompt_tokens` | 4000 | 首轮 prompt 的 token 中位数 |
@@ -467,15 +468,17 @@ Score_e
 =
 \frac{
 q_s(t,\Delta)\left(P_s^{before}-P_{s,e}^{after}\right)
-+0.002B_e
-+\lambda q_s(t,\Delta)\dfrac{B_e}{R_{\text{restore}}\Delta}
++0.002\,\rho_e B_e
++\lambda q_s(t,\Delta)\,I_e\dfrac{B_e}{R_{\text{restore}}\Delta}
 }
 {B_e}.
 $$
 
-三项分别是路由收益的损失、降级操作本身的开销，以及在 $\widehat t_s$ 之前把该区间重建回来的后台代价。降级后的前缀保留在 `host_prefix` 中，因此重建是同样大小的一次后台 restore，归一化分母与惩罚系数 $\lambda=0.22$ 与第 9.3 节的 $V_{s,n}$ 完全一致，两侧因此在同一本资源账目上。重建按"该 session 可能返回"计费，不建模 router 届时会选哪个节点。
+$P_s^{before}$ 与 $P_{s,e}^{after}$ 是集群可路由概率，不是本节点单独完成的概率。假设降级状态与 `_ensure_capacity` 一致：先把当前 HBM 前缀写入本节点 DRAM，再缩短 HBM，并且对端可达前缀随这次缩短一起更新，因此其他节点不能继续把正在丢掉的 HBM 当作取回来源。
 
-没有这一项时，控制器可以先为一次准备付费，再在同一个窗口内把它回收而不产生任何记账；并且当概率项在高负载下趋于饱和、$P^{before}$ 与 $P^{after}$ 都接近 1 时，前两项对所有候选几乎相同，排序失去梯度而退化为按 session ID 选择。
+$I_e=0$、$\rho_e=$ `spare_replica_factor`（默认 0.01）当且仅当缩短之后仍有**其他**节点的预测 TTFT 不超过 $D_s$。此时这块前缀是冗余副本：集群已经有一条不依赖它的可行路径，不必在本节点重建，降级地板也压低，使它排在任何集群仍需要的副本之前。$I_e=1$、$\rho_e=1$ 表示没有这样的外部可行节点，重建按本节点一次 restore 计费。
+
+没有重建项时，控制器可以先为一次准备付费，再在同一个窗口内把**唯一**副本回收而不产生任何记账；并且当概率项在高负载下趋于饱和、$P^{before}$ 与 $P^{after}$ 都接近 1 时，前两项对所有候选几乎相同，排序失去梯度而退化为按 session ID 选择。重建项只加在唯一副本上，避免把这一地板同时垫高已经有外部可行路径的冗余副本。
 
 分数越低，表示每释放一个 HBM block 的预期代价越小，因此越先降级。脚本中已无下一轮的 session 没有预测，分数为 0，可以自由回收。降级只缩短 `hbm_prefix`，原前缀保留在 `host_prefix` 中。
 

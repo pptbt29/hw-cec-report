@@ -45,6 +45,7 @@ class Config:
     queue_uncertainty_scale: float = 0.8
     shared_uncertainty_scale: float = 0.5
     reprepare_cost_weight: float = 1.0
+    spare_replica_factor: float = 0.01
     displacement_cost_weight: float = 1.0
     value_based_eviction: bool = True
     block_batch: int = 128
@@ -446,7 +447,7 @@ class Simulator:
         self._forecast_cache: dict[int, dict[int, float]] | None = None
         self._prediction_cache: dict[int, Prediction] | None = None
         self._price_cache: dict[int, float] = {}
-        self._probability_cache: dict[tuple, float] = {}
+        self._probability_cache: dict[tuple, tuple[float, tuple[float, ...]]] = {}
         self._recovery_cache: dict[tuple[int, int, int, int], RecoveryPlan] = {}
         self._pool = sorted(workload.session_start)
         live = cfg.concurrent_sessions if cfg.concurrent_sessions > 0 else len(self._pool)
@@ -709,13 +710,39 @@ class Simulator:
         queue = self._predicted_queue(state, prediction, node)
         return (queue if queue > recovery.seconds else recovery.seconds) + prompt
 
-    def _cluster_probability(
+    def _apply_prefix_override(
+        self,
+        hbm: tuple[int, ...],
+        host: tuple[int, ...],
+        override: tuple[int, ...] | None,
+    ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """Apply a hypothetical prefix change to every node's view of the copies.
+
+        Eviction and preparation both change one node's HBM. Other nodes can
+        transfer from that HBM, so the remote bound has to move with it;
+        otherwise a node would keep treating a prefix as fetchable after the
+        copy that actually holds it had been dropped. A three-tuple also
+        updates that node's DRAM, matching a demotion that writes the prefix
+        to the host tier before shrinking HBM.
+        """
+        if override is None:
+            return hbm, host
+        nid, new_hbm, *rest = override
+        changed_hbm = list(hbm)
+        changed_hbm[nid] = new_hbm
+        if not rest:
+            return tuple(changed_hbm), host
+        changed_host = list(host)
+        changed_host[nid] = rest[0]
+        return tuple(changed_hbm), tuple(changed_host)
+
+    def _cluster_evaluation(
         self,
         state: SessionState,
         prediction: Prediction,
-        override: tuple[int, int] | None = None,
-    ) -> float:
-        """Probability that the cluster serves this session's next turn in time.
+        override: tuple[int, ...] | None = None,
+    ) -> tuple[float, tuple[float, ...]]:
+        """Cluster success probability and per-node predicted TTFTs.
 
         Queue error is not a fixed number of seconds. The projected backlog of
         §8.1 is a fluid quantity, and both the amount of load that materialises
@@ -727,8 +754,8 @@ class Simulator:
         the fluid queue is least trustworthy.
         """
         sid = state.sid
-        hbm, host = self._prefix_signature(sid)
-        key = (sid, state.context_blocks, override, hbm, host)
+        hbm, host = self._apply_prefix_override(*self._prefix_signature(sid), override)
+        key = (sid, state.context_blocks, hbm, host)
         cached = self._probability_cache.get(key)
         if cached is not None:
             return cached
@@ -741,8 +768,7 @@ class Simulator:
         queues: list[float] = []
         for nid in range(count):
             remote = self._remote_prefix(nid, hbm, host)
-            local = override[1] if override is not None and override[0] == nid else hbm[nid]
-            recovery = self._recovery(local, context, host[nid], remote)
+            recovery = self._recovery(hbm[nid], context, host[nid], remote)
             busy = self.nodes[nid].busy_until if view is None else view[nid]
             queue = busy - arrival
             if queue < 0.0:
@@ -757,8 +783,18 @@ class Simulator:
             self.cfg.queue_uncertainty_s + self.cfg.queue_uncertainty_scale * queue for queue in queues
         ]
         value = routable_probability(ttfts, self.cfg.ttft_slo_s, shared, node_uncertainties)
-        self._probability_cache[key] = value
-        return value
+        result = (value, tuple(ttfts))
+        self._probability_cache[key] = result
+        return result
+
+    def _cluster_probability(
+        self,
+        state: SessionState,
+        prediction: Prediction,
+        override: tuple[int, ...] | None = None,
+    ) -> float:
+        """Probability that the cluster serves this session's next turn in time."""
+        return self._cluster_evaluation(state, prediction, override)[0]
 
     def _remote_prefix(
         self, nid: int, hbm: tuple[int, ...], host: tuple[int, ...]
@@ -1255,18 +1291,21 @@ class Simulator:
     def _eviction_score(self, sid: int, nid: int) -> float:
         """Expected cost per HBM block freed, in the units used by preparation.
 
-        Three terms. The first is the loss of SLO goodput, weighted by the same
-        conditional return probability that drives preparation, so a session
-        that has waited past its median gap is scored as returning soon rather
-        than as no longer relevant. The second is the demotion work itself. The
-        third is the background work needed to put the interval back before the
-        predicted return: demoted blocks stay on the host tier, so the rebuild
-        is a background restore of the same size, normalised and penalised
-        exactly as in `_collect_candidates`. Without it the controller can pay
-        for a preparation and then reclaim it in the same horizon at no
-        recorded cost, and when the probability terms are flat the ranking has
-        no gradient at all. The rebuild is charged whenever the session may
-        return, without modelling which node the router picks.
+        The first term is the loss of cluster SLO success, not the loss of
+        success on this node. A prefix that another node can already serve
+        inside the deadline therefore has little routing value here, even if
+        this node would itself miss the deadline after the demotion. The
+        hypothetical after-state writes the current HBM prefix to DRAM and
+        then shortens HBM, matching `_ensure_capacity`, and other nodes see
+        that HBM go away as a transfer source.
+
+        The second term is the demotion work itself. The third is the
+        background restore needed to put the interval back before the
+        predicted return. That rebuild is charged only when no other node
+        remains predicted-SLO-feasible without this HBM: a spare replica
+        does not have to be rebuilt on the node that dropped it. Without the
+        rebuild term the controller can pay for a preparation and then
+        reclaim a unique copy in the same horizon at no recorded cost.
 
         Only a session with no remaining turn in its script has no predicted
         return and is therefore free to reclaim.
@@ -1279,19 +1318,33 @@ class Simulator:
         prediction = self._prediction(sid)
         if prediction is None:
             return 0.0
-        before = self._cluster_probability(state, prediction)
-        after = self._cluster_probability(state, prediction, (nid, replica.hbm_prefix - amount))
+        new_hbm = replica.hbm_prefix - amount
+        new_host = replica.host_prefix if replica.host_prefix > replica.hbm_prefix else replica.hbm_prefix
+        before, _ = self._cluster_evaluation(state, prediction)
+        after, ttfts_after = self._cluster_evaluation(state, prediction, (nid, new_hbm, new_host))
         expected_loss = prediction.return_probability * max(0.0, before - after)
         demotion_cost = 0.002 * amount
-        rebuild_work = amount / max(
-            1.0, self.cfg.background_rates["restore"] * self.cfg.preparation_horizon_s
+        other_covers = any(
+            ttft <= self.cfg.ttft_slo_s for other, ttft in enumerate(ttfts_after) if other != nid
         )
-        reprepare_cost = (
-            self.cfg.reprepare_cost_weight
-            * prediction.return_probability
-            * self.cfg.resource_penalty
-            * rebuild_work
-        )
+        if other_covers:
+            # Another node still predicted-SLO-feasible without this HBM.
+            # The copy is spare: do not charge a local rebuild, and shrink
+            # the demotion floor so it ranks below any copy the cluster still
+            # needs. The remaining expected_loss is only the diversification
+            # value of a second feasible node.
+            demotion_cost *= self.cfg.spare_replica_factor
+            reprepare_cost = 0.0
+        else:
+            rebuild_work = amount / max(
+                1.0, self.cfg.background_rates["restore"] * self.cfg.preparation_horizon_s
+            )
+            reprepare_cost = (
+                self.cfg.reprepare_cost_weight
+                * prediction.return_probability
+                * self.cfg.resource_penalty
+                * rebuild_work
+            )
         return (expected_loss + demotion_cost + reprepare_cost) / amount
 
     def readiness_snapshot(self) -> list[dict[str, float | int | str]]:
