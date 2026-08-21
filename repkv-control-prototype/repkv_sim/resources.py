@@ -210,24 +210,26 @@ class ResourceModel:
         return {"transfer": "link", "restore": "host", "recompute": "compute"}
 
     def thresholds(self, budget_s: float) -> dict[str, float]:
-        """Context lengths at which each recovery path stops meeting a deadline.
+        """Token lengths at which each recovery action still fits the budget.
 
-        Below `rebuild_tokens` every path is affordable and KV placement cannot
-        change a TTFT outcome. Between `rebuild_tokens` and `move_tokens` the KV
-        only has to exist somewhere, because fetching it on demand still fits,
-        so the lever is retention. Above `move_tokens` no on-demand path fits
-        and the KV has to already be in local HBM, which is the only regime
-        where preparing it in advance is the mechanism that helps.
-
-        The two are not always in that order. On a link slow enough that
-        `move_tokens` falls below `rebuild_tokens`, fetching is slower than
-        rebuilding, remote copies stop being useful and the middle band
-        disappears.
+        Recompute and transfer are two actions, not two ordered named zones.
+        Each has its own feasible length. C1 is the shorter of the two and C2
+        is the longer, so C1 <= C2 always. Crossing C1 drops the slower
+        action; the faster one lasts until C2. When transfer is slower than
+        recompute the two actions swap which cutoff they occupy, and the
+        middle band is then recompute-only rather than gone. Restore is a
+        third, local action with its own cutoff.
         """
+        tokens = self.model.block_tokens
+        recompute = budget_s * self.recompute_blocks_s * tokens
+        transfer = budget_s * self.transfer_blocks_s * tokens
+        restore = budget_s * self.restore_blocks_s * tokens
         return {
-            "rebuild_tokens": budget_s * self.recompute_blocks_s * self.model.block_tokens,
-            "move_tokens": budget_s * self.transfer_blocks_s * self.model.block_tokens,
-            "restore_tokens": budget_s * self.restore_blocks_s * self.model.block_tokens,
+            "recompute_tokens": recompute,
+            "transfer_tokens": transfer,
+            "restore_tokens": restore,
+            "c1_tokens": min(recompute, transfer),
+            "c2_tokens": max(recompute, transfer),
         }
 
     def describe(self) -> dict[str, float]:

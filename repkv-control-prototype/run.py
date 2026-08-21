@@ -81,21 +81,28 @@ def main() -> None:
     rebuild = blocks / resources.recompute_blocks_s
     fetch = blocks / resources.transfer_blocks_s
     restore = blocks / resources.restore_blocks_s
-    if budget < restore:
-        zone = "nothing fits"
-    elif rebuild <= budget:
-        zone = "cheap rebuild"
-    elif fetch <= budget:
-        zone = "cheap fetch"
-    else:
+    cut = resources.thresholds(budget)
+    context = args.context_tokens
+    if context <= cut["c1_tokens"]:
+        zone = "both remote actions"
+    elif context <= cut["c2_tokens"]:
+        zone = "recompute only" if cut["recompute_tokens"] >= cut["transfer_tokens"] else "transfer only"
+    elif context <= cut["restore_tokens"]:
         zone = "must be local"
+    else:
+        zone = "hbm hit only"
     print(
         f"block={resources.model.block_bytes / 2**20:.2f} MiB  hbm={cfg.hbm_blocks} blk  "
         f"host={cfg.host_blocks} blk  slots={cfg.decode_slots}"
     )
     print(
-        f"context={args.context_tokens} tok  budget={budget:.2f}s  "
-        f"rebuild={rebuild:.2f}s  fetch={fetch:.2f}s  restore={restore:.2f}s  [{zone}]\n"
+        f"context={context} tok  budget={budget:.2f}s  "
+        f"rebuild={rebuild:.2f}s  fetch={fetch:.2f}s  restore={restore:.2f}s"
+    )
+    print(
+        f"C_recompute={cut['recompute_tokens']:.0f}  C_transfer={cut['transfer_tokens']:.0f}  "
+        f"C1={cut['c1_tokens']:.0f}  C2={cut['c2_tokens']:.0f}  "
+        f"C_restore={cut['restore_tokens']:.0f}  [{zone}]\n"
     )
 
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
