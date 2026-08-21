@@ -161,6 +161,73 @@ def cheapest_preparation(
     return PreparationPlan(target_prefix, best[2], best[1], best[0])
 
 
+def decide_minimum_slo_preparation(
+    context_blocks: int,
+    availability: PrefixAvailability,
+    queue_s: float,
+    prompt_s: float,
+    slo_s: float,
+    time_limit_s: float,
+    foreground_rates: dict[str, float],
+    background_rates: dict[str, float],
+    method_costs: dict[str, float],
+) -> tuple[PreparationPlan | None, str]:
+    """Return the minimum SLO plan and why a plan is absent.
+
+    Residual recovery time is non-increasing in the target prefix: raising the
+    target both shortens the interval left to recover and can only widen the
+    set of sources available for what remains. Feasibility is therefore
+    monotone in the target and the smallest feasible one is found by bisection.
+    The cheapest timely plan is likewise non-decreasing in duration, so if the
+    smallest feasible target cannot be built within the time limit no larger
+    target can either.
+
+    Two vetoes refuse work before bisection. `queue_exceeds_budget` means the
+    predicted device queue already overruns the deadline, so a local prefix
+    would not help. `already_feasible` means the current layout is predicted to
+    recover in time, so the planner intentionally does nothing. Full-prefix
+    preparation does not apply either veto.
+    """
+    current = fastest_recovery(availability.local_hbm, context_blocks, availability, foreground_rates)
+    # Recovery overlaps with the device queue rather than adding to it: a
+    # restore or a transfer proceeds while the device serves other requests.
+    # The two therefore have to fit under the deadline separately.
+    budget = slo_s + 1e-9 - prompt_s
+    if queue_s > budget:
+        return None, "queue_exceeds_budget"
+    if current.seconds <= budget:
+        return None, "already_feasible"
+    low, high = availability.local_hbm + 1, context_blocks
+    if low > high:
+        return None, "already_feasible"
+
+    def residual_seconds(target: int) -> float:
+        # Preparing into HBM does not put the interval on the host tier, so the
+        # sources available for what remains are the real ones.
+        hypothetical = PrefixAvailability(target, availability.local_host, availability.remote_hbm)
+        return fastest_recovery(target, context_blocks, hypothetical, foreground_rates).seconds
+
+    if residual_seconds(high) > budget:
+        return None, "cannot_cross_slo"
+    while low < high:
+        middle = (low + high) // 2
+        if residual_seconds(middle) <= budget:
+            high = middle
+        else:
+            low = middle + 1
+    plan = cheapest_preparation(
+        availability.local_hbm,
+        low,
+        availability,
+        time_limit_s,
+        background_rates,
+        method_costs,
+    )
+    if plan is None or not plan.segments:
+        return None, "no_timely_plan"
+    return plan, "ok"
+
+
 def minimum_slo_preparation(
     context_blocks: int,
     availability: PrefixAvailability,
@@ -172,51 +239,19 @@ def minimum_slo_preparation(
     background_rates: dict[str, float],
     method_costs: dict[str, float],
 ) -> PreparationPlan | None:
-    """Find the minimum prepared prefix that crosses the hard TTFT boundary.
-
-    Residual recovery time is non-increasing in the target prefix: raising the
-    target both shortens the interval left to recover and can only widen the
-    set of sources available for what remains. Feasibility is therefore
-    monotone in the target and the smallest feasible one is found by bisection.
-    The cheapest timely plan is likewise non-decreasing in duration, so if the
-    smallest feasible target cannot be built within the time limit no larger
-    target can either.
-    """
-    current = fastest_recovery(availability.local_hbm, context_blocks, availability, foreground_rates)
-    # Recovery overlaps with the device queue rather than adding to it: a
-    # restore or a transfer proceeds while the device serves other requests.
-    # The two therefore have to fit under the deadline separately.
-    budget = slo_s + 1e-9 - prompt_s
-    if queue_s > budget:
-        return None
-    if current.seconds <= budget:
-        return None
-    low, high = availability.local_hbm + 1, context_blocks
-    if low > high:
-        return None
-
-    def residual_seconds(target: int) -> float:
-        # Preparing into HBM does not put the interval on the host tier, so the
-        # sources available for what remains are the real ones.
-        hypothetical = PrefixAvailability(target, availability.local_host, availability.remote_hbm)
-        return fastest_recovery(target, context_blocks, hypothetical, foreground_rates).seconds
-
-    if residual_seconds(high) > budget:
-        return None
-    while low < high:
-        middle = (low + high) // 2
-        if residual_seconds(middle) <= budget:
-            high = middle
-        else:
-            low = middle + 1
-    return cheapest_preparation(
-        availability.local_hbm,
-        low,
+    """Find the minimum prepared prefix that crosses the hard TTFT boundary."""
+    plan, _reason = decide_minimum_slo_preparation(
+        context_blocks,
         availability,
+        queue_s,
+        prompt_s,
+        slo_s,
         time_limit_s,
+        foreground_rates,
         background_rates,
         method_costs,
     )
+    return plan
 
 
 def success_probability(ttft_s: float, slo_s: float, uncertainty_s: float) -> float:

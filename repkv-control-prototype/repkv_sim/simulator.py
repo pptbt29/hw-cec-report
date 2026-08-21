@@ -15,8 +15,8 @@ from .planner import (
     WorkSegment,
     at_least_one_success,
     cheapest_preparation,
+    decide_minimum_slo_preparation,
     fastest_recovery,
-    minimum_slo_preparation,
     routable_probability,
     success_probability,
 )
@@ -337,6 +337,14 @@ class Metrics:
     foreground_seconds: dict[str, float] = field(
         default_factory=lambda: {name: 0.0 for name in RESOURCES}
     )
+    prep_inspects: int = 0
+    prep_accepted: int = 0
+    prep_skip_already_feasible: int = 0
+    prep_skip_queue: int = 0
+    prep_skip_no_plan: int = 0
+    prep_skip_nonpositive: int = 0
+    prep_target_blocks: int = 0
+    prep_context_blocks: int = 0
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -546,6 +554,16 @@ class Simulator:
             "recompute_blocks_per_success": (self.metrics.background["recompute"] + self.metrics.demand["recompute"]) / success,
             "hbm_block_seconds_per_success": self.metrics.hbm_block_seconds / success,
             "unused_preparation_ratio": unused / max(1, self.metrics.prepared_blocks),
+            "prepared_blocks": self.metrics.prepared_blocks,
+            "used_prepared_blocks": self.metrics.used_prepared_blocks,
+            "foreground_transfer_blocks": self.metrics.demand["transfer"],
+            "prep_accept_rate": self.metrics.prep_accepted / max(1, self.metrics.prep_inspects),
+            "prep_skip_already_feasible_rate": self.metrics.prep_skip_already_feasible
+            / max(1, self.metrics.prep_inspects),
+            "prep_skip_queue_rate": self.metrics.prep_skip_queue / max(1, self.metrics.prep_inspects),
+            "prep_skip_nonpositive_rate": self.metrics.prep_skip_nonpositive / max(1, self.metrics.prep_inspects),
+            "prep_target_fraction": self.metrics.prep_target_blocks
+            / max(1, self.metrics.prep_context_blocks),
             "demoted_blocks": self.metrics.demoted_blocks,
             "cancelled_batches": self.metrics.cancelled_batches,
             "overlapping_turns": self.metrics.overlapping_turns,
@@ -1032,6 +1050,7 @@ class Simulator:
                     continue
                 queue = max(0.0, self._projected_busy_until(state.sid, node.nid) - prediction.predicted_arrival)
                 prompt = prediction.predicted_prompt_blocks / self.cfg.prefill_blocks_s
+                self.metrics.prep_inspects += 1
                 if self.policy == "eager_full":
                     plan = cheapest_preparation(
                         availability.local_hbm,
@@ -1041,8 +1060,9 @@ class Simulator:
                         self.cfg.background_rates,
                         self.cfg.method_costs,
                     )
+                    reason = "ok" if plan is not None and plan.segments else "no_timely_plan"
                 else:
-                    plan = minimum_slo_preparation(
+                    plan, reason = decide_minimum_slo_preparation(
                         state.context_blocks,
                         availability,
                         queue,
@@ -1054,6 +1074,12 @@ class Simulator:
                         self.cfg.method_costs,
                     )
                 if plan is None or not plan.segments:
+                    if reason == "already_feasible":
+                        self.metrics.prep_skip_already_feasible += 1
+                    elif reason == "queue_exceeds_budget":
+                        self.metrics.prep_skip_queue += 1
+                    else:
+                        self.metrics.prep_skip_no_plan += 1
                     continue
                 after = self._cluster_probability(state, prediction, (node.nid, plan.target_prefix))
                 added = plan.target_prefix - availability.local_hbm
@@ -1089,6 +1115,9 @@ class Simulator:
                 score = net / max(resource_cost + displacement, 1e-9)
             slack = prediction.predicted_arrival - self.now - plan.seconds
             if net > 0:
+                self.metrics.prep_accepted += 1
+                self.metrics.prep_target_blocks += plan.target_prefix
+                self.metrics.prep_context_blocks += state.context_blocks
                 candidates.append(
                     PlanCandidate(
                         state.sid,
@@ -1104,6 +1133,8 @@ class Simulator:
                         slack,
                     )
                 )
+            else:
+                self.metrics.prep_skip_nonpositive += 1
         return candidates
 
     def _prepare(self) -> None:
@@ -1423,6 +1454,14 @@ def aggregate(summaries: list[dict[str, float | int | str]]) -> list[dict[str, f
         "recompute_blocks_per_success",
         "hbm_block_seconds_per_success",
         "unused_preparation_ratio",
+        "prepared_blocks",
+        "used_prepared_blocks",
+        "foreground_transfer_blocks",
+        "prep_accept_rate",
+        "prep_skip_already_feasible_rate",
+        "prep_skip_queue_rate",
+        "prep_skip_nonpositive_rate",
+        "prep_target_fraction",
         "deferred_admissions",
         "exhausted_replenishments",
     )

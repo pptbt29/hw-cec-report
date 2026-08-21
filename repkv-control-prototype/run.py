@@ -111,6 +111,10 @@ def main() -> None:
         "recompute_blocks_per_success",
         "hbm_block_seconds_per_success",
         "unused_preparation_ratio",
+        "prep_accept_rate",
+        "prep_skip_already_feasible_rate",
+        "prep_skip_nonpositive_rate",
+        "foreground_transfer_blocks",
         "deferred_admissions",
         "exhausted_replenishments",
     )
